@@ -1,0 +1,46 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Boundary(BackendAPI, "Backend API") {
+    Component(UserModule, "User Module", "Java", "Manages user profiles and authentication/authorization logic")
+    Component(CatalogModule, "Catalog Module", "Java", "Handles book search via Google Books API and local book catalog management")
+    Component(ReadingListModule, "Reading List Module", "Java", "Manages user's reading lists (Want to Read)")
+    Component(ReviewModule, "Review Module", "Java", "Handles book reviews and related operations")
+    ComponentQueue(eventsBus, "Events Bus", "In memory", "For asynchronous communication between modules")
+
+    Boundary(database, "Database") {
+        ComponentDb(userData, "Users data", "PostgreSQL Schema", "Stores user profiles and user-related data")
+        ComponentDb(catalogData, "Catalog data", "PostgreSQL Schema", "Stores essential book metadata from Google Books")
+        ComponentDb(readingListData, "Reading List data", "PostgreSQL Schema", "Stores user reading list entries")
+        ComponentDb(reviewData, "Reviews data", "PostgreSQL Schema", "Stores user book reviews")
+    }
+}
+
+System_Ext(GoogleBooksAPI, "Google Books API", "External catalog of book information")
+System_Ext(Keycloak, "Keycloak", "Identity Provider for Authentication/Authorization") {
+    Component(keycloakEventListener, "Keycloak Event Listener", "Java (Custom Plugin)", "Publishes 'User Registered' events to the Event Bus")
+}
+
+
+Rel(UserModule, userData, "Reads and writes", "JDBC")
+Rel(CatalogModule, catalogData, "Reads and writes", "JDBC")
+Rel(ReadingListModule, readingListData, "Reads and writes", "JDBC")
+Rel(ReviewModule, reviewData, "Reads and writes", "JDBC")
+
+Rel(CatalogModule, GoogleBooksAPI, "Uses", "REST API (HTTPS)")
+
+Rel(Keycloak, keycloakEventListener, "Emits", "User Registration Events")
+Rel(keycloakEventListener, eventsBus, "Publishes", "UserRegisteredEvent")
+Rel(eventsBus, UserModule, "Delivers", "UserRegisteredEvent")
+Rel(UserModule, userData, "Creates", "user_profile", "in response to UserRegisteredEvent")
+
+Rel(ReadingListModule, CatalogModule, "Uses", "Java API calls", "e.g., ensureBookExists() - may still be sync for some operations")
+Rel(ReviewModule, CatalogModule, "Uses", "Java API calls", "e.g., ensureBookExists() - may still be sync for some operations")
+
+
+Rel(BackendAPI, Keycloak, "Delegates Authentication and Authorization to", "OIDC/OAuth 2.0")
+
+
+SHOW_LEGEND()
+footer Component Diagram - BackendAPI Container - Book Reading App (C4 Model - Level 3) - Async User Sync via Events
+@enduml
