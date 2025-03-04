@@ -16,7 +16,7 @@ public class UserUnitTest {
         String email = "john.doe@example.com";
         UiTheme initialTheme = UiTheme.LIGHT;
 
-        User user = new User.UserBuilder()
+        User user = new UserImpl.UserBuilder()
                 .userId(userId)
                 .firstName(firstName)
                 .lastName(lastName)
@@ -36,7 +36,7 @@ public class UserUnitTest {
 
     @Test
     void testUpdateUiTheme() {
-        User user = new User.UserBuilder()
+        User user = new UserImpl.UserBuilder()
                 .userId(UUID.randomUUID())
                 .firstName("Jane")
                 .lastName("Smith")
@@ -58,7 +58,7 @@ public class UserUnitTest {
         String username = "testuser";
         String email = "test@example.com";
 
-        User user = new User.UserBuilder()
+        User user = new UserImpl.UserBuilder()
                 .userId(userId)
                 .username(username)
                 .email(email)
