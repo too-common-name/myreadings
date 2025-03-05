@@ -78,36 +78,43 @@ public class UserImpl implements User {
     }
 
     
+    @Override
     public UUID getUserId() {
         return keycloakUserId;
     }
 
     
+    @Override
     public String getFirstName() {
         return firstName;
     }
 
     
+    @Override
     public String getLastName() {
         return lastName;
     }
 
     
+    @Override
     public String getUsername() {
         return username;
     }
 
     
+    @Override
     public String getEmail() {
         return email;
     }
 
     
+    @Override
     public UiTheme getThemePreference() {
         return themePreference;
     }
     
     
+    @Override
     public void updateUiTheme(UiTheme newTheme) {
         this.themePreference = newTheme;
     }
