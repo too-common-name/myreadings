@@ -1,13 +1,24 @@
 package modules.user.domain;
 
 import java.util.UUID;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public class UserImpl implements User {
 
     private final UUID keycloakUserId;
+    @NotBlank
+    @Size(max = 30)
     private final String firstName;
+    @NotBlank
+    @Size(max = 30)
     private final String lastName;
+    @NotBlank
+    @Size(max = 30)
     private final String username;
+    @NotBlank
+    @Email
     private final String email;
     private UiTheme themePreference;
 
@@ -66,30 +77,37 @@ public class UserImpl implements User {
         }
     }
 
+    @Override
     public UUID getUserId() {
         return keycloakUserId;
     }
 
+    @Override
     public String getFirstName() {
         return firstName;
     }
 
+    @Override
     public String getLastName() {
         return lastName;
     }
 
+    @Override
     public String getUsername() {
         return username;
     }
 
+    @Override
     public String getEmail() {
         return email;
     }
 
+    @Override
     public UiTheme getThemePreference() {
         return themePreference;
     }
     
+    @Override
     public void updateUiTheme(UiTheme newTheme) {
         this.themePreference = newTheme;
     }
