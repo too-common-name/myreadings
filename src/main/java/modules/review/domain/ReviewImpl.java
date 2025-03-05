@@ -71,31 +71,37 @@ public class ReviewImpl implements Review {
             return this;
         }
 
-        public ReviewImpl build() {
+        public Review build() {
             return new ReviewImpl(reviewId, book, user, reviewText, rating, publicationDate);
         }
     }
 
+    @Override
     public UUID getReviewId() {
         return reviewId;
     }
 
+    @Override
     public Book getBook() {
         return book;
     }
 
+    @Override
     public User getUser() {
         return user;
     }
 
+    @Override
     public String getReviewText() {
         return reviewText;
     }
 
+    @Override
     public int getRating() {
         return rating;
     }
 
+    @Override
     public LocalDateTime getPublicationDate() {
         return publicationDate;
     }

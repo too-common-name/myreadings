@@ -9,7 +9,7 @@ import modules.user.domain.User;
 import modules.catalog.domain.Book;
 import java.util.List;
 
-public class ReadingListImpl implements ReadingList {
+public class ReadingListImpl implements ReadingList, ReadingList {
 
     private final UUID readingListId;
     @NotNull
@@ -76,31 +76,37 @@ public class ReadingListImpl implements ReadingList {
     }
 
 
+    @Override
     public UUID getReadingListId() {
         return readingListId;
     }
 
 
+    @Override
     public User getUser() {
         return user;
     }
 
 
+    @Override
     public String getName() {
         return name;
     }
 
 
+    @Override
     public String getDescription() {
         return description;
     }
 
 
+    @Override
     public LocalDateTime getCreationDate() {
         return creationDate;
     }
 
 
+    @Override
     public List<Book> getBooks() {
         return books;
     }
