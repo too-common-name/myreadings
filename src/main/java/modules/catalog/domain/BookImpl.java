@@ -110,52 +110,52 @@ public class BookImpl implements Book {
         }
     }
 
-    @Override
+    
     public UUID getBookId() {
         return bookId;
     }
 
-    @Override
+    
     public String getIsbn() {
         return isbn;
     }
 
-    @Override
+    
     public String getTitle() {
         return title;
     }
 
-    @Override
+    
     public List<String> getAuthors() {
         return authors;
     }
 
-    @Override
+    
     public LocalDate getPublicationDate() {
         return publicationDate;
     }
 
-    @Override
+    
     public String getPublisher() {
         return publisher;
     }
 
-    @Override
+    
     public String getDescription() {
         return description;
     }
 
-    @Override
+    
     public int getPageCount() {
         return pageCount;
     }
 
-    @Override
+    
     public String getCoverImageId() {
         return coverImageId;
     }
 
-    @Override
+    
     public String getOriginalLanguage() {
         return originalLanguage;
     }
