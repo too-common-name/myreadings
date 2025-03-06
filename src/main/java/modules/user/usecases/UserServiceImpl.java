@@ -1,7 +1,6 @@
 package modules.user.usecases;
 
 import modules.user.domain.User;
-import modules.user.domain.UserImpl;
 import modules.user.infrastructure.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -19,8 +18,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User createUserProfile(UserImpl.UserBuilder userBuilder) {
-        User user = userBuilder.build();
+    public User createUserProfile(User user) {
         return userRepository.save(user);
     }
 

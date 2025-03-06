@@ -23,6 +23,21 @@ public class UserImplUnitTest {
     }
 
     @Test
+    void createUserWithValidDataSuccessful() {
+        User user = new UserImpl.UserBuilder()
+                .userId(UUID.randomUUID())
+                .firstName("John")
+                .lastName("Doe")
+                .username("johndoe")
+                .email("john.doe@example.com")
+                .themePreference(UiTheme.LIGHT)
+                .build();
+
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+        assertTrue(violations.isEmpty(), "Validation should pass for valid user data");
+    }
+
+    @Test
     void createUserWithTooLongFirstNameFailsValidation() {
         String longFirstName = "VeryLongFirstNameExceedingFiftyCharactersForSure";
         User user = new UserImpl.UserBuilder()
@@ -43,7 +58,7 @@ public class UserImplUnitTest {
         User user = new UserImpl.UserBuilder()
                 .userId(UUID.randomUUID())
                 .firstName("John")
-                .lastName(" ") // Blank last name
+                .lastName(" ")
                 .username("johndoe")
                 .email("john.doe@example.com")
                 .themePreference(UiTheme.LIGHT)
@@ -75,7 +90,7 @@ public class UserImplUnitTest {
                 .userId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
-                .username("") // Blank username
+                .username("")
                 .email("john.doe@example.com")
                 .themePreference(UiTheme.LIGHT)
                 .build();
@@ -128,5 +143,20 @@ public class UserImplUnitTest {
 
         Set<ConstraintViolation<User>> violations = validator.validate(user);
         assertFalse(violations.isEmpty(), "Validation should fail for invalid email format");
+    }
+
+    @Test
+    void testUpdateUiTheme() {
+        UserImpl user = (UserImpl) new UserImpl.UserBuilder()
+                .userId(UUID.randomUUID())
+                .firstName("John")
+                .lastName("Doe")
+                .username("johndoe")
+                .email("john.doe@example.com")
+                .themePreference(UiTheme.LIGHT)
+                .build();
+
+        user.updateUiTheme(UiTheme.DARK);
+        assertEquals(UiTheme.DARK, user.getThemePreference());
     }
 }

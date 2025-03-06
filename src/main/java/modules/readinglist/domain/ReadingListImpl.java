@@ -2,6 +2,8 @@ package modules.readinglist.domain;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import common.annotations.Generated;
+import common.annotations.Generated;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,7 +11,7 @@ import modules.user.domain.User;
 import modules.catalog.domain.Book;
 import java.util.List;
 
-public class ReadingListImpl implements ReadingList, ReadingList {
+public class ReadingListImpl implements ReadingList {
 
     private final UUID readingListId;
     @NotNull
@@ -75,37 +77,37 @@ public class ReadingListImpl implements ReadingList, ReadingList {
         }
     }
 
-
+    @Generated
     @Override
     public UUID getReadingListId() {
         return readingListId;
     }
 
-
+    @Generated
     @Override
     public User getUser() {
         return user;
     }
 
-
+    @Generated
     @Override
     public String getName() {
         return name;
     }
 
-
+    @Generated
     @Override
     public String getDescription() {
         return description;
     }
 
-
+    @Generated
     @Override
     public LocalDateTime getCreationDate() {
         return creationDate;
     }
 
-
+    @Generated
     @Override
     public List<Book> getBooks() {
         return books;
