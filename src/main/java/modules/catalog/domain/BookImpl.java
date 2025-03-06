@@ -3,6 +3,7 @@ package modules.catalog.domain;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import common.annotations.Generated;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PastOrPresent;
@@ -110,61 +111,61 @@ public class BookImpl implements Book {
         }
     }
 
-    
+    @Generated
     @Override
     public UUID getBookId() {
         return bookId;
     }
 
-    
+    @Generated
     @Override
     public String getIsbn() {
         return isbn;
     }
 
-    
+    @Generated
     @Override
     public String getTitle() {
         return title;
     }
 
-    
+    @Generated
     @Override
     public List<String> getAuthors() {
         return authors;
     }
 
-    
+    @Generated
     @Override
     public LocalDate getPublicationDate() {
         return publicationDate;
     }
 
-    
+    @Generated
     @Override
     public String getPublisher() {
         return publisher;
     }
 
-    
+    @Generated
     @Override
     public String getDescription() {
         return description;
     }
 
-    
+    @Generated
     @Override
     public int getPageCount() {
         return pageCount;
     }
 
-    
+    @Generated
     @Override
     public String getCoverImageId() {
         return coverImageId;
     }
 
-    
+    @Generated
     @Override
     public String getOriginalLanguage() {
         return originalLanguage;

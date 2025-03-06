@@ -10,10 +10,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import modules.user.domain.UserImpl;
+import modules.catalog.domain.Book;
+import modules.catalog.domain.BookImpl;
 import modules.readinglist.domain.ReadingListImpl.ReadingListBuilder;
 import modules.user.domain.UiTheme;
 import modules.user.domain.User;
@@ -74,6 +78,7 @@ public class ReadingListImplUnitTest {
         return new ReadingListImpl.ReadingListBuilder()
                 .readingListId(UUID.randomUUID())
                 .user(createValidUser())
+                .books(Arrays.asList())
                 .name("My Reading List")
                 .description("This is a valid description within the limit")
                 .creationDate(LocalDateTime.now());

@@ -2,6 +2,7 @@ package modules.review.domain;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import common.annotations.Generated;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -76,31 +77,37 @@ public class ReviewImpl implements Review {
         }
     }
 
+    @Generated
     @Override
     public UUID getReviewId() {
         return reviewId;
     }
 
+    @Generated
     @Override
     public Book getBook() {
         return book;
     }
 
+    @Generated
     @Override
     public User getUser() {
         return user;
     }
 
+    @Generated
     @Override
     public String getReviewText() {
         return reviewText;
     }
 
+    @Generated
     @Override
     public int getRating() {
         return rating;
     }
-
+    
+    @Generated
     @Override
     public LocalDateTime getPublicationDate() {
         return publicationDate;

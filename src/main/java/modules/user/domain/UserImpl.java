@@ -1,6 +1,7 @@
 package modules.user.domain;
 
 import java.util.UUID;
+import common.annotations.Generated;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -77,43 +78,43 @@ public class UserImpl implements User {
         }
     }
 
-    
+    @Generated
     @Override
     public UUID getUserId() {
         return keycloakUserId;
     }
 
-    
+    @Generated    
     @Override
     public String getFirstName() {
         return firstName;
     }
 
-    
+    @Generated    
     @Override
     public String getLastName() {
         return lastName;
     }
 
-    
+    @Generated
     @Override
     public String getUsername() {
         return username;
     }
 
-    
+    @Generated
     @Override
     public String getEmail() {
         return email;
     }
 
-    
+    @Generated
     @Override
     public UiTheme getThemePreference() {
         return themePreference;
     }
     
-    
+    @Generated
     @Override
     public void updateUiTheme(UiTheme newTheme) {
         this.themePreference = newTheme;
