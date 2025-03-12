@@ -3,7 +3,6 @@ package modules.readinglist.domain;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import common.annotations.Generated;
-import common.annotations.Generated;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

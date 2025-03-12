@@ -11,13 +11,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import modules.user.domain.UserImpl;
-import modules.catalog.domain.Book;
-import modules.catalog.domain.BookImpl;
 import modules.readinglist.domain.ReadingListImpl.ReadingListBuilder;
 import modules.user.domain.UiTheme;
 import modules.user.domain.User;
