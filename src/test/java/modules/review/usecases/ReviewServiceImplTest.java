@@ -8,8 +8,8 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -20,8 +20,10 @@ import modules.review.infrastructure.ReviewRepository;
 import modules.review.utils.ReviewTestUtils;
 import modules.catalog.domain.Book;
 import modules.catalog.usecases.BookService;
+import modules.catalog.utils.CatalogTestUtils;
 import modules.user.domain.User;
 import modules.user.usecases.UserService;
+import modules.user.utils.UserTestUtils;
 
 
 public class ReviewServiceImplTest {
@@ -49,8 +51,8 @@ public class ReviewServiceImplTest {
         Review reviewToCreate = ReviewTestUtils.createValidReviewWithText("test");
         UUID bookId = reviewToCreate.getBook().getBookId();
         UUID userId = reviewToCreate.getUser().getUserId();
-        Book existingBook = ReviewTestUtils.createValidBookWithId(bookId);
-        User existingUser = ReviewTestUtils.createValidUserWithId(userId);
+        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
+        User existingUser = UserTestUtils.createValidUserWithId(userId);
 
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
         when(userService.findUserProfileById(userId)).thenReturn(Optional.of(existingUser));
@@ -93,7 +95,7 @@ public class ReviewServiceImplTest {
         UUID userId = reviewToCreate.getUser().getUserId();
 
         when(bookService.getBookById(bookId))
-                .thenReturn(Optional.of(ReviewTestUtils.createValidBookWithId(bookId)));
+                .thenReturn(Optional.of(CatalogTestUtils.createValidBookWithId(bookId)));
         when(userService.findUserProfileById(userId)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> {
@@ -137,7 +139,7 @@ public class ReviewServiceImplTest {
     @Test
     void testGetReviewsForBookSuccessful() {
         UUID bookId = UUID.randomUUID();
-        Book existingBook = ReviewTestUtils.createValidBookWithId(bookId);
+        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
         List<Review> expectedReviews =
                 Arrays.asList(ReviewTestUtils.createValidReviewForBook(bookId, "Review 1"),
                         ReviewTestUtils.createValidReviewForBook(bookId, "Review 2"));
@@ -159,10 +161,10 @@ public class ReviewServiceImplTest {
     @Test
     void testGetEmptyReviewsForBookSuccessful() {
         UUID bookId = UUID.randomUUID();
-        Book existingBook = ReviewTestUtils.createValidBookWithId(bookId);
+        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
 
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(reviewRepository.getBookReviews(bookId)).thenReturn(Collections.emptyList());
+        when(reviewRepository.getBookReviews(bookId)).thenReturn(new ArrayList<>());
 
         List<Review> retrievedReviews = reviewService.getReviewsForBook(bookId);
 
@@ -191,7 +193,7 @@ public class ReviewServiceImplTest {
     @Test
     void testGetReviewsForUserSuccessful() {
         UUID userId = UUID.randomUUID();
-        User existingUser = ReviewTestUtils.createValidUserWithId(userId);
+        User existingUser = UserTestUtils.createValidUserWithId(userId);
         List<Review> expectedReviews =
                 Arrays.asList(ReviewTestUtils.createValidReviewForUser(userId, "Review 1"),
                         ReviewTestUtils.createValidReviewForUser(userId, "Review 2"));
@@ -213,10 +215,10 @@ public class ReviewServiceImplTest {
     @Test
     void testGetEmptyReviewsForUserSuccessful() {
         UUID userId = UUID.randomUUID();
-        User existingUser = ReviewTestUtils.createValidUserWithId(userId);
+        User existingUser = UserTestUtils.createValidUserWithId(userId);
 
         when(userService.findUserProfileById(userId)).thenReturn(Optional.of(existingUser));
-        when(reviewRepository.getUserReviews(userId)).thenReturn(Collections.emptyList());
+        when(reviewRepository.getUserReviews(userId)).thenReturn(new ArrayList<>());
 
         List<Review> retrievedReviews = reviewService.getReviewsForUser(userId);
 
@@ -286,7 +288,7 @@ public class ReviewServiceImplTest {
     @Test
     void testGetAverageRatingForBookSuccessful() {
         UUID bookId = UUID.randomUUID();
-        Book existingBook = ReviewTestUtils.createValidBookWithId(bookId);
+        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
         List<Review> reviewsForBook =
                 Arrays.asList(ReviewTestUtils.createReviewWithRatingForBook(bookId, 4),
                         ReviewTestUtils.createReviewWithRatingForBook(bookId, 5),
@@ -318,9 +320,9 @@ public class ReviewServiceImplTest {
     @Test
     void testGetZeroAverageRatingForBookSuccessful() {
         UUID bookId = UUID.randomUUID();
-        Book existingBook = ReviewTestUtils.createValidBookWithId(bookId);
+        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(reviewRepository.getBookReviews(bookId)).thenReturn(Collections.emptyList());
+        when(reviewRepository.getBookReviews(bookId)).thenReturn(new ArrayList<>());
 
         double averageRating = reviewService.getAverageRatingForBook(bookId);
 
@@ -332,8 +334,8 @@ public class ReviewServiceImplTest {
     void testFindReviewByUserAndBookSuccessful() {
         UUID userId = UUID.randomUUID();
         UUID bookId = UUID.randomUUID();
-        Book existingBook = ReviewTestUtils.createValidBookWithId(bookId);
-        User existingUser = ReviewTestUtils.createValidUserWithId(userId);
+        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
+        User existingUser = UserTestUtils.createValidUserWithId(userId);
         Review existingReview = ReviewTestUtils.createValidReviewWithText("test");
 
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
@@ -373,7 +375,7 @@ public class ReviewServiceImplTest {
     void testFindReviewByUserAndBookFailsUserNotFound() {
         UUID bookId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        Book existingBook = ReviewTestUtils.createValidBookWithId(bookId);
+        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
 
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
         when(userService.findUserProfileById(userId)).thenReturn(Optional.empty());

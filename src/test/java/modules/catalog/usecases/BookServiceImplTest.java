@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -88,7 +88,7 @@ public class BookServiceImplTest {
 
     @Test
     void testGetAllBooksFails() {
-        when(bookRepository.findAll()).thenReturn(Collections.emptyList());
+        when(bookRepository.findAll()).thenReturn(new ArrayList<>());
 
         List<Book> retrievedBooks = bookService.getAllBooks();
 
