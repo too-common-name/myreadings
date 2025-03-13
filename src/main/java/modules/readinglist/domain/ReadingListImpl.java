@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import modules.user.domain.User;
 import modules.catalog.domain.Book;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ReadingListImpl implements ReadingList {
@@ -39,7 +40,7 @@ public class ReadingListImpl implements ReadingList {
         private String name;
         private String description;
         private LocalDateTime creationDate;
-        private List<Book> books = java.util.Collections.emptyList();
+        private List<Book> books = new ArrayList<>();
 
         public ReadingListBuilder readingListId(UUID readingListId) {
             this.readingListId = readingListId;

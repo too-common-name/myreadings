@@ -3,7 +3,6 @@ package modules.review.usecases;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.List;
-import java.util.stream.Collectors;
 import modules.catalog.usecases.BookService;
 import modules.review.domain.Review;
 import modules.review.infrastructure.ReviewRepository;

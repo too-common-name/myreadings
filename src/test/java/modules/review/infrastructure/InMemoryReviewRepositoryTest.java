@@ -52,7 +52,7 @@ public class InMemoryReviewRepositoryTest {
 
     @Test
     void saveAllEmptyList() {
-        List<Review> emptyReviewsList = Collections.emptyList();
+        List<Review> emptyReviewsList = new ArrayList<>();
 
         List<Review> savedReviews = repository.saveAll(emptyReviewsList);
 
