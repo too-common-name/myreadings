@@ -20,12 +20,15 @@ public class BookImpl implements Book {
     private final List<String> authors;
     @PastOrPresent
     private final LocalDate publicationDate;
+    @Size(max = 255)
     private final String publisher;
     @Size(max = 500)
     private final String description;
     @Min(0)
     private final int pageCount;
+    @Size(max = 255)
     private final String coverImageId;
+    @Size(max = 50)
     private final String originalLanguage;
 
     private BookImpl(UUID bookId, String isbn, String title, List<String> authors,

@@ -88,6 +88,36 @@ public class BookImplUnitTest {
                 "Validation error should be on field 'description'");
     }
 
+    @Test
+    void createBookWithTooLongPublisherFailsValidation() {
+        String longPublisher = "VeryLongPublisherNameExceedingTwoHundredFiftyFiveCharactersForSureThisIsJustToTestTheMaximumLengthOfThePublisherFieldAndItShouldDefinitelyFailValidationBecauseItIsWayTooLongAndExceedsTheLimit..................................................................................................................................................................................................................";
+        Book book = createValidBookBuilder().publisher(longPublisher).build();
+        Set<ConstraintViolation<Book>> violations = validator.validate(book);
+        assertFalse(violations.isEmpty(), "Validation should fail for too long publisher");
+        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("publisher")),
+                "Validation error should be on field 'publisher'");
+    }
+
+    @Test
+    void createBookWithTooLongCoverImageIdFailsValidation() {
+        String longCoverImageId = "VeryLongCoverImageIdExceedingTwoHundredFiftyFiveCharactersForSureThisIsJustToTestTheMaximumLengthOfTheCoverImageIdFieldAndItShouldDefinitelyFailValidationBecauseItIsWayTooLongAndExceedsTheLimit..................................................................................................................................................................................................................";
+        Book book = createValidBookBuilder().coverImageId(longCoverImageId).build();
+        Set<ConstraintViolation<Book>> violations = validator.validate(book);
+        assertFalse(violations.isEmpty(), "Validation should fail for too long coverImageId");
+        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("coverImageId")),
+                "Validation error should be on field 'coverImageId'");
+    }
+
+    @Test
+    void createBookWithTooLongOriginalLanguageFailsValidation() {
+        String longOriginalLanguage = "VeryLongOriginalLanguageNameExceedingFiftyCharactersForSureThisIsJustToTestTheMaximumLengthOfTheOriginalLanguageFieldAndItShouldDefinitelyFailValidationBecauseItIsWayTooLongAndExceedsTheLimit........................................................................................................................................................................................";
+        Book book = createValidBookBuilder().originalLanguage(longOriginalLanguage).build();
+        Set<ConstraintViolation<Book>> violations = validator.validate(book);
+        assertFalse(violations.isEmpty(), "Validation should fail for too long originalLanguage");
+        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("originalLanguage")),
+                "Validation error should be on field 'originalLanguage'");
+    }
+
     private BookImpl.BookBuilder createValidBookBuilder() {
         return new BookImpl.BookBuilder()
                 .bookId(UUID.randomUUID())
