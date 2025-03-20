@@ -10,6 +10,7 @@ import modules.user.domain.User;
 import modules.catalog.domain.Book;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class ReadingListImpl implements ReadingList {
 
@@ -111,5 +112,18 @@ public class ReadingListImpl implements ReadingList {
     @Override
     public List<Book> getBooks() {
         return books;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ReadingListImpl that = (ReadingListImpl) o;
+        return Objects.equals(readingListId, that.readingListId) && Objects.equals(user.getUserId(), that.user.getUserId()) && Objects.equals(name, that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(readingListId, user.getUserId(), name);
     }
 }
