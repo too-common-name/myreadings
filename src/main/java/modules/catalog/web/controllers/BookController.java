@@ -14,7 +14,6 @@ import modules.catalog.domain.BookImpl;
 import modules.catalog.usecases.BookService;
 import modules.catalog.web.dto.BookResponseDTO;
 import modules.catalog.web.dto.BookRequestDTO;
-import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -23,9 +22,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/v1/books") 
 @Produces(MediaType.APPLICATION_JSON) 
 @Consumes(MediaType.APPLICATION_JSON) 
+@Authenticated
 public class BookController {
 
     @Inject
@@ -58,7 +60,7 @@ public class BookController {
 
     @GET
     @Path("/{bookId}")
-    @PermitAll
+    @RolesAllowed({"user", "admin"})
     public Response getBookById(@PathParam("bookId") UUID bookId) {
         Optional<Book> bookOptional = bookService.getBookById(bookId);
         if (bookOptional.isPresent()) {
@@ -85,7 +87,7 @@ public class BookController {
     }
 
     @GET
-    @PermitAll
+    @RolesAllowed({"user", "admin"})
     public Response getAllBooks() {
         List<Book> books = bookService.getAllBooks();
         List<BookResponseDTO> responseDTOs = books.stream()
