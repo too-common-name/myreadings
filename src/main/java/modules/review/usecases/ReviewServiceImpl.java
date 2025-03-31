@@ -1,6 +1,9 @@
 package modules.review.usecases;
 
 import java.util.UUID;
+
+import jakarta.enterprise.context.ApplicationScoped;
+
 import java.util.Optional;
 import java.util.List;
 import modules.catalog.usecases.BookService;
@@ -8,6 +11,7 @@ import modules.review.domain.Review;
 import modules.review.infrastructure.ReviewRepository;
 import modules.user.usecases.UserService;
 
+@ApplicationScoped
 public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewRepository reviewRepository;
