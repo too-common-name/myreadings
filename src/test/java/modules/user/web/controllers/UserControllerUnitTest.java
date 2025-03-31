@@ -12,6 +12,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import jakarta.ws.rs.core.SecurityContext;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -29,44 +31,84 @@ public class UserControllerUnitTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private JsonWebToken jwt;
+
+    @Mock
+    private SecurityContext ctx;
+
+    private UUID testUserId;
+    private UUID authenticatedUserId;
+
+    private User mockUser;
+    private UserResponseDTO expectedResponse;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        testUserId = UUID.randomUUID();
+        authenticatedUserId = testUserId; 
+
+        mockUser = new UserImpl.UserBuilder()
+                .userId(testUserId)
+                .firstName("Daniele")
+                .lastName("Rossi")
+                .username("drossi")
+                .email("drossi@redhat.com")
+                .build();
+        expectedResponse = UserResponseDTO.builder()
+                .userId(testUserId)
+                .firstName("Daniele")
+                .lastName("Rossi")
+                .username("drossi")
+                .email("drossi@redhat.com")
+                .build();
+        when(jwt.getClaim("sub")).thenReturn(authenticatedUserId.toString());
     }
 
     @Test
-    void testGetUserByIdShouldReturnOkAndUserDTO() {
-        UUID userId = UUID.randomUUID();
-        User mockUser = new UserImpl.UserBuilder()
-                .userId(userId)
-                .firstName("Daniele")
-                .lastName("Rossi")
-                .username("drossi")
-                .email("drossi@redhat.com")
-                .build();
-        UserResponseDTO expectedResponse = UserResponseDTO.builder()
-                .userId(userId)
-                .firstName("Daniele")
-                .lastName("Rossi")
-                .username("drossi")
-                .email("drossi@redhat.com")
-                .build();
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+    void testGetUserByIdShouldReturnOkAndUserDTOForSameUser() {
+        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.of(mockUser));
 
-        Response response = userController.getUserById(userId);
+        Response response = userController.getUserById(testUserId);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedResponse, response.getEntity());
-        verify(userService, times(1)).findUserProfileById(userId);
+        verify(userService, times(1)).findUserProfileById(testUserId);
     }
 
     @Test
     void testGetUserByIdShouldReturnNotFound() {
-        UUID userId = UUID.randomUUID();
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.empty());
-        Response response = userController.getUserById(userId);
+        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.empty());
+
+        Response response = userController.getUserById(testUserId);
+
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
         assertNull(response.getEntity());
-        verify(userService, times(1)).findUserProfileById(userId);
+        verify(userService, times(1)).findUserProfileById(testUserId);
+    }
+
+    @Test
+    void testGetUserByIdShouldReturnForbiddenForDifferentUser() {
+        UUID otherUserId = UUID.randomUUID();
+
+        Response response = userController.getUserById(otherUserId);
+
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
+        assertEquals("Access denied.", response.getEntity());
+        verify(userService, never()).findUserProfileById(any());
+    }
+
+    @Test
+    void testGetUserByIdShouldReturnOkForAdminAccessingOtherUser() {
+        UUID otherUserId = UUID.randomUUID();
+        when(userService.findUserProfileById(otherUserId)).thenReturn(Optional.of(mockUser));
+        when(ctx.isUserInRole("admin")).thenReturn(true); // Simula utente admin
+
+        Response response = userController.getUserById(otherUserId);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(expectedResponse, response.getEntity());
+        verify(userService, times(1)).findUserProfileById(otherUserId);
     }
 }

@@ -14,6 +14,8 @@ import modules.catalog.domain.BookImpl;
 import modules.catalog.usecases.BookService;
 import modules.catalog.web.dto.BookResponseDTO;
 import modules.catalog.web.dto.BookRequestDTO;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -30,6 +32,7 @@ public class BookController {
     BookService bookService;
 
     @POST
+    @RolesAllowed("admin")
     public Response createBook(@Valid BookRequestDTO createBookRequestDTO) {
         Book bookToCreate = new BookImpl.BookBuilder()
                 .bookId(UUID.randomUUID())
@@ -55,6 +58,7 @@ public class BookController {
 
     @GET
     @Path("/{bookId}")
+    @PermitAll
     public Response getBookById(@PathParam("bookId") UUID bookId) {
         Optional<Book> bookOptional = bookService.getBookById(bookId);
         if (bookOptional.isPresent()) {
@@ -69,6 +73,7 @@ public class BookController {
 
     @DELETE
     @Path("/{bookId}")
+    @RolesAllowed("admin")
     public Response deleteBookById(@PathParam("bookId") UUID bookId) {
         if (bookService.getBookById(bookId).isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
@@ -80,6 +85,7 @@ public class BookController {
     }
 
     @GET
+    @PermitAll
     public Response getAllBooks() {
         List<Book> books = bookService.getAllBooks();
         List<BookResponseDTO> responseDTOs = books.stream()

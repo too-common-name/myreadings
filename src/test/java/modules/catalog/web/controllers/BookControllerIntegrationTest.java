@@ -1,6 +1,7 @@
 package modules.catalog.web.controllers;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
@@ -16,6 +17,7 @@ import static org.hamcrest.CoreMatchers.*;
 public class BookControllerIntegrationTest {
 
     @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testCreateBookSuccessful() {
         BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
 
@@ -25,6 +27,14 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    void testCreateBookWithoutRoleShouldReturnUnauthorized() {
+        given().contentType(ContentType.JSON).body(CatalogTestUtils.createValidBookRequestDTO())
+               .when().post("/api/v1/books")
+               .then().statusCode(401);
+    }
+
+    @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testCreateBookMissingIsbnShouldReturnBadRequest() {
         BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
         bookRequest.setIsbn(null);
@@ -34,6 +44,7 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testCreateBookMissingTitleShouldReturnBadRequest() {
         BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
         bookRequest.setTitle(null);
@@ -43,6 +54,7 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testCreateBookTitleTooLongShouldReturnBadRequest() {
         String longTitle =
                 "This is a very long title that exceeds the maximum allowed length of 255 characters. Let's make it even longer just to be absolutely sure that it will indeed exceed the limit and trigger the validation error. We should probably add some more characters here to be safe.";
@@ -54,6 +66,7 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testCreateBookPublicationDateInFutureShouldReturnBadRequest() {
         BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
         bookRequest.setPublicationDate(LocalDate.now().plusDays(1));
@@ -64,6 +77,7 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testCreateBookNegativePageCountShouldReturnBadRequest() {
         BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
         bookRequest.setPageCount(-1);
@@ -73,6 +87,7 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testGetBookByIdExistingIdShouldReturnOkAndBook() {
         BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
         String bookId = given().contentType(ContentType.JSON).body(bookRequest).when()
@@ -91,6 +106,7 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testDeleteBookByIdExistingIdShouldReturnNoContentAndBookShouldBeGone() {
         BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
         String bookId = given().contentType(ContentType.JSON).body(bookRequest).when()
@@ -104,6 +120,7 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testDeleteBookByIdNonExistingIdShouldReturnNotFound() {
         UUID nonExistingId = UUID.randomUUID();
         given().pathParam("bookId", nonExistingId).when().delete("/api/v1/books/{bookId}").then()
@@ -111,6 +128,13 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    void testDeleteBookByIdExistingIdWithoutRoleShouldReturnUnauthorized() {
+        given().pathParam("bookId", "fakeit").when().delete("/api/v1/books/{bookId}")
+               .then().statusCode(401);
+    }
+
+    @Test
+    @TestSecurity(user = "adminUser", roles = "admin")
     void testGetAllBooksBooksExistShouldReturnOkAndListOfBooks() {
         BookRequestDTO bookRequest1 = CatalogTestUtils.createValidBookRequestDTO();
         bookRequest1.setIsbn("111-111");
