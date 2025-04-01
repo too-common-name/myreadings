@@ -23,8 +23,8 @@ public class ReadingListImpl implements ReadingList {
     @Size(max = 200)
     private final String description;
     private final LocalDateTime creationDate;
-    private final List<Book> books; // Can be ReadingListItem if we want to model custom fields
-
+    private final List<Book> books; 
+    
     private ReadingListImpl(UUID readingListId, User user, String name, String description,
             LocalDateTime creationDate, List<Book> books) {
         this.readingListId = readingListId;

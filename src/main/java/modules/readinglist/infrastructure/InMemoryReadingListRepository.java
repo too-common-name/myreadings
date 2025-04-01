@@ -4,14 +4,13 @@ import modules.readinglist.domain.ReadingList;
 import modules.catalog.domain.Book;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class InMemoryReadingListRepository implements ReadingListRepository {
 
-    private final Map<UUID, ReadingList> readingLists = new ConcurrentHashMap<>();
+    private final Map<UUID, ReadingList> readingLists = new HashMap<>();
 
     @Override
     public ReadingList save(ReadingList readingList) {
