@@ -19,6 +19,8 @@ import modules.user.domain.User;
 import modules.user.usecases.UserService;
 
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.ForbiddenException;
 
 import io.quarkus.security.Authenticated;
 
@@ -48,135 +50,12 @@ public class ReviewController {
     @Context
     SecurityContext ctx;
 
-    @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "user", "admin" })
-    public Response createReview(@Valid ReviewRequestDTO createReviewRequestDTO) {
+    private UUID getCurrentUserIdFromJwt() {
         String userIdClaim = jwt.getClaim("sub");
         if (userIdClaim == null) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity("User ID not found in JWT.").build();
+            throw new NotAuthorizedException("User ID not found in JWT.");
         }
-        UUID userId = UUID.fromString(userIdClaim);
-
-        Optional<Book> book = bookService.getBookById(createReviewRequestDTO.getBookId());
-        Optional<User> user = userService.findUserProfileById(userId);
-
-        if (book.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Book not found.").build();
-        }
-        if (user.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
-        }
-
-        Review reviewToCreate = new ReviewImpl.ReviewBuilder()
-                .reviewId(UUID.randomUUID())
-                .book(book.get())
-                .user(user.get())
-                .reviewText(createReviewRequestDTO.getReviewText())
-                .rating(createReviewRequestDTO.getRating())
-                .publicationDate(LocalDateTime.now())
-                .build();
-
-        Review createdReview = reviewService.createReview(reviewToCreate);
-
-        return Response.status(Response.Status.CREATED)
-                .entity(mapToReviewResponseDTO(createdReview))
-                .build();
-    }
-
-    @GET
-    @Path("/{reviewId}")
-    @RolesAllowed({ "user", "admin" })
-    public Response getReviewById(@PathParam("reviewId") UUID reviewId) {
-        Optional<Review> reviewOptional = reviewService.findReviewById(reviewId);
-        return reviewOptional.map(review -> Response.ok(mapToReviewResponseDTO(review)).build())
-                .orElse(Response.status(Response.Status.NOT_FOUND).build());
-    }
-
-    @PUT
-    @Path("/{reviewId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "user", "admin" })
-    public Response updateReview(@PathParam("reviewId") UUID reviewId, @Valid ReviewRequestDTO updateReviewRequestDTO) {
-        String userIdClaim = jwt.getClaim("sub");
-        if (userIdClaim == null) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity("User ID not found in JWT.").build();
-        }
-        UUID currentUserId = UUID.fromString(userIdClaim);
-
-        try {
-            Review existingReview = findReviewAndCheckOwnership(reviewId, currentUserId);
-
-            Optional<Book> book = bookService.getBookById(updateReviewRequestDTO.getBookId());
-            Optional<User> user = userService.findUserProfileById(currentUserId);
-
-            if (book.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("Book not found.").build();
-            }
-            if (user.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
-            }
-
-            Review reviewToUpdate = new ReviewImpl.ReviewBuilder()
-                    .reviewId(reviewId)
-                    .book(existingReview.getBook())
-                    .user(existingReview.getUser())
-                    .reviewText(updateReviewRequestDTO.getReviewText())
-                    .rating(updateReviewRequestDTO.getRating())
-                    .publicationDate(existingReview.getPublicationDate())
-                    .build();
-
-            Review updatedReview = reviewService.updateReview(reviewToUpdate);
-
-            return Response.ok(mapToReviewResponseDTO(updatedReview)).build();
-
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        }
-    }
-
-    @DELETE
-    @Path("/{reviewId}")
-    @RolesAllowed({ "user", "admin" })
-    public Response deleteReviewById(@PathParam("reviewId") UUID reviewId) {
-        String userIdClaim = jwt.getClaim("sub");
-        if (userIdClaim == null) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity("User ID not found in JWT.").build();
-        }
-        UUID currentUserId = UUID.fromString(userIdClaim);
-
-        try {
-            findReviewAndCheckOwnership(reviewId, currentUserId);
-            reviewService.deleteReviewById(reviewId);
-            return Response.noContent().build();
-
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        }
-    }
-
-    @GET
-    @Path("/books/{bookId}")
-    @RolesAllowed({ "user", "admin" })
-    public Response getReviewsByBookId(@PathParam("bookId") UUID bookId) {
-        List<Review> reviews = reviewService.getReviewsForBook(bookId);
-        return Response.ok(reviews.stream()
-                .map(this::mapToReviewResponseDTO)
-                .collect(Collectors.toList())).build();
-    }
-
-    @GET
-    @Path("/users/{userId}")
-    @RolesAllowed({ "user", "admin" })
-    public Response getReviewsByUserId(@PathParam("userId") UUID userId) {
-        List<Review> reviews = reviewService.getReviewsForUser(userId);
-        return Response.ok(reviews.stream()
-                .map(this::mapToReviewResponseDTO)
-                .collect(Collectors.toList())).build();
+        return UUID.fromString(userIdClaim);
     }
 
     private ReviewResponseDTO mapToReviewResponseDTO(Review review) {
@@ -201,5 +80,148 @@ public class ReviewController {
             throw new ForbiddenException("You are not authorized to access this review.");
         }
         return existingReview;
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RolesAllowed({ "user", "admin" })
+    public Response createReview(@Valid ReviewRequestDTO createReviewRequestDTO) {
+        try {
+            UUID userId = getCurrentUserIdFromJwt();
+
+            Optional<Book> book = bookService.getBookById(createReviewRequestDTO.getBookId());
+            Optional<User> user = userService.findUserProfileById(userId);
+
+            if (book.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Book not found.").build();
+            }
+            if (user.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
+            }
+
+            Review reviewToCreate = new ReviewImpl.ReviewBuilder()
+                    .reviewId(UUID.randomUUID())
+                    .book(book.get())
+                    .user(user.get())
+                    .reviewText(createReviewRequestDTO.getReviewText())
+                    .rating(createReviewRequestDTO.getRating())
+                    .publicationDate(LocalDateTime.now())
+                    .build();
+
+            Review createdReview = reviewService.createReview(reviewToCreate);
+
+            return Response.status(Response.Status.CREATED)
+                    .entity(mapToReviewResponseDTO(createdReview))
+                    .build();
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/{reviewId}")
+    @RolesAllowed({ "user", "admin" })
+    public Response getReviewById(@PathParam("reviewId") UUID reviewId) {
+        try {
+            UUID currentUserId = getCurrentUserIdFromJwt();
+            return Response.ok(mapToReviewResponseDTO(findReviewAndCheckOwnership(reviewId, currentUserId))).build();
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        } catch (ForbiddenException e) {
+            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
+        }
+    }
+
+    @PUT
+    @Path("/{reviewId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RolesAllowed({ "user", "admin" })
+    public Response updateReview(@PathParam("reviewId") UUID reviewId, @Valid ReviewRequestDTO updateReviewRequestDTO) {
+        try {
+            UUID currentUserId = getCurrentUserIdFromJwt();
+
+            Review existingReview = findReviewAndCheckOwnership(reviewId, currentUserId);
+
+            Optional<Book> book = bookService.getBookById(updateReviewRequestDTO.getBookId());
+            Optional<User> user = userService.findUserProfileById(currentUserId);
+
+            if (book.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Book not found.").build();
+            }
+            if (user.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
+            }
+
+            Review reviewToUpdate = new ReviewImpl.ReviewBuilder()
+                    .reviewId(reviewId)
+                    .book(existingReview.getBook())
+                    .user(existingReview.getUser())
+                    .reviewText(updateReviewRequestDTO.getReviewText())
+                    .rating(updateReviewRequestDTO.getRating())
+                    .publicationDate(existingReview.getPublicationDate())
+                    .build();
+
+            Review updatedReview = reviewService.updateReview(reviewToUpdate);
+
+            return Response.ok(mapToReviewResponseDTO(updatedReview)).build();
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        } catch (ForbiddenException e) {
+            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
+        }
+    }
+
+    @DELETE
+    @Path("/{reviewId}")
+    @RolesAllowed({ "user", "admin" })
+    public Response deleteReviewById(@PathParam("reviewId") UUID reviewId) {
+        try {
+            UUID currentUserId = getCurrentUserIdFromJwt();
+
+            findReviewAndCheckOwnership(reviewId, currentUserId);
+            reviewService.deleteReviewById(reviewId);
+            return Response.noContent().build();
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        } catch (ForbiddenException e) {
+            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/books/{bookId}")
+    @RolesAllowed({ "user", "admin" })
+    public Response getReviewsByBookId(@PathParam("bookId") UUID bookId) {
+        List<Review> reviews = reviewService.getReviewsForBook(bookId);
+        return Response.ok(reviews.stream()
+                .map(this::mapToReviewResponseDTO)
+                .collect(Collectors.toList())).build();
+    }
+
+    @GET
+    @Path("/users/{userId}")
+    @RolesAllowed({ "user", "admin" })
+    public Response getReviewsByUserId(@PathParam("userId") UUID userId) {
+        try {
+            UUID currentUserId = getCurrentUserIdFromJwt();
+
+            if (!userId.equals(currentUserId) && !ctx.isUserInRole("admin")) {
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity("You are not authorized to view reviews for this user.").build();
+            }
+
+            List<Review> reviews = reviewService.getReviewsForUser(userId);
+            return Response.ok(reviews.stream()
+                    .map(this::mapToReviewResponseDTO)
+                    .collect(Collectors.toList())).build();
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        }
     }
 }
