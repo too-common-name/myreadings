@@ -61,7 +61,6 @@ public class ReviewControllerIntegrationTest {
                         .build();
 
         private UUID aliceReviewId;
-        private UUID bobReviewId;
 
         @BeforeEach
         void setUp() {

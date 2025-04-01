@@ -13,7 +13,6 @@ import modules.user.domain.User;
 import modules.user.domain.UserImpl;
 import modules.user.usecases.UserService;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import jakarta.ws.rs.core.SecurityContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +29,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,9 +49,6 @@ public class ReviewControllerUnitTest {
 
     @Mock
     private JsonWebToken jwt;
-
-    @Mock
-    private SecurityContext ctx;
 
     private UUID testUserId;
     private UUID testBookId;
@@ -141,7 +138,8 @@ public class ReviewControllerUnitTest {
     @Test
     void testGetReviewByIdShouldReturnOkAndReviewDTO() {
         when(reviewService.findReviewById(testReviewId)).thenReturn(Optional.of(mockReview));
-        
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+
         Response response = reviewController.getReviewById(testReviewId);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -152,6 +150,7 @@ public class ReviewControllerUnitTest {
     @Test
     void testGetReviewByIdShouldReturnNotFound() {
         when(reviewService.findReviewById(testReviewId)).thenReturn(Optional.empty());
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
 
         Response response = reviewController.getReviewById(testReviewId);
 
@@ -273,6 +272,7 @@ public class ReviewControllerUnitTest {
         List<Review> reviews = Collections.singletonList(mockReview);
         List<ReviewResponseDTO> expectedList = Collections.singletonList(expectedResponseDTO);
         when(reviewService.getReviewsForUser(testUserId)).thenReturn(reviews);
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
 
         Response response = reviewController.getReviewsByUserId(testUserId);
 

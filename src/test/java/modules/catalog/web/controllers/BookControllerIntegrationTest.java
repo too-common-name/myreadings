@@ -99,6 +99,7 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
+    @TestSecurity(user = "user", roles = "user")
     void testGetBookByIdNonExistingIdShouldReturnNotFound() {
         UUID nonExistingId = UUID.randomUUID();
         given().pathParam("bookId", nonExistingId).when().get("/api/v1/books/{bookId}").then()
