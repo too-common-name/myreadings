@@ -1,6 +1,7 @@
 package modules.catalog.core.domain;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import jakarta.validation.constraints.Min;
@@ -9,6 +10,7 @@ import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Builder.Default;
 
 @Data
 @Builder
@@ -20,7 +22,8 @@ public class BookImpl implements Book {
     @NotBlank
     @Size(max = 255)
     private final String title;
-    private final List<String> authors;
+    @Default
+    private final List<String> authors = new ArrayList<>();
     @PastOrPresent
     private final LocalDate publicationDate;
     @Size(max = 255)

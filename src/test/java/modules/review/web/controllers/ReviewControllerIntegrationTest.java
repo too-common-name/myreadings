@@ -55,22 +55,22 @@ public class ReviewControllerIntegrationTest {
                         .build();
 
         private final Book testBook = BookImpl.builder()
-                        .bookId(UUID.randomUUID())
                         .isbn("978-0321765723")
                         .title("The Lord of the Rings")
                         .build();
 
         private UUID aliceReviewId;
+        private Book createdBook;
 
         @BeforeEach
         void setUp() {
                 userService.createUserProfile(alice);
                 userService.createUserProfile(admin);
-                bookService.createBook(testBook);
+                createdBook = bookService.createBook(testBook);
 
                 Review aliceReview = ReviewImpl.builder()
                                 .reviewId(UUID.randomUUID())
-                                .book(testBook)
+                                .book(createdBook)
                                 .user(alice)
                                 .rating(5)
                                 .reviewText("Excellent book!")
@@ -81,20 +81,19 @@ public class ReviewControllerIntegrationTest {
 
         @Test
         void testUserCanCreateReview() {
-                UUID newBookId = UUID.randomUUID();
-                bookService.createBook(
-                                BookImpl.builder().bookId(newBookId).isbn("123").title("New Book").build());
+                Book created = bookService.createBook(
+                                BookImpl.builder().isbn("123").title("New Book").build());
                 given()
                                 .auth().oauth2(getAccessToken(alice.getUsername()))
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + newBookId + "\", \"rating\": 5, \"reviewText\": \"Great!\"}")
+                                .body("{\"bookId\": \"" + created.getBookId() + "\", \"rating\": 5, \"reviewText\": \"Great!\"}")
                                 .when().post()
                                 .then()
                                 .statusCode(201)
                                 .body("rating", is(5))
                                 .body("reviewText", equalTo("Great!"))
                                 .body("userId", equalTo(alice.getKeycloakUserId().toString()))
-                                .body("bookId", equalTo(newBookId.toString()));
+                                .body("bookId", equalTo(created.getBookId().toString()));
         }
 
         @Test
@@ -116,7 +115,7 @@ public class ReviewControllerIntegrationTest {
                                 .auth().oauth2(getAccessToken(alice.getUsername()))
                                 .pathParam("reviewId", aliceReviewId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + testBook.getBookId()
+                                .body("{\"bookId\": \"" + createdBook.getBookId()
                                                 + "\", \"rating\": 3, \"reviewText\": \"Updated review text.\"}")
                                 .when().put("/{reviewId}")
                                 .then()
@@ -133,7 +132,7 @@ public class ReviewControllerIntegrationTest {
                                 .auth().oauth2(getAccessToken(admin.getUsername()))
                                 .pathParam("reviewId", aliceReviewId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + testBook.getBookId()
+                                .body("{\"bookId\": \"" + createdBook.getBookId()
                                                 + "\", \"rating\": 2, \"reviewText\": \"Attempting to update.\"}")
                                 .when().put("/{reviewId}")
                                 .then()
@@ -164,11 +163,11 @@ public class ReviewControllerIntegrationTest {
         void testGetReviewsByBookId() {
                 given()
                                 .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("bookId", testBook.getBookId())
+                                .pathParam("bookId", createdBook.getBookId())
                                 .when().get("/books/{bookId}")
                                 .then()
                                 .statusCode(200)
-                                .body("[0].bookId", equalTo(testBook.getBookId().toString()));
+                                .body("[0].bookId", equalTo(createdBook.getBookId().toString()));
         }
 
         @Test

@@ -5,10 +5,14 @@ import modules.catalog.infrastructure.persistence.in_memory.InMemoryBookReposito
 import modules.catalog.utils.CatalogTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import io.quarkus.test.junit.TestProfile;
+
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@TestProfile(InMemoryRepositoryTestProfile.class)
 public class InMemoryBookRepositoryTest {
 
     private InMemoryBookRepository repository;

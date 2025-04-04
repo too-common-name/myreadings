@@ -55,19 +55,19 @@ public class ReadingListControllerIntegrationTest {
             .build();
 
     private final Book testBook = BookImpl.builder()
-            .bookId(UUID.randomUUID())
             .isbn("123-456")
             .title("Test Book")
             .build();
 
     private UUID aliceListId;
     private UUID adminListId;
+    private Book createdBook;
 
     @BeforeEach
     void setUp() {
         userService.createUserProfile(alice);
         userService.createUserProfile(admin);
-        bookService.createBook(testBook);
+        createdBook = bookService.createBook(testBook);
 
         ReadingList aliceReadingList = ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
@@ -193,7 +193,7 @@ public class ReadingListControllerIntegrationTest {
                 .auth().oauth2(getAccessToken(alice.getUsername()))
                 .pathParam("readingListId", aliceListId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"bookId\": \"" + testBook.getBookId() + "\"}")
+                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
                 .when().post("/{readingListId}/books")
                 .then()
                 .statusCode(200)
@@ -206,7 +206,7 @@ public class ReadingListControllerIntegrationTest {
                 .auth().oauth2(getAccessToken(alice.getUsername()))
                 .pathParam("readingListId", adminListId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"bookId\": \"" + testBook.getBookId() + "\"}")
+                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
                 .when().post("/{readingListId}/books")
                 .then()
                 .statusCode(403);
@@ -219,13 +219,13 @@ public class ReadingListControllerIntegrationTest {
                 .auth().oauth2(token)
                 .pathParam("readingListId", aliceListId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"bookId\": \"" + testBook.getBookId() + "\"}")
+                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
                 .when().post("/{readingListId}/books");
 
         given()
                 .auth().oauth2(token)
                 .pathParam("readingListId", aliceListId)
-                .pathParam("bookId", testBook.getBookId())
+                .pathParam("bookId", createdBook.getBookId())
                 .when().delete("/{readingListId}/books/{bookId}")
                 .then()
                 .statusCode(204);
@@ -236,7 +236,7 @@ public class ReadingListControllerIntegrationTest {
         given()
                 .auth().oauth2(getAccessToken(alice.getUsername()))
                 .pathParam("readingListId", adminListId)
-                .pathParam("bookId", testBook.getBookId())
+                .pathParam("bookId", createdBook.getBookId())
                 .when().delete("/{readingListId}/books/{bookId}")
                 .then()
                 .statusCode(403);
@@ -249,7 +249,7 @@ public class ReadingListControllerIntegrationTest {
                 .auth().oauth2(token)
                 .pathParam("readingListId", aliceListId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"bookId\": \"" + testBook.getBookId() + "\"}")
+                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
                 .when().post("/{readingListId}/books");
 
         given()
@@ -258,7 +258,7 @@ public class ReadingListControllerIntegrationTest {
                 .when().get("/{readingListId}/books")
                 .then()
                 .statusCode(200)
-                .body("any { it.bookId == '" + testBook.getBookId().toString() + "' }", is(true));
+                .body("any { it.bookId == '" + createdBook.getBookId().toString() + "' }", is(true));
     }
 
     @Test
