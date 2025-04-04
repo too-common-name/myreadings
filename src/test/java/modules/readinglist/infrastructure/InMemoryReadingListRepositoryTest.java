@@ -1,7 +1,7 @@
 package modules.readinglist.infrastructure;
 
-import modules.catalog.domain.Book;
 import modules.readinglist.domain.ReadingList;
+import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.readinglist.utils.ReadingListTestUtils;
 import modules.user.domain.User;
@@ -129,7 +129,7 @@ public class InMemoryReadingListRepositoryTest {
         repository.save(readingList1);
         repository.save(readingList2);
 
-        List<ReadingList> userReadingLists = repository.findByUserId(user.getUserId());
+        List<ReadingList> userReadingLists = repository.findByUserId(user.getKeycloakUserId());
 
         assertEquals(2, userReadingLists.size());
         assertIterableEquals(new HashSet<>(List.of(readingList1, readingList2)),
@@ -139,7 +139,7 @@ public class InMemoryReadingListRepositoryTest {
     @Test
     void testFindByUserIdEmpty() {
         User user = UserTestUtils.createValidUser();
-        List<ReadingList> userReadingLists = repository.findByUserId(user.getUserId());
+        List<ReadingList> userReadingLists = repository.findByUserId(user.getKeycloakUserId());
         assertTrue(userReadingLists.isEmpty());
     }
 

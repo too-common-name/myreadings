@@ -55,7 +55,7 @@ public class UserController {
 
     private UserResponseDTO mapToUserResponseDTO(User user) {
         return UserResponseDTO.builder()
-                .userId(user.getUserId())
+                .userId(user.getKeycloakUserId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .username(user.getUsername())

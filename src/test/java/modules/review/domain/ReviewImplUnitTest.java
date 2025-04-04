@@ -12,9 +12,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
-import modules.catalog.domain.Book;
-import modules.catalog.domain.BookImpl;
+
 import modules.user.domain.UserImpl;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
 import modules.user.domain.UiTheme;
 import modules.user.domain.User;
 
@@ -30,7 +31,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithValidDataSuccessful() {
-        Review review = new ReviewImpl.ReviewBuilder()
+        Review review = ReviewImpl.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(createValidUser())
@@ -46,7 +47,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithoutBookFailsValidation() {
-        Review review = new ReviewImpl.ReviewBuilder()
+        Review review = ReviewImpl.builder()
                 .reviewId(UUID.randomUUID())
                 .book(null) // Book is null, should fail @NotNull
                 .user(createValidUser())
@@ -63,7 +64,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithoutUserFailsValidation() {
-        Review review = new ReviewImpl.ReviewBuilder()
+        Review review = ReviewImpl.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(null) // User is null, should fail @NotNull
@@ -82,7 +83,7 @@ public class ReviewImplUnitTest {
     void createReviewWithTooLongReviewTextFailsValidation() {
         String longReviewText = "This review text is intentionally made very long to exceed the 200 character limit imposed by the @Size annotation. We need to make sure that validation correctly identifies this as an invalid review text because it is too long....................................................................................................................."; // Exceeds 200 chars
 
-        Review review = new ReviewImpl.ReviewBuilder()
+        Review review = ReviewImpl.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(createValidUser())
@@ -99,7 +100,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithRatingTooLowFailsValidation() {
-        Review review = new ReviewImpl.ReviewBuilder()
+        Review review = ReviewImpl.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(createValidUser())
@@ -116,7 +117,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithRatingTooHighFailsValidation() {
-        Review review = new ReviewImpl.ReviewBuilder()
+        Review review = ReviewImpl.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(createValidUser())
@@ -133,7 +134,7 @@ public class ReviewImplUnitTest {
 
     // Helper methods to create valid Book and User instances for tests
     private Book createValidBook() {
-        return new BookImpl.BookBuilder()
+        return BookImpl.builder()
                 .bookId(UUID.randomUUID())
                 .isbn("978-0321765723")
                 .title("The катание Programming Language")
@@ -148,8 +149,8 @@ public class ReviewImplUnitTest {
     }
 
     private User createValidUser() {
-        return new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        return UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")

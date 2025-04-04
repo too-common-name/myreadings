@@ -1,6 +1,6 @@
 package modules.readinglist.infrastructure;
 
-import modules.catalog.domain.Book;
+import modules.catalog.core.domain.Book;
 import modules.readinglist.domain.ReadingList;
 import java.util.List;
 import java.util.Optional;

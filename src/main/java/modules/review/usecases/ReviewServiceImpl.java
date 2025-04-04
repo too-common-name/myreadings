@@ -6,7 +6,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.Optional;
 import java.util.List;
-import modules.catalog.usecases.BookService;
+
+import modules.catalog.core.usecases.BookService;
 import modules.review.domain.Review;
 import modules.review.infrastructure.ReviewRepository;
 import modules.user.usecases.UserService;
@@ -30,8 +31,8 @@ public class ReviewServiceImpl implements ReviewService {
         if (!bookService.getBookById(review.getBook().getBookId()).isPresent()) {
             throw new IllegalArgumentException("Book not found: " + review.getBook().getBookId());
         }
-        if (!userService.findUserProfileById(review.getUser().getUserId()).isPresent()) {
-            throw new IllegalArgumentException("User not found: " + review.getUser().getUserId());
+        if (!userService.findUserProfileById(review.getUser().getKeycloakUserId()).isPresent()) {
+            throw new IllegalArgumentException("User not found: " + review.getUser().getKeycloakUserId());
         }
 
         return reviewRepository.save(review);

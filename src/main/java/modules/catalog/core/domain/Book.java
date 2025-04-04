@@ -1,4 +1,4 @@
-package modules.catalog.domain;
+package modules.catalog.core.domain;
 
 import java.time.LocalDate;
 import java.util.List;

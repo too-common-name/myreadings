@@ -1,7 +1,7 @@
 package modules.readinglist.usecases;
 
-import modules.catalog.domain.Book;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.BookService;
 import modules.readinglist.domain.ReadingList;
 import modules.readinglist.infrastructure.ReadingListRepository;
 import modules.catalog.utils.CatalogTestUtils;

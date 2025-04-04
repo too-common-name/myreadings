@@ -18,8 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import modules.review.domain.Review;
 import modules.review.infrastructure.ReviewRepository;
 import modules.review.utils.ReviewTestUtils;
-import modules.catalog.domain.Book;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.BookService;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.user.domain.User;
 import modules.user.usecases.UserService;
@@ -50,7 +50,7 @@ public class ReviewServiceImplTest {
 
         Review reviewToCreate = ReviewTestUtils.createValidReviewWithText("test");
         UUID bookId = reviewToCreate.getBook().getBookId();
-        UUID userId = reviewToCreate.getUser().getUserId();
+        UUID userId = reviewToCreate.getUser().getKeycloakUserId();
         Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
         User existingUser = UserTestUtils.createValidUserWithId(userId);
 
@@ -92,7 +92,7 @@ public class ReviewServiceImplTest {
     void testCreateReviewFailsUserNotFound() {
         Review reviewToCreate = ReviewTestUtils.createValidReviewWithText("test");
         UUID bookId = reviewToCreate.getBook().getBookId();
-        UUID userId = reviewToCreate.getUser().getUserId();
+        UUID userId = reviewToCreate.getUser().getKeycloakUserId();
 
         when(bookService.getBookById(bookId))
                 .thenReturn(Optional.of(CatalogTestUtils.createValidBookWithId(bookId)));

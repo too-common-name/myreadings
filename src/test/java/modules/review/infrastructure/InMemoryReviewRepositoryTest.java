@@ -139,7 +139,7 @@ public class InMemoryReviewRepositoryTest {
 
         List<Review> reviewsForUser1 = repository.getUserReviews(userId1);
         assertEquals(2, reviewsForUser1.size());
-        assertTrue(reviewsForUser1.stream().allMatch(review -> review.getUser().getUserId().equals(userId1)));
+        assertTrue(reviewsForUser1.stream().allMatch(review -> review.getUser().getKeycloakUserId().equals(userId1)));
     }
 
     @Test
@@ -159,7 +159,7 @@ public class InMemoryReviewRepositoryTest {
         Optional<Review> retrievedReviewOpt = repository.findByUserIdAndBookId(userId, bookId);
         assertTrue(retrievedReviewOpt.isPresent());
         assertEquals(expectedReview.getReviewId(), retrievedReviewOpt.get().getReviewId());
-        assertEquals(userId, retrievedReviewOpt.get().getUser().getUserId());
+        assertEquals(userId, retrievedReviewOpt.get().getUser().getKeycloakUserId());
         assertEquals(bookId, retrievedReviewOpt.get().getBook().getBookId());
     }
 

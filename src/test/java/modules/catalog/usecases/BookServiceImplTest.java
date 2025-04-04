@@ -1,7 +1,8 @@
 package modules.catalog.usecases;
 
-import modules.catalog.domain.Book;
-import modules.catalog.infrastructure.BookRepository;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.BookServiceImpl;
+import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -55,14 +55,14 @@ public class InMemoryReviewRepository implements ReviewRepository {
     @Override
     public List<Review> getUserReviews(UUID userId) {
         return reviews.values().stream()
-                .filter(review -> review.getUser().getUserId().equals(userId))
+                .filter(review -> review.getUser().getKeycloakUserId().equals(userId))
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<Review> findByUserIdAndBookId(UUID userId, UUID bookId) {
         return reviews.values().stream()
-                .filter(review -> review.getUser().getUserId().equals(userId) && review.getBook().getBookId().equals(bookId))
+                .filter(review -> review.getUser().getKeycloakUserId().equals(userId) && review.getBook().getBookId().equals(bookId))
                 .findFirst();
     }
 

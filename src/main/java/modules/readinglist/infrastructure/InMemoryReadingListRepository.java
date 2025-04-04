@@ -1,7 +1,7 @@
 package modules.readinglist.infrastructure;
 
+import modules.catalog.core.domain.Book;
 import modules.readinglist.domain.ReadingList;
-import modules.catalog.domain.Book;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,7 +27,7 @@ public class InMemoryReadingListRepository implements ReadingListRepository {
     @Override
     public List<ReadingList> findByUserId(UUID userId) {
         return readingLists.values().stream()
-                .filter(readingList -> readingList.getUser().getUserId().equals(userId))
+                .filter(readingList -> readingList.getUser().getKeycloakUserId().equals(userId))
                 .collect(Collectors.toList());
     }
     

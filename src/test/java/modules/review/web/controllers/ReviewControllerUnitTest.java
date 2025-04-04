@@ -1,9 +1,9 @@
 package modules.review.web.controllers;
 
 import jakarta.ws.rs.core.Response;
-import modules.catalog.domain.Book;
-import modules.catalog.domain.BookImpl;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
+import modules.catalog.core.usecases.BookService;
 import modules.review.domain.Review;
 import modules.review.domain.ReviewImpl;
 import modules.review.usecases.ReviewService;
@@ -67,8 +67,8 @@ public class ReviewControllerUnitTest {
         testBookId = UUID.randomUUID();
         testReviewId = UUID.randomUUID();
 
-        mockBook = new BookImpl.BookBuilder().bookId(testBookId).title("Test Book").build();
-        mockUser = new UserImpl.UserBuilder().userId(testUserId).username("testuser").build();
+        mockBook = BookImpl.builder().bookId(testBookId).title("Test Book").build();
+        mockUser = UserImpl.builder().keycloakUserId(testUserId).username("testuser").build();
 
         mockReviewRequestDTO = ReviewRequestDTO.builder()
                 .bookId(testBookId)
@@ -76,7 +76,7 @@ public class ReviewControllerUnitTest {
                 .reviewText("This is a test review.")
                 .build();
 
-        mockReview = new ReviewImpl.ReviewBuilder()
+        mockReview = ReviewImpl.builder()
                 .reviewId(testReviewId)
                 .book(mockBook)
                 .user(mockUser)
@@ -162,7 +162,7 @@ public class ReviewControllerUnitTest {
     @Test
     void testUpdateReviewShouldReturnOkAndReviewDTOForOwner() {
         ReviewRequestDTO updateRequestDTO = ReviewRequestDTO.builder().rating(5).reviewText("Updated review.").bookId(testBookId).build();
-        Review updatedReview = new ReviewImpl.ReviewBuilder()
+        Review updatedReview = ReviewImpl.builder()
                 .reviewId(testReviewId)
                 .book(mockBook)
                 .user(mockUser)

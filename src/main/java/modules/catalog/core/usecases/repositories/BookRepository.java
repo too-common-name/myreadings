@@ -1,7 +1,9 @@
-package modules.catalog.infrastructure;
+package modules.catalog.core.usecases.repositories;
 
-import modules.catalog.domain.Book;
 import java.util.UUID;
+
+import modules.catalog.core.domain.Book;
+
 import java.util.Optional;
 import java.util.List;
 

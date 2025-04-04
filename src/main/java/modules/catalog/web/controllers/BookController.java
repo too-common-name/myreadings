@@ -9,9 +9,9 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import modules.catalog.domain.Book;
-import modules.catalog.domain.BookImpl;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
+import modules.catalog.core.usecases.BookService;
 import modules.catalog.web.dto.BookResponseDTO;
 import modules.catalog.web.dto.BookRequestDTO;
 import jakarta.annotation.security.RolesAllowed;
@@ -36,7 +36,7 @@ public class BookController {
     @POST
     @RolesAllowed("admin")
     public Response createBook(@Valid BookRequestDTO createBookRequestDTO) {
-        Book bookToCreate = new BookImpl.BookBuilder()
+        Book bookToCreate = BookImpl.builder()
                 .bookId(UUID.randomUUID())
                 .isbn(createBookRequestDTO.getIsbn())
                 .title(createBookRequestDTO.getTitle())

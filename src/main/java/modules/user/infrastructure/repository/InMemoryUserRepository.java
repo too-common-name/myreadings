@@ -16,7 +16,7 @@ public class InMemoryUserRepository implements UserRepository {
 
     @Override
     public User save(User user) {
-        users.put(user.getUserId(), user);
+        users.put(user.getKeycloakUserId(), user);
         return user;
     }
 

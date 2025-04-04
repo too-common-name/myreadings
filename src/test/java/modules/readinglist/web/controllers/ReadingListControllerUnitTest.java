@@ -40,7 +40,7 @@ public class ReadingListControllerUnitTest {
     @Mock
     private JsonWebToken jwt;
 
-    private UUID testUserId;
+    private UUID testkeycloakUserId;
     private UUID testReadingListId;
     private UUID testBookId;
 
@@ -52,18 +52,18 @@ public class ReadingListControllerUnitTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        testUserId = UUID.randomUUID();
+        testkeycloakUserId = UUID.randomUUID();
         testReadingListId = UUID.randomUUID();
         testBookId = UUID.randomUUID();
 
-        mockUser = new UserImpl.UserBuilder().userId(testUserId).username("testuser").build();
+        mockUser = UserImpl.builder().keycloakUserId(testkeycloakUserId).username("testuser").build();
 
         mockReadingListRequestDTO = ReadingListRequestDTO.builder()
                 .name("Test List")
                 .description("Test Description")
                 .build();
 
-        mockReadingList = new ReadingListImpl.ReadingListBuilder()
+        mockReadingList = ReadingListImpl.builder()
                 .readingListId(testReadingListId)
                 .user(mockUser)
                 .name("Test List")
@@ -79,13 +79,13 @@ public class ReadingListControllerUnitTest {
                 .books(new ArrayList<>())
                 .build();
 
-        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(jwt.getClaim("sub")).thenReturn(testkeycloakUserId.toString());
     }
 
     @Test
     void testCreateReadingListShouldReturnCreatedAndDTO() {
         when(readingListService.createReadingList(any(ReadingList.class))).thenReturn(mockReadingList);
-        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.of(mockUser));
+        when(userService.findUserProfileById(testkeycloakUserId)).thenReturn(Optional.of(mockUser));
         
         Response response = readingListController.createReadingList(mockReadingListRequestDTO);
 
@@ -96,7 +96,7 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testCreateReadingListShouldReturnBadRequestIfUserNotFound() {
-        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.empty());
+        when(userService.findUserProfileById(testkeycloakUserId)).thenReturn(Optional.empty());
 
         Response response = readingListController.createReadingList(mockReadingListRequestDTO);
 
@@ -128,8 +128,8 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testGetReadingListByIdShouldReturnForbiddenForNonOwner() {
-        User otherUser = new UserImpl.UserBuilder().userId(UUID.randomUUID()).username("otheruser").build();
-        ReadingList otherList = new ReadingListImpl.ReadingListBuilder().readingListId(testReadingListId).user(otherUser).build();
+        User otherUser = UserImpl.builder().keycloakUserId(UUID.randomUUID()).username("otheruser").build();
+        ReadingList otherList = ReadingListImpl.builder().readingListId(testReadingListId).user(otherUser).build();
         when(readingListService.findReadingListById(testReadingListId)).thenReturn(Optional.of(otherList));
 
         Response response = readingListController.getReadingListById(testReadingListId);
@@ -143,19 +143,19 @@ public class ReadingListControllerUnitTest {
     void testGetAllReadingListsForUserShouldReturnOkAndListOfDTOs() {
         List<ReadingList> readingLists = Collections.singletonList(mockReadingList);
         List<ReadingListResponseDTO> expectedList = Collections.singletonList(expectedResponseDTO);
-        when(readingListService.getReadingListsForUser(testUserId)).thenReturn(readingLists);
+        when(readingListService.getReadingListsForUser(testkeycloakUserId)).thenReturn(readingLists);
 
         Response response = readingListController.getAllReadingListsForUser();
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedList, response.getEntity());
-        verify(readingListService, times(1)).getReadingListsForUser(testUserId);
+        verify(readingListService, times(1)).getReadingListsForUser(testkeycloakUserId);
     }
 
     @Test
     void testUpdateReadingListShouldReturnOkAndDTOForOwner() {
         ReadingListRequestDTO updateDTO = ReadingListRequestDTO.builder().name("Updated Name").description("Updated Description").build();
-        ReadingList updatedList = new ReadingListImpl.ReadingListBuilder()
+        ReadingList updatedList = ReadingListImpl.builder()
                 .readingListId(testReadingListId)
                 .user(mockUser)
                 .name("Updated Name")
@@ -191,8 +191,8 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testUpdateReadingListShouldReturnForbiddenForNonOwner() {
-        User otherUser = new UserImpl.UserBuilder().userId(UUID.randomUUID()).username("otheruser").build();
-        ReadingList otherList = new ReadingListImpl.ReadingListBuilder().readingListId(testReadingListId).user(otherUser).build();
+        User otherUser = UserImpl.builder().keycloakUserId(UUID.randomUUID()).username("otheruser").build();
+        ReadingList otherList = ReadingListImpl.builder().readingListId(testReadingListId).user(otherUser).build();
         when(readingListService.findReadingListById(testReadingListId)).thenReturn(Optional.of(otherList));
 
         Response response = readingListController.updateReadingList(testReadingListId, mockReadingListRequestDTO);
@@ -225,8 +225,8 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testDeleteReadingListShouldReturnForbiddenForNonOwner() {
-        User otherUser = new UserImpl.UserBuilder().userId(UUID.randomUUID()).username("otheruser").build();
-        ReadingList otherList = new ReadingListImpl.ReadingListBuilder().readingListId(testReadingListId).user(otherUser).build();
+        User otherUser = UserImpl.builder().keycloakUserId(UUID.randomUUID()).username("otheruser").build();
+        ReadingList otherList = ReadingListImpl.builder().readingListId(testReadingListId).user(otherUser).build();
         when(readingListService.findReadingListById(testReadingListId)).thenReturn(Optional.of(otherList));
 
         Response response = readingListController.deleteReadingList(testReadingListId);
@@ -265,8 +265,8 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testAddBookToReadingListShouldReturnForbiddenForNonOwner() {
-        User otherUser = new UserImpl.UserBuilder().userId(UUID.randomUUID()).username("otheruser").build();
-        ReadingList otherList = new ReadingListImpl.ReadingListBuilder().readingListId(testReadingListId).user(otherUser).build();
+        User otherUser = UserImpl.builder().keycloakUserId(UUID.randomUUID()).username("otheruser").build();
+        ReadingList otherList = ReadingListImpl.builder().readingListId(testReadingListId).user(otherUser).build();
         when(readingListService.findReadingListById(testReadingListId)).thenReturn(Optional.of(otherList));
         AddBookRequestDTO addBookRequestDTO = AddBookRequestDTO.builder().bookId(testBookId).build();
 
@@ -301,8 +301,8 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testRemoveBookFromReadingListShouldReturnForbiddenForNonOwner() {
-        User otherUser = new UserImpl.UserBuilder().userId(UUID.randomUUID()).username("otheruser").build();
-        ReadingList otherList = new ReadingListImpl.ReadingListBuilder().readingListId(testReadingListId).user(otherUser).build();
+        User otherUser = UserImpl.builder().keycloakUserId(UUID.randomUUID()).username("otheruser").build();
+        ReadingList otherList = ReadingListImpl.builder().readingListId(testReadingListId).user(otherUser).build();
         when(readingListService.findReadingListById(testReadingListId)).thenReturn(Optional.of(otherList));
 
         Response response = readingListController.removeBookFromReadingList(testReadingListId, testBookId);
@@ -314,7 +314,7 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testGetBooksInReadingListShouldReturnOkAndListOfBooksForOwner() {
-        List<modules.catalog.domain.Book> books = Collections.emptyList(); // Mock your book list here if needed
+        List<modules.catalog.core.domain.Book> books = Collections.emptyList(); // Mock your book list here if needed
         when(readingListService.findReadingListById(testReadingListId)).thenReturn(Optional.of(mockReadingList));
         when(readingListService.getBooksInReadingList(testReadingListId)).thenReturn(books);
 
@@ -338,8 +338,8 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testGetBooksInReadingListShouldReturnForbiddenForNonOwner() {
-        User otherUser = new UserImpl.UserBuilder().userId(UUID.randomUUID()).username("otheruser").build();
-        ReadingList otherList = new ReadingListImpl.ReadingListBuilder().readingListId(testReadingListId).user(otherUser).build();
+        User otherUser = UserImpl.builder().keycloakUserId(UUID.randomUUID()).username("otheruser").build();
+        ReadingList otherList = ReadingListImpl.builder().readingListId(testReadingListId).user(otherUser).build();
         when(readingListService.findReadingListById(testReadingListId)).thenReturn(Optional.of(otherList));
 
         Response response = readingListController.getBooksInReadingList(testReadingListId);

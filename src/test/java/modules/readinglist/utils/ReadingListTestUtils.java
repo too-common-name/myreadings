@@ -15,7 +15,7 @@ public class ReadingListTestUtils {
 
     public static ReadingList createValidReadingListWithId(UUID readingListId) {
         User user = UserTestUtils.createValidUser();
-        return new ReadingListImpl.ReadingListBuilder()
+        return ReadingListImpl.builder()
                 .readingListId(readingListId)
                 .user(user)
                 .name("Test Reading List")
@@ -26,7 +26,7 @@ public class ReadingListTestUtils {
 
     public static ReadingList createValidReadingListWithName(String name) {
         User user = UserTestUtils.createValidUser();
-        return new ReadingListImpl.ReadingListBuilder()
+        return ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
                 .user(user)
                 .name(name)
@@ -36,7 +36,7 @@ public class ReadingListTestUtils {
     }
 
     public static ReadingList createValidReadingListForUser(User user, String name) {
-        return new ReadingListImpl.ReadingListBuilder()
+        return ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
                 .user(user)
                 .name(name)

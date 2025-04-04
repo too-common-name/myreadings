@@ -5,9 +5,9 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.MediaType;
-import modules.catalog.domain.Book;
-import modules.catalog.domain.BookImpl;
-import modules.catalog.usecases.BookServiceImpl;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
+import modules.catalog.core.usecases.BookServiceImpl;
 import modules.review.domain.Review;
 import modules.review.domain.ReviewImpl;
 import modules.review.usecases.ReviewServiceImpl;
@@ -39,22 +39,22 @@ public class ReviewControllerIntegrationTest {
 
         KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
-        private final User alice = new UserImpl.UserBuilder()
-                        .userId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
+        private final User alice = UserImpl.builder()
+                        .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
                         .firstName("Alice")
                         .lastName("Silverstone")
                         .username("alice")
                         .email("asilverstone@test.com")
                         .build();
-        private final User admin = new UserImpl.UserBuilder()
-                        .userId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
+        private final User admin = UserImpl.builder()
+                        .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
                         .firstName("Bruce")
                         .lastName("Wayne")
                         .username("admin")
                         .email("bwayne@test.com")
                         .build();
 
-        private final Book testBook = new BookImpl.BookBuilder()
+        private final Book testBook = BookImpl.builder()
                         .bookId(UUID.randomUUID())
                         .isbn("978-0321765723")
                         .title("The Lord of the Rings")
@@ -68,7 +68,7 @@ public class ReviewControllerIntegrationTest {
                 userService.createUserProfile(admin);
                 bookService.createBook(testBook);
 
-                Review aliceReview = new ReviewImpl.ReviewBuilder()
+                Review aliceReview = ReviewImpl.builder()
                                 .reviewId(UUID.randomUUID())
                                 .book(testBook)
                                 .user(alice)
@@ -83,7 +83,7 @@ public class ReviewControllerIntegrationTest {
         void testUserCanCreateReview() {
                 UUID newBookId = UUID.randomUUID();
                 bookService.createBook(
-                                new BookImpl.BookBuilder().bookId(newBookId).isbn("123").title("New Book").build());
+                                BookImpl.builder().bookId(newBookId).isbn("123").title("New Book").build());
                 given()
                                 .auth().oauth2(getAccessToken(alice.getUsername()))
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -93,7 +93,7 @@ public class ReviewControllerIntegrationTest {
                                 .statusCode(201)
                                 .body("rating", is(5))
                                 .body("reviewText", equalTo("Great!"))
-                                .body("userId", equalTo(alice.getUserId().toString()))
+                                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
                                 .body("bookId", equalTo(newBookId.toString()));
         }
 
@@ -106,7 +106,7 @@ public class ReviewControllerIntegrationTest {
                                 .then()
                                 .statusCode(200)
                                 .body("reviewId", equalTo(aliceReviewId.toString()))
-                                .body("userId", equalTo(alice.getUserId().toString()));
+                                .body("userId", equalTo(alice.getKeycloakUserId().toString()));
         }
 
 
@@ -124,7 +124,7 @@ public class ReviewControllerIntegrationTest {
                                 .body("reviewId", equalTo(aliceReviewId.toString()))
                                 .body("rating", is(3))
                                 .body("reviewText", equalTo("Updated review text."))
-                                .body("userId", equalTo(alice.getUserId().toString()));
+                                .body("userId", equalTo(alice.getKeycloakUserId().toString()));
         }
 
         @Test
@@ -175,11 +175,11 @@ public class ReviewControllerIntegrationTest {
         void testGetReviewsByUserId() {
                 given()
                                 .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("userId", alice.getUserId())
+                                .pathParam("userId", alice.getKeycloakUserId())
                                 .when().get("/users/{userId}")
                                 .then()
                                 .statusCode(200)
-                                .body("[0].userId", equalTo(alice.getUserId().toString()));
+                                .body("[0].userId", equalTo(alice.getKeycloakUserId().toString()));
         }
 
         protected String getAccessToken(String userName) {

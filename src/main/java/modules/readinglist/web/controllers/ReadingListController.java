@@ -6,7 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import modules.catalog.domain.Book;
+import modules.catalog.core.domain.Book;
 import modules.readinglist.domain.ReadingList;
 import modules.readinglist.domain.ReadingListImpl;
 import modules.readinglist.usecases.ReadingListService;
@@ -61,7 +61,7 @@ public class ReadingListController {
             throw new NotFoundException("Reading list not found with ID: " + readingListId);
         }
         ReadingList readingList = readingListOptional.get();
-        if (!readingList.getUser().getUserId().equals(currentUserId)) {
+        if (!readingList.getUser().getKeycloakUserId().equals(currentUserId)) {
             throw new ForbiddenException("Reading list does not belong to the current user.");
         }
         return readingList;
@@ -78,7 +78,7 @@ public class ReadingListController {
                 return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
             }
 
-            ReadingList newReadingList = new ReadingListImpl.ReadingListBuilder()
+            ReadingList newReadingList = ReadingListImpl.builder()
                     .readingListId(UUID.randomUUID())
                     .user(user.get())
                     .name(readingListRequestDTO.getName())
@@ -134,7 +134,7 @@ public class ReadingListController {
             UUID currentUserId = getCurrentUserIdFromJwt();
             ReadingList existingReadingList = findReadingListAndCheckOwnership(readingListId, currentUserId);
 
-            ReadingList updatedReadingList = new ReadingListImpl.ReadingListBuilder()
+            ReadingList updatedReadingList = ReadingListImpl.builder()
                     .readingListId(readingListId)
                     .user(existingReadingList.getUser())
                     .name(readingListRequestDTO.getName())

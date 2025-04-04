@@ -31,8 +31,8 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        testUser = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        testUser = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .username("testuser")
                 .firstName("Test")
                 .lastName("User")
@@ -53,7 +53,7 @@ class UserServiceImplTest {
 
     @Test
     void testFindUserProfileByIdSuccessful() {
-        UUID userId = testUser.getUserId();
+        UUID userId = testUser.getKeycloakUserId();
         when(userRepositoryMock.findById(userId)).thenReturn(Optional.of(testUser));
 
         Optional<User> foundUserOptional = userService.findUserProfileById(userId);
@@ -90,7 +90,7 @@ class UserServiceImplTest {
 
     @Test
     void testDeleteUserProfileSuccessful() {
-        UUID userIdToDelete = testUser.getUserId();
+        UUID userIdToDelete = testUser.getKeycloakUserId();
         doNothing().when(userRepositoryMock).deleteById(userIdToDelete);
 
         userService.deleteUserProfile(userIdToDelete);
