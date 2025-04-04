@@ -2,6 +2,9 @@ package modules.catalog.infrastructure.persistence.postgres;
 
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
+
+import java.util.ArrayList;
+
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
@@ -32,7 +35,7 @@ public class BookPersistenceMapper {
                 .bookId(entity.getBookId())
                 .isbn(entity.getIsbn())
                 .title(entity.getTitle())
-                .authors(entity.getAuthors())
+                .authors(new ArrayList<>(entity.getAuthors()))
                 .publicationDate(entity.getPublicationDate())
                 .publisher(entity.getPublisher())
                 .description(entity.getDescription())

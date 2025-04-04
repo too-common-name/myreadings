@@ -1,6 +1,7 @@
 package modules.catalog.infrastructure;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -18,6 +19,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
+@TestProfile(JpaRepositoryTestProfile.class)
 public class JpaBookRepositoryTest {
 
     @Inject

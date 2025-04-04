@@ -2,6 +2,7 @@ package modules.catalog.infrastructure.persistence.in_memory;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.repositories.BookRepository;
 
 import java.util.UUID;
@@ -22,8 +23,20 @@ public class InMemoryBookRepository implements BookRepository {
 
     @Override
     public Book save(Book book) {
-        books.put(book.getBookId(), book);
-        return book;
+        Book bookToSave = BookImpl.builder()
+                .bookId(UUID.randomUUID())
+                .isbn(book.getIsbn())
+                .title(book.getTitle())
+                .authors(book.getAuthors())
+                .publicationDate(book.getPublicationDate())
+                .publisher(book.getPublisher())
+                .description(book.getDescription())
+                .pageCount(book.getPageCount())
+                .coverImageId(book.getCoverImageId())
+                .originalLanguage(book.getOriginalLanguage())
+                .build();
+        books.put(bookToSave.getBookId(), bookToSave);
+        return bookToSave;
     }
 
     @Override
