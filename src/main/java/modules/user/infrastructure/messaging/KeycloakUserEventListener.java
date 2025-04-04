@@ -46,8 +46,8 @@ public class KeycloakUserEventListener {
                 
                 UUID keycloakUserId = UUID.fromString(root.getString("userId"));
 
-                User user = new UserImpl.UserBuilder()
-                        .userId(keycloakUserId)
+                User user = UserImpl.builder()
+                        .keycloakUserId(keycloakUserId)
                         .firstName(registrationEvent.getFirstName())
                         .lastName(registrationEvent.getLastName())
                         .username(registrationEvent.getUsername())

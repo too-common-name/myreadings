@@ -24,8 +24,8 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithValidDataSuccessful() {
-        User user = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
@@ -40,8 +40,8 @@ public class UserImplUnitTest {
     @Test
     void createUserWithTooLongFirstNameFailsValidation() {
         String longFirstName = "VeryLongFirstNameExceedingFiftyCharactersForSure";
-        User user = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName(longFirstName)
                 .lastName("Doe")
                 .username("johndoe")
@@ -55,8 +55,8 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithBlankLastNameFailsValidation() {
-        User user = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName(" ")
                 .username("johndoe")
@@ -71,8 +71,8 @@ public class UserImplUnitTest {
     @Test
     void createUserWithTooLongLastNameFailsValidation() {
         String longLastName = "VeryLongLastNameExceedingFiftyCharactersForSure";
-        User user = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName(longLastName)
                 .username("johndoe")
@@ -86,8 +86,8 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithBlankUsernameFailsValidation() {
-        User user = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("")
@@ -102,8 +102,8 @@ public class UserImplUnitTest {
     @Test
     void createUserWithTooLongUsernameFailsValidation() {
         String longUsername = "VeryLongUsernameExceedingFiftyCharactersForSure";
-        User user = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username(longUsername)
@@ -117,8 +117,8 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithBlankEmailFailsValidation() {
-        User user = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
@@ -132,8 +132,8 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithInvalidEmailFormatFailsValidation() {
-        User user = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
@@ -147,8 +147,8 @@ public class UserImplUnitTest {
 
     @Test
     void testUpdateUiTheme() {
-        UserImpl user = (UserImpl) new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        UserImpl user = (UserImpl) UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
@@ -156,7 +156,7 @@ public class UserImplUnitTest {
                 .themePreference(UiTheme.LIGHT)
                 .build();
 
-        user.updateUiTheme(UiTheme.DARK);
+        user.setThemePreference(UiTheme.DARK);
         assertEquals(UiTheme.DARK, user.getThemePreference());
     }
 }

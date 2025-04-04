@@ -8,8 +8,8 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
-import modules.catalog.domain.Book;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.BookService;
 import modules.review.domain.Review;
 import modules.review.domain.ReviewImpl;
 import modules.review.usecases.ReviewService;
@@ -62,7 +62,7 @@ public class ReviewController {
         return ReviewResponseDTO.builder()
                 .reviewId(review.getReviewId())
                 .bookId(review.getBook().getBookId())
-                .userId(review.getUser().getUserId())
+                .userId(review.getUser().getKeycloakUserId())
                 .reviewText(review.getReviewText())
                 .rating(review.getRating())
                 .publicationDate(review.getPublicationDate())
@@ -76,7 +76,7 @@ public class ReviewController {
             throw new NotFoundException("Review not found with ID: " + reviewId);
         }
         Review existingReview = existingReviewOptional.get();
-        if (!existingReview.getUser().getUserId().equals(currentUserId)) {
+        if (!existingReview.getUser().getKeycloakUserId().equals(currentUserId)) {
             throw new ForbiddenException("You are not authorized to access this review.");
         }
         return existingReview;
@@ -99,7 +99,7 @@ public class ReviewController {
                 return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
             }
 
-            Review reviewToCreate = new ReviewImpl.ReviewBuilder()
+            Review reviewToCreate = ReviewImpl.builder()
                     .reviewId(UUID.randomUUID())
                     .book(book.get())
                     .user(user.get())
@@ -154,7 +154,7 @@ public class ReviewController {
                 return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
             }
 
-            Review reviewToUpdate = new ReviewImpl.ReviewBuilder()
+            Review reviewToUpdate = ReviewImpl.builder()
                     .reviewId(reviewId)
                     .book(existingReview.getBook())
                     .user(existingReview.getUser())

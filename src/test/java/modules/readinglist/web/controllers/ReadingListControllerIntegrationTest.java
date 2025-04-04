@@ -5,9 +5,9 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.MediaType;
-import modules.catalog.domain.Book;
-import modules.catalog.domain.BookImpl;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
+import modules.catalog.core.usecases.BookService;
 import modules.readinglist.domain.ReadingList;
 import modules.readinglist.domain.ReadingListImpl;
 import modules.readinglist.usecases.ReadingListService;
@@ -39,22 +39,22 @@ public class ReadingListControllerIntegrationTest {
 
     KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
-    private final User alice = new UserImpl.UserBuilder()
-            .userId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
+    private final User alice = UserImpl.builder()
+            .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
             .firstName("Alice")
             .lastName("Silverstone")
             .username("alice")
             .email("asilverstone@test.com")
             .build();
-    private final User admin = new UserImpl.UserBuilder()
-            .userId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
+    private final User admin = UserImpl.builder()
+            .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
             .firstName("Bruce")
             .lastName("Wayne")
             .username("admin")
             .email("bwayne@test.com")
             .build();
 
-    private final Book testBook = new BookImpl.BookBuilder()
+    private final Book testBook = BookImpl.builder()
             .bookId(UUID.randomUUID())
             .isbn("123-456")
             .title("Test Book")
@@ -69,7 +69,7 @@ public class ReadingListControllerIntegrationTest {
         userService.createUserProfile(admin);
         bookService.createBook(testBook);
 
-        ReadingList aliceReadingList = new ReadingListImpl.ReadingListBuilder()
+        ReadingList aliceReadingList = ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
                 .user(alice)
                 .name("Alice's List")
@@ -79,7 +79,7 @@ public class ReadingListControllerIntegrationTest {
                 .build();
         aliceListId = readingListService.createReadingList(aliceReadingList).getReadingListId();
 
-        ReadingList adminReadingList = new ReadingListImpl.ReadingListBuilder()
+        ReadingList adminReadingList = ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
                 .user(admin)
                 .name("Admin's List")

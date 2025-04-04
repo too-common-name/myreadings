@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public interface User {
 
-    UUID getUserId();
+    UUID getKeycloakUserId();
 
     String getFirstName();
 
@@ -17,6 +17,6 @@ public interface User {
 
     UiTheme getThemePreference();
 
-    void updateUiTheme(UiTheme newTheme);
+    void setThemePreference(UiTheme newTheme);
 
 }

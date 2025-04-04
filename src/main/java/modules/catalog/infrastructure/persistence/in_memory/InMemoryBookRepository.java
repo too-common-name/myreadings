@@ -1,8 +1,13 @@
-package modules.catalog.infrastructure;
+package modules.catalog.infrastructure.persistence.in_memory;
 
-import modules.catalog.domain.Book;
-import jakarta.enterprise.context.ApplicationScoped; 
+import jakarta.enterprise.context.ApplicationScoped;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.repositories.BookRepository;
+
 import java.util.UUID;
+
+import io.quarkus.arc.properties.IfBuildProperty;
+
 import java.util.Optional;
 import java.util.List;
 import java.util.ArrayList;
@@ -10,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @ApplicationScoped
+@IfBuildProperty(name = "app.book.repository.type", stringValue = "in-memory")
 public class InMemoryBookRepository implements BookRepository {
 
     private final Map<UUID, Book> books = new HashMap<>();

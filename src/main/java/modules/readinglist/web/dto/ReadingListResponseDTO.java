@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import lombok.Builder;
 import lombok.Data;
-import modules.catalog.domain.Book;
+import modules.catalog.core.domain.Book;
 
 @Data
 @Builder

@@ -61,6 +61,6 @@ public class KeycloakUserEventListenerTest {
         assertEquals("drossi@redhat.com", capturedUser.getEmail());
         assertEquals("Daniele", capturedUser.getFirstName());
         assertEquals("Rossi", capturedUser.getLastName());
-        assertNotNull(capturedUser.getUserId());
+        assertNotNull(capturedUser.getKeycloakUserId());
     }
 }

@@ -15,7 +15,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import modules.user.domain.UserImpl;
-import modules.readinglist.domain.ReadingListImpl.ReadingListBuilder;
 import modules.user.domain.UiTheme;
 import modules.user.domain.User;
 
@@ -71,8 +70,8 @@ public class ReadingListImplUnitTest {
         return createValidReadingListBuilder().build();
     }
 
-    private ReadingListBuilder createValidReadingListBuilder() {
-        return new ReadingListImpl.ReadingListBuilder()
+    private ReadingListImpl.ReadingListImplBuilder createValidReadingListBuilder() {
+        return ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
                 .user(createValidUser())
                 .books(Arrays.asList())
@@ -82,8 +81,8 @@ public class ReadingListImplUnitTest {
     }
 
     private User createValidUser() {
-        return new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        return UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")

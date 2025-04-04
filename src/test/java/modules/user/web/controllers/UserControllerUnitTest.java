@@ -49,8 +49,8 @@ public class UserControllerUnitTest {
         testUserId = UUID.randomUUID();
         authenticatedUserId = testUserId; 
 
-        mockUser = new UserImpl.UserBuilder()
-                .userId(testUserId)
+        mockUser = UserImpl.builder()
+                .keycloakUserId(testUserId)
                 .firstName("Daniele")
                 .lastName("Rossi")
                 .username("drossi")

@@ -1,7 +1,7 @@
-package modules.catalog.usecases;
+package modules.catalog.core.usecases;
 
-import modules.catalog.domain.Book;
-import modules.catalog.infrastructure.BookRepository;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.repositories.BookRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 

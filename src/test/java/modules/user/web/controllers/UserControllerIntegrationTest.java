@@ -25,15 +25,15 @@ public class UserControllerIntegrationTest {
     KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
     // TODO: This info should be fetched from config/quarkus-realm.json
-    private final User alice = new UserImpl.UserBuilder()
-    .userId(UUID.fromString( "eb4123a3-b722-4798-9af5-8957f823657a"))
+    private final User alice = UserImpl.builder()
+    .keycloakUserId(UUID.fromString( "eb4123a3-b722-4798-9af5-8957f823657a"))
     .firstName("Alice")
     .lastName("Silverstone")
     .username("alice")
     .email("asilverstone@test.com")
     .build();
-    private final User admin = new UserImpl.UserBuilder()
-    .userId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
+    private final User admin = UserImpl.builder()
+    .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
     .firstName("Bruce")
     .lastName("Wayne")
     .username("admin")
@@ -50,11 +50,11 @@ public class UserControllerIntegrationTest {
     void testUserCanAccessHisInformations() {
         given()
                 .auth().oauth2(getAccessToken(alice.getUsername()))
-                .pathParam("userId", alice.getUserId().toString())
+                .pathParam("userId", alice.getKeycloakUserId().toString())
                 .when().get("/{userId}")
                 .then()
                 .statusCode(200)
-                .body("userId", equalTo(alice.getUserId().toString()))
+                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
                 .body("firstName", equalTo(alice.getFirstName()))
                 .body("lastName", equalTo(alice.getLastName()))
                 .body("username", equalTo(alice.getUsername()))
@@ -65,11 +65,11 @@ public class UserControllerIntegrationTest {
     void testAdminCanAccessOthersInformations() {
         given()
                 .auth().oauth2(getAccessToken(admin.getUsername()))
-                .pathParam("userId", alice.getUserId())
+                .pathParam("userId", alice.getKeycloakUserId())
                 .when().get("/{userId}")
                 .then()
                 .statusCode(200)
-                .body("userId", equalTo(alice.getUserId().toString()))
+                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
                 .body("firstName", equalTo(alice.getFirstName()))
                 .body("lastName", equalTo(alice.getLastName()))
                 .body("username", equalTo(alice.getUsername()))
@@ -80,7 +80,7 @@ public class UserControllerIntegrationTest {
     void testUserCannotAccessOthersInformations() {
         given()
                 .auth().oauth2(getAccessToken(alice.getUsername()))
-                .pathParam("userId", admin.getUserId())
+                .pathParam("userId", admin.getKeycloakUserId())
                 .when().get("/{userId}")
                 .then()
                 .statusCode(403);

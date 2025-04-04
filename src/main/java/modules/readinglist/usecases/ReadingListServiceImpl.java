@@ -2,8 +2,8 @@ package modules.readinglist.usecases;
 
 import modules.readinglist.domain.ReadingList;
 import modules.readinglist.infrastructure.ReadingListRepository;
-import modules.catalog.domain.Book;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.BookService;
 
 import java.util.List;
 import java.util.Optional;

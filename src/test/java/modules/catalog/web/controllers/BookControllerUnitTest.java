@@ -1,7 +1,7 @@
 package modules.catalog.web.controllers;
 
-import modules.catalog.domain.Book;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.BookService;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
 import modules.catalog.web.dto.BookResponseDTO;

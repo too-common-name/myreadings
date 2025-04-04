@@ -1,6 +1,7 @@
 package modules.readinglist.usecases;
+import modules.catalog.core.domain.Book;
 import modules.readinglist.domain.ReadingList;
-import modules.catalog.domain.Book;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
