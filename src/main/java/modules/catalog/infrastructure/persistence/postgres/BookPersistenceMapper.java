@@ -28,14 +28,16 @@ public class BookPersistenceMapper {
     }
 
     public Book toDomain(BookEntity entity) {
+        
         if (entity == null) {
             return null;
         }
+
         return BookImpl.builder()
                 .bookId(entity.getBookId())
                 .isbn(entity.getIsbn())
                 .title(entity.getTitle())
-                .authors(new ArrayList<>(entity.getAuthors()))
+                .authors(entity.getAuthors())
                 .publicationDate(entity.getPublicationDate())
                 .publisher(entity.getPublisher())
                 .description(entity.getDescription())
