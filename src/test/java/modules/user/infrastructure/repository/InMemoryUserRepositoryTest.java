@@ -1,10 +1,12 @@
 package modules.user.infrastructure.repository;
 
-import modules.user.domain.UiTheme;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import modules.user.core.domain.UiTheme;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.infrastructure.persistence.in_memory.InMemoryUserRepository;
 
 import java.util.List;
 import java.util.Optional;

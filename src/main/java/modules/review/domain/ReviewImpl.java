@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import modules.catalog.core.domain.Book;
-import modules.user.domain.User;
+import modules.user.core.domain.User;
 import lombok.Builder;
 import lombok.Data;
 

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "book")
+@Table(name = "books")
 @Data
 @Builder
 @NoArgsConstructor
@@ -23,9 +23,10 @@ public class BookEntity {
     @Column(name = "book_id")
     private UUID bookId;
 
+    @Column(name = "isbn", nullable = false, unique = true)
     private String isbn;
 
-    @Column(nullable = false)
+    @Column(name = "title", nullable = false, length = 255)
     private String title;
 
     private List<String> authors;
@@ -33,18 +34,19 @@ public class BookEntity {
     @Column(name = "publication_date")
     private LocalDate publicationDate;
 
+    @Column(name = "publisher", length = 255)
     private String publisher;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", length = 500)
     private String description;
 
     @Column(name = "page_count")
     private int pageCount;
 
-    @Column(name = "cover_image_id")
+    @Column(name = "cover_image_id", length = 255)
     private String coverImageId;
 
-    @Column(name = "original_language")
+    @Column(name = "original_language", length = 50)
     private String originalLanguage;
     
 }

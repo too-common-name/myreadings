@@ -1,7 +1,9 @@
-package modules.user.infrastructure.repository;
+package modules.user.core.usecases.repositories;
 
-import modules.user.domain.User;
 import java.util.UUID;
+
+import modules.user.core.domain.User;
+
 import java.util.Optional;
 import java.util.List;
 

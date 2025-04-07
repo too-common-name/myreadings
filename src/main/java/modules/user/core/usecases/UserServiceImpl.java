@@ -1,13 +1,16 @@
-package modules.user.usecases;
+package modules.user.core.usecases;
 
-import modules.user.domain.User;
-import modules.user.infrastructure.repository.UserRepository;
+import modules.user.core.domain.User;
+import modules.user.core.usecases.repositories.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
 import java.util.UUID;
 import java.util.Optional;
 
 @ApplicationScoped
+@Transactional
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;

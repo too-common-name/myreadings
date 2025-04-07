@@ -3,6 +3,9 @@ package modules.user.domain;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import modules.user.core.domain.UiTheme;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
 import jakarta.validation.ConstraintViolation;
 
 import org.junit.jupiter.api.BeforeAll;

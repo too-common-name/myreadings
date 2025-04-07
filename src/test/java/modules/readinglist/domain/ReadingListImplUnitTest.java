@@ -3,6 +3,9 @@ package modules.readinglist.domain;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import modules.user.core.domain.UiTheme;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
 import jakarta.validation.ConstraintViolation;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -13,10 +16,6 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
-
-import modules.user.domain.UserImpl;
-import modules.user.domain.UiTheme;
-import modules.user.domain.User;
 
 public class ReadingListImplUnitTest {
 

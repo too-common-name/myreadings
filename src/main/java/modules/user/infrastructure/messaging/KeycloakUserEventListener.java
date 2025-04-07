@@ -5,10 +5,11 @@ import jakarta.inject.Inject;
 import jakarta.json.JsonObject;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.domain.UserRegistrationEvent;
-import modules.user.usecases.UserService;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.domain.UserRegistrationEvent;
+import modules.user.core.usecases.UserService;
+
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

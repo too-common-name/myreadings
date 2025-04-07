@@ -10,7 +10,7 @@ import java.util.List;
 import modules.catalog.core.usecases.BookService;
 import modules.review.domain.Review;
 import modules.review.infrastructure.ReviewRepository;
-import modules.user.usecases.UserService;
+import modules.user.core.usecases.UserService;
 
 @ApplicationScoped
 public class ReviewServiceImpl implements ReviewService {

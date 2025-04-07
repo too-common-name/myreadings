@@ -1,8 +1,9 @@
 package modules.user.usecases;
 
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.infrastructure.repository.UserRepository;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserServiceImpl;
+import modules.user.core.usecases.repositories.UserRepository;
 import modules.user.utils.UserTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

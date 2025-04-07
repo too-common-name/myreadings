@@ -2,6 +2,7 @@ package modules.catalog.utils;
 
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.UUID;
 
 import modules.catalog.core.domain.Book;
@@ -10,12 +11,23 @@ import modules.catalog.web.dto.BookRequestDTO;
 import modules.catalog.web.dto.BookResponseDTO;
 
 public class CatalogTestUtils {
+    
+    private static final Random random = new Random();
+
+    public static String generateSimpleRandomISBN13() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 13; i++) {
+            sb.append(random.nextInt(10));
+        }
+        return sb.toString();
+    }
+
     public static Book createValidBook() {
         return createBookWithText("Generic test book");
     }
 
     public static Book createValidBookWithId(UUID bookId) {
-        return BookImpl.builder().bookId(bookId).isbn("978-0321765723")
+        return BookImpl.builder().bookId(bookId).isbn(generateSimpleRandomISBN13())
                 .title("Test Book Title").authors(Arrays.asList("Test Author"))
                 .publicationDate(LocalDate.now().minusYears(5)).publisher("Test Publisher")
                 .description("Test book description").pageCount(300).coverImageId("coverTest123")
@@ -24,7 +36,7 @@ public class CatalogTestUtils {
 
 
     public static Book createBookWithText(String reviewText) {
-        return BookImpl.builder().bookId(UUID.randomUUID()).isbn("978-0321765723")
+        return BookImpl.builder().bookId(UUID.randomUUID()).isbn(generateSimpleRandomISBN13())
                 .title("Test Book Title").authors(Arrays.asList("Test Author"))
                 .publicationDate(LocalDate.now().minusYears(5)).publisher("Test Publisher")
                 .description("Test book description").pageCount(300).coverImageId("coverTest123")
@@ -33,7 +45,7 @@ public class CatalogTestUtils {
 
     public static BookRequestDTO createValidBookRequestDTO() {
         return BookRequestDTO.builder()
-                .isbn("1234567890")
+                .isbn(generateSimpleRandomISBN13())
                 .title("Test Title")
                 .authors(Arrays.asList("Test author"))
                 .publicationDate(LocalDate.of(2023, 1, 1))
