@@ -1,4 +1,4 @@
-package modules.user.domain;
+package modules.user.core.domain;
 
 public class UserRegistrationEvent {
     private String username;

@@ -11,9 +11,10 @@ import modules.catalog.core.usecases.BookServiceImpl;
 import modules.review.domain.Review;
 import modules.review.domain.ReviewImpl;
 import modules.review.usecases.ReviewServiceImpl;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.usecases.UserServiceImpl;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserServiceImpl;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

@@ -1,10 +1,11 @@
 package modules.user.utils;
 
-import modules.user.domain.UiTheme;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
 import java.util.Objects;
 import java.util.UUID;
+
+import modules.user.core.domain.UiTheme;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
 
 public class UserTestUtils {
 

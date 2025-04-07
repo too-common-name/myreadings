@@ -3,7 +3,6 @@ package modules.catalog.infrastructure.persistence.postgres;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
@@ -14,13 +13,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import io.quarkus.arc.properties.IfBuildProperty;
+import io.quarkus.hibernate.orm.PersistenceUnit;
 
 @ApplicationScoped
 @Transactional
 @IfBuildProperty(name = "app.book.repository.type", stringValue = "jpa", enableIfMissing = true)
 public class JpaBookRepository implements BookRepository {
 
-    @PersistenceContext
+    @Inject
+    @PersistenceUnit("books-db")
     EntityManager entityManager;
 
     @Inject

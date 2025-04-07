@@ -7,9 +7,10 @@ import modules.readinglist.usecases.ReadingListService;
 import modules.readinglist.web.dto.AddBookRequestDTO;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
 import modules.readinglist.web.dto.ReadingListResponseDTO;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.usecases.UserService;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserService;
+
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

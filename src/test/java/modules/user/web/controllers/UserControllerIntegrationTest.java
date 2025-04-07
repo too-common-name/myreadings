@@ -1,12 +1,14 @@
 package modules.user.web.controllers;
 
+import io.quarkus.hibernate.orm.PersistenceUnit;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
 import jakarta.inject.Inject;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.usecases.UserServiceImpl;
+import jakarta.persistence.EntityManager;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserServiceImpl;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,27 +23,33 @@ import static org.hamcrest.CoreMatchers.equalTo;
 public class UserControllerIntegrationTest {
 
     @Inject
+    @PersistenceUnit("users-db")
+    EntityManager entityManager;
+
+    @Inject
     UserServiceImpl userService;
+
     KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
     // TODO: This info should be fetched from config/quarkus-realm.json
     private final User alice = UserImpl.builder()
-    .keycloakUserId(UUID.fromString( "eb4123a3-b722-4798-9af5-8957f823657a"))
-    .firstName("Alice")
-    .lastName("Silverstone")
-    .username("alice")
-    .email("asilverstone@test.com")
-    .build();
+            .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
+            .firstName("Alice")
+            .lastName("Silverstone")
+            .username("alice")
+            .email("asilverstone@test.com")
+            .build();
     private final User admin = UserImpl.builder()
-    .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
-    .firstName("Bruce")
-    .lastName("Wayne")
-    .username("admin")
-    .email("bwayne@test.com")
-    .build();
+            .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
+            .firstName("Bruce")
+            .lastName("Wayne")
+            .username("admin")
+            .email("bwayne@test.com")
+            .build();
 
     @BeforeEach
     void setUp() {
+        entityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
         userService.createUserProfile(alice);
         userService.createUserProfile(admin);
     }
@@ -95,7 +103,6 @@ public class UserControllerIntegrationTest {
                 .then()
                 .statusCode(404);
     }
-
 
     protected String getAccessToken(String userName) {
         return keycloakClient.getAccessToken(userName);

@@ -21,8 +21,8 @@ import modules.review.utils.ReviewTestUtils;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.BookService;
 import modules.catalog.utils.CatalogTestUtils;
-import modules.user.domain.User;
-import modules.user.usecases.UserService;
+import modules.user.core.domain.User;
+import modules.user.core.usecases.UserService;
 import modules.user.utils.UserTestUtils;
 
 

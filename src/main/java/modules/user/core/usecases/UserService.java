@@ -1,7 +1,9 @@
-package modules.user.usecases;
+package modules.user.core.usecases;
 
-import modules.user.domain.User;
 import java.util.UUID;
+
+import modules.user.core.domain.User;
+
 import java.util.Optional;
 
 public interface UserService {

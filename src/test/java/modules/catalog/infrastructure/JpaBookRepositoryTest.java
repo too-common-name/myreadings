@@ -1,5 +1,6 @@
 package modules.catalog.infrastructure;
 
+import io.quarkus.hibernate.orm.PersistenceUnit;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
@@ -12,6 +13,9 @@ import modules.catalog.utils.CatalogTestUtils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import common.JpaRepositoryTestProfile;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,7 +29,8 @@ public class JpaBookRepositoryTest {
     @Inject
     BookRepository repository;
 
-    @PersistenceContext
+    @Inject
+    @PersistenceUnit("books-db")
     EntityManager entityManager;
     
     @BeforeEach

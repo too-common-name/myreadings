@@ -2,7 +2,7 @@ package modules.readinglist.utils;
 
 import modules.readinglist.domain.ReadingList;
 import modules.readinglist.domain.ReadingListImpl;
-import modules.user.domain.User;
+import modules.user.core.domain.User;
 import modules.user.utils.UserTestUtils;
 import java.time.LocalDateTime;
 import java.util.UUID;

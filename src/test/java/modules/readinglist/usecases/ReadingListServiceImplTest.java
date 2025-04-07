@@ -6,7 +6,7 @@ import modules.readinglist.domain.ReadingList;
 import modules.readinglist.infrastructure.ReadingListRepository;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.readinglist.utils.ReadingListTestUtils;
-import modules.user.domain.User;
+import modules.user.core.domain.User;
 import modules.user.utils.UserTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

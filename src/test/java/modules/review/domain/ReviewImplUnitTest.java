@@ -13,11 +13,11 @@ import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
-import modules.user.domain.UserImpl;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
-import modules.user.domain.UiTheme;
-import modules.user.domain.User;
+import modules.user.core.domain.UiTheme;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
 
 public class ReviewImplUnitTest {
 

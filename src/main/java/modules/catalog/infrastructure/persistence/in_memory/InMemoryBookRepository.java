@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @ApplicationScoped
-@IfBuildProperty(name = "app.book.repository.type", stringValue = "in-memory")
+@IfBuildProperty(name = "app.repository.type", stringValue = "in-memory", enableIfMissing = true)
 public class InMemoryBookRepository implements BookRepository {
 
     private final Map<UUID, Book> books = new HashMap<>();

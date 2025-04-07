@@ -6,6 +6,7 @@ import modules.catalog.utils.CatalogTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import common.InMemoryRepositoryTestProfile;
 import io.quarkus.test.junit.TestProfile;
 
 import java.util.*;
