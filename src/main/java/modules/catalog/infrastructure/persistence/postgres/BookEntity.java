@@ -28,7 +28,6 @@ public class BookEntity {
     @Column(nullable = false)
     private String title;
 
-    @ElementCollection
     private List<String> authors;
 
     @Column(name = "publication_date")
