@@ -1,15 +1,14 @@
 package modules.user.web.controllers;
 
-import io.quarkus.hibernate.orm.PersistenceUnit;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserServiceImpl;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,11 +20,6 @@ import static org.hamcrest.CoreMatchers.equalTo;
 @QuarkusTest
 @TestHTTPEndpoint(UserController.class)
 public class UserControllerIntegrationTest {
-
-    @Inject
-    @PersistenceUnit("users-db")
-    EntityManager entityManager;
-
     @Inject
     UserServiceImpl userService;
 
@@ -49,9 +43,14 @@ public class UserControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        entityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
         userService.createUserProfile(alice);
         userService.createUserProfile(admin);
+    }
+
+    @AfterEach
+    void cleanUp() {
+        userService.deleteUserProfile(alice.getKeycloakUserId());
+        userService.deleteUserProfile(admin.getKeycloakUserId());
     }
 
     @Test

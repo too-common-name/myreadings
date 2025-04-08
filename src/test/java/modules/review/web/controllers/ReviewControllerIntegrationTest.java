@@ -1,9 +1,12 @@
 package modules.review.web.controllers;
 
+import io.quarkus.hibernate.orm.PersistenceUnit;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.MediaType;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
@@ -15,6 +18,7 @@ import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserServiceImpl;
 
+import org.junit.jupiter.api.AfterEach; // Importa AfterEach
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +41,14 @@ public class ReviewControllerIntegrationTest {
 
         @Inject
         UserServiceImpl userService;
+
+        @Inject
+        @PersistenceUnit("books-db")
+        EntityManager booksEntityManager;
+
+        @Inject
+        @PersistenceUnit("users-db")
+        EntityManager usersEntityManager;
 
         KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
@@ -65,9 +77,8 @@ public class ReviewControllerIntegrationTest {
 
         @BeforeEach
         void setUp() {
-                userService.createUserProfile(alice);
-                userService.createUserProfile(admin);
-                createdBook = bookService.createBook(testBook);
+                setUpUsers();
+                setUpBooks();
 
                 Review aliceReview = ReviewImpl.builder()
                                 .reviewId(UUID.randomUUID())
@@ -80,6 +91,46 @@ public class ReviewControllerIntegrationTest {
                 aliceReviewId = reviewService.createReview(aliceReview).getReviewId();
         }
 
+        @AfterEach
+        void cleanUp() {
+                cleanUpReviews();
+                cleanUpBooks();
+                cleanUpUsers();
+        }
+
+        @Transactional
+        void cleanUpReviews() {
+                try {
+                        reviewService.deleteReviewById(aliceReviewId);
+                } catch (Exception ex) {
+                }
+        }
+
+        @Transactional
+        void cleanUpBooks() {
+                booksEntityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
+        }
+
+        @Transactional
+        void cleanUpUsers() {
+                usersEntityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
+        }
+
+        @Transactional
+        void setUpUsers() {
+                userService.createUserProfile(alice);
+                userService.createUserProfile(admin);
+        }
+
+        @Transactional
+        void setUpBooks() {
+                createdBook = bookService.createBook(testBook);
+        }
+
+        protected String getAccessToken(String userName) {
+                return keycloakClient.getAccessToken(userName);
+        }
+
         @Test
         void testUserCanCreateReview() {
                 Book created = bookService.createBook(
@@ -87,7 +138,8 @@ public class ReviewControllerIntegrationTest {
                 given()
                                 .auth().oauth2(getAccessToken(alice.getUsername()))
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + created.getBookId() + "\", \"rating\": 5, \"reviewText\": \"Great!\"}")
+                                .body("{\"bookId\": \"" + created.getBookId()
+                                                + "\", \"rating\": 5, \"reviewText\": \"Great!\"}")
                                 .when().post()
                                 .then()
                                 .statusCode(201)
@@ -108,7 +160,6 @@ public class ReviewControllerIntegrationTest {
                                 .body("reviewId", equalTo(aliceReviewId.toString()))
                                 .body("userId", equalTo(alice.getKeycloakUserId().toString()));
         }
-
 
         @Test
         void testUserCanUpdateOwnReview() {
@@ -182,7 +233,4 @@ public class ReviewControllerIntegrationTest {
                                 .body("[0].userId", equalTo(alice.getKeycloakUserId().toString()));
         }
 
-        protected String getAccessToken(String userName) {
-                return keycloakClient.getAccessToken(userName);
-        }
 }
