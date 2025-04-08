@@ -5,13 +5,12 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
 
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import common.JpaRepositoryTestProfile;
@@ -33,9 +32,9 @@ public class JpaBookRepositoryTest {
     @PersistenceUnit("books-db")
     EntityManager entityManager;
     
-    @BeforeEach
+    @AfterEach
     @Transactional
-    void setUp() {
+    void cleanUp() {
         entityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
     }
 

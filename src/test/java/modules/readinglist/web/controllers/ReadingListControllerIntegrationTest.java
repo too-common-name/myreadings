@@ -18,6 +18,7 @@ import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserService;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +42,7 @@ public class ReadingListControllerIntegrationTest {
         @Inject
         BookService bookService;
 
-        @Inject
+                @Inject
         @PersistenceUnit("books-db")
         EntityManager booksEntityManager;
 
@@ -58,6 +59,7 @@ public class ReadingListControllerIntegrationTest {
                         .username("alice")
                         .email("asilverstone@test.com")
                         .build();
+
         private final User admin = UserImpl.builder()
                         .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
                         .firstName("Bruce")
@@ -76,7 +78,6 @@ public class ReadingListControllerIntegrationTest {
         private Book createdBook;
 
         @BeforeEach
-        @Transactional
         void setUp() {
                 setUpUsers();
                 setUpBooks();
@@ -102,19 +103,40 @@ public class ReadingListControllerIntegrationTest {
                 adminListId = readingListService.createReadingList(adminReadingList).getReadingListId();
         }
 
+        @AfterEach
+        void cleanUp() {
+                cleanUpReadingLists();
+                cleanUpBooks();
+                cleanUpUsers();
+        }
+
+        @Transactional
+        void cleanUpReadingLists() {
+                try {
+                        readingListService.deleteReadingListById(aliceListId);
+                        readingListService.deleteReadingListById(adminListId);
+                } catch (Exception ex) {
+                }
+        }
+
+        @Transactional
+        void cleanUpBooks() {
+                booksEntityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
+        }
+
+        @Transactional
+        void cleanUpUsers() {
+                usersEntityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
+        }
+
         @Transactional
         void setUpUsers() {
-                userService.deleteUserProfile(alice.getKeycloakUserId());
-                userService.deleteUserProfile(admin.getKeycloakUserId());
                 userService.createUserProfile(alice);
                 userService.createUserProfile(admin);
         }
 
         @Transactional
         void setUpBooks() {
-                if(createdBook != null) {
-                        bookService.deleteBookById(createdBook.getBookId());
-                }
                 createdBook = bookService.createBook(testBook);
         }
 
