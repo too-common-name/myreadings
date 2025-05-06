@@ -42,13 +42,13 @@ public class InMemoryBookRepositoryTest {
     void findAllSuccessful() {
         repository.save(CatalogTestUtils.createValidBook());
         repository.save(CatalogTestUtils.createValidBook());
-        List<Book> allBooks = repository.findAll();
+        List<Book> allBooks = repository.findAll(null, null, null);
         assertEquals(2, allBooks.size());
     }
 
     @Test
     void findAllSuccessfulNoBooks() {
-        List<Book> allBooks = repository.findAll();
+        List<Book> allBooks = repository.findAll(null, null, null);
         assertTrue(allBooks.isEmpty());
     }
 

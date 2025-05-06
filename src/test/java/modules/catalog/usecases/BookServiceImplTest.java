@@ -76,26 +76,26 @@ public class BookServiceImplTest {
     void testGetAllBooksSuccessful() {
         List<Book> expectedBooks = Arrays.asList(CatalogTestUtils.createValidBook(),
                 CatalogTestUtils.createValidBook());
-        when(bookRepository.findAll()).thenReturn(expectedBooks);
+        when(bookRepository.findAll(null, null, null)).thenReturn(expectedBooks);
 
-        List<Book> retrievedBooks = bookService.getAllBooks();
+        List<Book> retrievedBooks = bookService.getAllBooks(null, null, null);
 
         assertNotNull(retrievedBooks, "getAllBooks should return a list");
         assertFalse(retrievedBooks.isEmpty(), "List of books should not be empty when books exist");
         assertEquals(expectedBooks.size(), retrievedBooks.size(),
                 "List should contain the expected number of books");
-        verify(bookRepository, times(1)).findAll();
+        verify(bookRepository, times(1)).findAll(null, null, null);
     }
 
     @Test
     void testGetAllBooksFails() {
-        when(bookRepository.findAll()).thenReturn(new ArrayList<>());
+        when(bookRepository.findAll(null, null, null)).thenReturn(new ArrayList<>());
 
-        List<Book> retrievedBooks = bookService.getAllBooks();
+        List<Book> retrievedBooks = bookService.getAllBooks(null, null, null);
 
         assertNotNull(retrievedBooks, "getAllBooks should return a list even if no books exist");
         assertTrue(retrievedBooks.isEmpty(), "List of books should be empty when no books exist");
-        verify(bookRepository, times(1)).findAll();
+        verify(bookRepository, times(1)).findAll(null, null, null);
     }
 
     @Test

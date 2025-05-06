@@ -9,7 +9,7 @@ import modules.catalog.core.domain.Book;
 public interface BookService {
     Book createBook(Book book);
     Optional<Book> getBookById(UUID bookId);
-    List<Book> getAllBooks();
+    List<Book> getAllBooks(String sort, String order, Integer limit);
     Book updateBook(Book book);
     void deleteBookById(UUID bookId);
 }
