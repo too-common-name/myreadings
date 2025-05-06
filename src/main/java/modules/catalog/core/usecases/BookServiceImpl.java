@@ -28,8 +28,8 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    public List<Book> getAllBooks() {
-        return bookRepository.findAll();
+    public List<Book> getAllBooks(String sort, String order, Integer limit) {
+        return bookRepository.findAll(sort, order, limit);
     }
 
     @Override

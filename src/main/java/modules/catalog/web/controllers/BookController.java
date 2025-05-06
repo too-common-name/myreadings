@@ -7,6 +7,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import modules.catalog.core.domain.Book;
@@ -88,8 +89,11 @@ public class BookController {
 
     @GET
     @RolesAllowed({"user", "admin"})
-    public Response getAllBooks() {
-        List<Book> books = bookService.getAllBooks();
+    public Response getAllBooks(
+        @QueryParam("sort") String sort,
+        @QueryParam("order") String order,
+        @QueryParam("limit") Integer limit) {
+        List<Book> books = bookService.getAllBooks(sort, order, limit);
         List<BookResponseDTO> responseDTOs = books.stream()
                                                     .map(this::mapToBookResponseDTO)
                                                     .collect(Collectors.toList());
@@ -109,6 +113,7 @@ public class BookController {
                 .pageCount(book.getPageCount())
                 .coverImageId(book.getCoverImageId())
                 .originalLanguage(book.getOriginalLanguage())
+                .genre(book.getGenre())
                 .build();
     }
 }

@@ -48,5 +48,8 @@ public class BookEntity {
 
     @Column(name = "original_language", length = 50)
     private String originalLanguage;
+
+    @Column(name = "genre", length = 50)
+    private String genre;
     
 }

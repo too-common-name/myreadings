@@ -26,5 +26,7 @@ public interface Book {
     String getCoverImageId();
 
     String getOriginalLanguage();
+
+    String getGenre();
     
 }

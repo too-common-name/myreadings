@@ -3,8 +3,6 @@ package modules.catalog.infrastructure.persistence.postgres;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 
-import java.util.ArrayList;
-
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
@@ -24,6 +22,7 @@ public class BookPersistenceMapper {
                 .pageCount(book.getPageCount())
                 .coverImageId(book.getCoverImageId())
                 .originalLanguage(book.getOriginalLanguage())
+                .genre(book.getGenre())
                 .build();
     }
 
@@ -44,6 +43,7 @@ public class BookPersistenceMapper {
                 .pageCount(entity.getPageCount())
                 .coverImageId(entity.getCoverImageId())
                 .originalLanguage(entity.getOriginalLanguage())
+                .genre(entity.getGenre())
                 .build();
     }
 }

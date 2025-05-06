@@ -3,6 +3,7 @@ package modules.catalog.infrastructure.persistence.postgres;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
@@ -41,10 +42,37 @@ public class JpaBookRepository implements BookRepository {
     }
 
     @Override
-    public List<Book> findAll() {
-        return entityManager.createQuery("SELECT b FROM BookEntity b", BookEntity.class)
-                .getResultList()
-                .stream()
+    public List<Book> findAll(String sort, String order, Integer limit) {
+        StringBuilder jpql = new StringBuilder("SELECT b FROM BookEntity b");
+
+        if (sort != null && !sort.trim().isEmpty()) {
+            String validatedSortField = null;
+            switch (sort.toLowerCase()) {
+                case "publicationdate":
+                    validatedSortField = "b.publicationDate";
+                    break;
+                default:
+                    System.err.println("Warning: Invalid sort field provided for JPA repository: " + sort + ". Only 'publicationDate' is supported.");
+                    break;
+            }
+
+            if (validatedSortField != null) {
+                jpql.append(" ORDER BY ").append(validatedSortField);
+                if (order != null && order.equalsIgnoreCase("desc")) {
+                    jpql.append(" DESC"); 
+                } else {
+                    jpql.append(" ASC");
+                }
+            }
+        }
+
+        TypedQuery<BookEntity> query = entityManager.createQuery(jpql.toString(), BookEntity.class);
+
+        if (limit != null && limit > 0) {
+            query.setMaxResults(limit); 
+        }
+
+        return query.getResultList().stream()
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }

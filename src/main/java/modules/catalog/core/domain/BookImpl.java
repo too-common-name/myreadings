@@ -36,5 +36,7 @@ public class BookImpl implements Book {
     private final String coverImageId;
     @Size(max = 50)
     private final String originalLanguage;
+    @Size(max = 50)
+    private final String genre;
 
 }

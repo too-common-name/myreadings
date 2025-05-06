@@ -20,4 +20,5 @@ public class BookResponseDTO {
     private int pageCount;
     private String coverImageId;
     private String originalLanguage;
+    private String genre;
 }

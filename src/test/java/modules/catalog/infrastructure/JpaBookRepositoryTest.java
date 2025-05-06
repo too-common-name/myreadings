@@ -62,14 +62,14 @@ public class JpaBookRepositoryTest {
     void findAllSuccessful() {
         repository.save(CatalogTestUtils.createValidBook());
         repository.save(CatalogTestUtils.createValidBook());
-        List<Book> allBooks = repository.findAll();
+        List<Book> allBooks = repository.findAll(null, null, null);
         assertEquals(2, allBooks.size());
     }
 
     @Test
     @Transactional
     void findAllSuccessfulNoBooks() {
-        List<Book> allBooks = repository.findAll();
+        List<Book> allBooks = repository.findAll(null, null, null);
         assertTrue(allBooks.isEmpty());
     }
 
