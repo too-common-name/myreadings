@@ -27,7 +27,7 @@ public class InMemoryReadingListRepository implements ReadingListRepository {
     @Override
     public List<ReadingList> findByUserId(UUID userId) {
         return readingLists.values().stream()
-                .filter(readingList -> readingList.getUser().getKeycloakUserId().equals(userId))
+                .filter(readingList -> readingList.getUserId().equals(userId))
                 .collect(Collectors.toList());
     }
     
