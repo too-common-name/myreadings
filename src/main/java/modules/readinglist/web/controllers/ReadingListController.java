@@ -61,7 +61,7 @@ public class ReadingListController {
             throw new NotFoundException("Reading list not found with ID: " + readingListId);
         }
         ReadingList readingList = readingListOptional.get();
-        if (!readingList.getUser().getKeycloakUserId().equals(currentUserId)) {
+        if (!readingList.getUserId().equals(currentUserId)) {
             throw new ForbiddenException("Reading list does not belong to the current user.");
         }
         return readingList;
@@ -80,7 +80,7 @@ public class ReadingListController {
 
             ReadingList newReadingList = ReadingListImpl.builder()
                     .readingListId(UUID.randomUUID())
-                    .user(user.get())
+                    .userId(user.get().getKeycloakUserId())
                     .name(readingListRequestDTO.getName())
                     .description(readingListRequestDTO.getDescription())
                     .creationDate(LocalDateTime.now())
@@ -136,7 +136,7 @@ public class ReadingListController {
 
             ReadingList updatedReadingList = ReadingListImpl.builder()
                     .readingListId(readingListId)
-                    .user(existingReadingList.getUser())
+                    .userId(existingReadingList.getUserId())
                     .name(readingListRequestDTO.getName())
                     .description(readingListRequestDTO.getDescription())
                     .books(existingReadingList.getBooks())

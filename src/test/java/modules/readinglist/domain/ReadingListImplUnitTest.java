@@ -36,7 +36,7 @@ public class ReadingListImplUnitTest {
 
     @Test
     void createReadingListWithoutUserFailsValidation() {
-        ReadingList readingList = createValidReadingListBuilder().user(null).build();
+        ReadingList readingList = createValidReadingListBuilder().userId(null).build();
         Set<ConstraintViolation<ReadingList>> violations = validator.validate(readingList);
         assertFalse(violations.isEmpty(), "Validation should fail for missing user");
     }
@@ -72,7 +72,7 @@ public class ReadingListImplUnitTest {
     private ReadingListImpl.ReadingListImplBuilder createValidReadingListBuilder() {
         return ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
-                .user(createValidUser())
+                .userId(createValidUser().getKeycloakUserId())
                 .books(Arrays.asList())
                 .name("My Reading List")
                 .description("This is a valid description within the limit")

@@ -5,14 +5,13 @@ import java.util.List;
 import java.util.UUID;
 
 import modules.catalog.core.domain.Book;
-import modules.user.core.domain.User;
 
 
 public interface ReadingList {
 
     UUID getReadingListId();
 
-    User getUser();
+    UUID getUserId();
 
     String getName();
 

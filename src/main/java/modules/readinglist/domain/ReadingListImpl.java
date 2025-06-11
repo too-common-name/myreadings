@@ -19,7 +19,7 @@ public class ReadingListImpl implements ReadingList {
 
     private final UUID readingListId;
     @NotNull
-    private final User user;
+    private final UUID userId;
     @NotBlank
     @Size(max = 30)
     private final String name;
