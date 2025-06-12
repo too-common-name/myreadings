@@ -3,7 +3,6 @@ package modules.user.infrastructure.persistence.postgres;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 import modules.user.core.domain.User;
 import modules.user.core.usecases.repositories.UserRepository;
 
@@ -16,7 +15,6 @@ import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.hibernate.orm.PersistenceUnit;
 
 @ApplicationScoped
-@Transactional
 @IfBuildProperty(name = "app.repository.type", stringValue = "jpa")
 public class JpaUserRepository implements UserRepository {
 

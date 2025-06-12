@@ -42,7 +42,7 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithTooLongFirstNameFailsValidation() {
-        String longFirstName = "VeryLongFirstNameExceedingFiftyCharactersForSure";
+        String longFirstName = "VeryLongFirstNameExceedingFiftyCharactersForSureVeryLongFirstNameExceedingFiftyCharactersForSure";
         User user = UserImpl.builder()
                 .keycloakUserId(UUID.randomUUID())
                 .firstName(longFirstName)
@@ -73,7 +73,7 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithTooLongLastNameFailsValidation() {
-        String longLastName = "VeryLongLastNameExceedingFiftyCharactersForSure";
+        String longLastName = "VeryLongLastNameExceedingFiftyCharactersForSureVeryLongLastNameExceedingFiftyCharactersForSure";
         User user = UserImpl.builder()
                 .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
@@ -104,7 +104,7 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithTooLongUsernameFailsValidation() {
-        String longUsername = "VeryLongUsernameExceedingFiftyCharactersForSure";
+        String longUsername = "VeryLongUsernameExceedingFiftyCharactersForSureVeryLongUsernameExceedingFiftyCharactersForSureVeryLongUsernameExceedingFiftyCharactersForSure";
         User user = UserImpl.builder()
                 .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
@@ -125,7 +125,7 @@ public class UserImplUnitTest {
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
-                .email("   ") // Blank email
+                .email("   ") 
                 .themePreference(UiTheme.LIGHT)
                 .build();
 
@@ -140,7 +140,7 @@ public class UserImplUnitTest {
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
-                .email("invalid-email-format") // Invalid email format
+                .email("invalid-email-format")
                 .themePreference(UiTheme.LIGHT)
                 .build();
 

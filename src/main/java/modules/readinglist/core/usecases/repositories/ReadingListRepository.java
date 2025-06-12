@@ -1,7 +1,8 @@
-package modules.readinglist.infrastructure;
+package modules.readinglist.core.usecases.repositories;
 
 import modules.catalog.core.domain.Book;
-import modules.readinglist.domain.ReadingList;
+import modules.readinglist.core.domain.ReadingList;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

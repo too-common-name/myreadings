@@ -1,16 +1,20 @@
-package modules.readinglist.infrastructure;
+package modules.readinglist.infrastructure.persistence.in_memory;
 
 import modules.catalog.core.domain.Book;
-import modules.readinglist.domain.ReadingList;
+import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.core.usecases.repositories.ReadingListRepository;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
+@IfBuildProperty(name = "app.repository.type", stringValue = "in-memory", enableIfMissing = true)
 public class InMemoryReadingListRepository implements ReadingListRepository {
 
-    private final Map<UUID, ReadingList> readingLists = new HashMap<>();
+    private Map<UUID, ReadingList> readingLists = new HashMap<>();
 
     @Override
     public ReadingList save(ReadingList readingList) {
@@ -60,4 +64,5 @@ public class InMemoryReadingListRepository implements ReadingListRepository {
         }
         return new ArrayList<>();
     }
+
 }

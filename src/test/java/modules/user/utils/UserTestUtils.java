@@ -25,7 +25,7 @@ public class UserTestUtils {
 
     public static User createValidUserWithId(UUID userId) {
         return UserImpl.builder().keycloakUserId(userId).firstName("Test").lastName("User")
-                .username("testuser" + userId).email("test.user" + userId + "@example.com")
+                .username("tu" + userId).email("test.user" + userId + "@example.com")
                 .themePreference(UiTheme.LIGHT).build();
     }
 }

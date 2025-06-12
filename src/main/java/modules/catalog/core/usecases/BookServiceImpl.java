@@ -11,13 +11,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
-@Transactional
 public class BookServiceImpl implements BookService {
 
     @Inject
     BookRepository bookRepository;
 
     @Override
+    @Transactional
     public Book createBook(Book book) {
         return bookRepository.save(book);
     }
@@ -33,11 +33,13 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
+    @Transactional
     public Book updateBook(Book book) {
         return bookRepository.save(book);
     }
 
     @Override
+    @Transactional
     public void deleteBookById(UUID bookId) {
         bookRepository.deleteById(bookId);
     }

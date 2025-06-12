@@ -11,9 +11,9 @@ import jakarta.ws.rs.core.MediaType;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.BookService;
-import modules.readinglist.domain.ReadingList;
-import modules.readinglist.domain.ReadingListImpl;
-import modules.readinglist.usecases.ReadingListService;
+import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.core.domain.ReadingListImpl;
+import modules.readinglist.core.usecases.ReadingListService;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserService;
@@ -42,7 +42,7 @@ public class ReadingListControllerIntegrationTest {
         @Inject
         BookService bookService;
 
-                @Inject
+        @Inject
         @PersistenceUnit("books-db")
         EntityManager booksEntityManager;
 
@@ -246,6 +246,7 @@ public class ReadingListControllerIntegrationTest {
                                 .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
                                 .when().post("/{readingListId}/books")
                                 .then()
+                                .log().all()
                                 .statusCode(200)
                                 .body(is("Book added to reading list."));
         }

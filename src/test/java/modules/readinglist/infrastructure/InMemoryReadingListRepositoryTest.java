@@ -1,8 +1,9 @@
 package modules.readinglist.infrastructure;
 
-import modules.readinglist.domain.ReadingList;
 import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
+import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.infrastructure.persistence.in_memory.InMemoryReadingListRepository;
 import modules.readinglist.utils.ReadingListTestUtils;
 import modules.user.core.domain.User;
 import modules.user.utils.UserTestUtils;
