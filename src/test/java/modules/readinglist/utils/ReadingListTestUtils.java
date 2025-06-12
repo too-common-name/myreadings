@@ -1,10 +1,12 @@
 package modules.readinglist.utils;
 
+import modules.catalog.core.domain.Book;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.domain.ReadingListImpl;
 import modules.user.core.domain.User;
 import modules.user.utils.UserTestUtils;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public class ReadingListTestUtils {
@@ -42,6 +44,29 @@ public class ReadingListTestUtils {
                 .name(name)
                 .description("A test reading list for a specific user")
                 .creationDate(LocalDateTime.now())
+                .build();
+    }
+
+    public static ReadingList createValidReadingListWithIdAndBookStubs(UUID readingListId, List<Book> books) {
+        User user = UserTestUtils.createValidUser();
+        return ReadingListImpl.builder()
+                .readingListId(readingListId)
+                .userId(user.getKeycloakUserId())
+                .name("Test List With Books")
+                .description("A test list containing book stubs")
+                .creationDate(LocalDateTime.now())
+                .books(books)
+                .build();
+    }
+
+    public static ReadingList createValidReadingListForUserWithBooks(User user, String name, List<Book> books) {
+        return ReadingListImpl.builder()
+                .readingListId(UUID.randomUUID())
+                .userId(user.getKeycloakUserId())
+                .name(name)
+                .description("A test reading list for a specific user with books")
+                .creationDate(LocalDateTime.now())
+                .books(books)
                 .build();
     }
 }
