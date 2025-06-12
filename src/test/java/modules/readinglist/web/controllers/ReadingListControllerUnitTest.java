@@ -1,9 +1,9 @@
 package modules.readinglist.web.controllers;
 
 import jakarta.ws.rs.core.Response;
-import modules.readinglist.domain.ReadingList;
-import modules.readinglist.domain.ReadingListImpl;
-import modules.readinglist.usecases.ReadingListService;
+import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.core.domain.ReadingListImpl;
+import modules.readinglist.core.usecases.ReadingListService;
 import modules.readinglist.web.dto.AddBookRequestDTO;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
 import modules.readinglist.web.dto.ReadingListResponseDTO;

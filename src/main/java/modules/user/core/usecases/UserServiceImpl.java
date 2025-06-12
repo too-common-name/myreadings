@@ -10,7 +10,6 @@ import java.util.UUID;
 import java.util.Optional;
 
 @ApplicationScoped
-@Transactional
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
@@ -21,6 +20,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User createUserProfile(User user) {
         return userRepository.save(user);
     }
@@ -31,11 +31,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User updateUserProfile(User user) {
         return userRepository.save(user);
     }
 
     @Override
+    @Transactional
     public void deleteUserProfile(UUID userId) {
         userRepository.deleteById(userId);
     }

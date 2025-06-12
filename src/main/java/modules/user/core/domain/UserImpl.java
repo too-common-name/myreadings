@@ -14,16 +14,17 @@ public class UserImpl implements User {
 
     private final UUID keycloakUserId;
     @NotBlank
-    @Size(max = 30)
+    @Size(max = 50)
     private final String firstName;
     @NotBlank
-    @Size(max = 30)
+    @Size(max = 50)
     private final String lastName;
     @NotBlank
-    @Size(max = 30)
+    @Size(max = 80)
     private final String username;
     @NotBlank
     @Email
+    @Size(max = 100)
     private final String email;
     @Builder.Default
     private UiTheme themePreference = UiTheme.LIGHT;

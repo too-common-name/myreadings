@@ -1,16 +1,13 @@
 package modules.catalog.infrastructure;
 
-import io.quarkus.hibernate.orm.PersistenceUnit;
+import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import common.JpaRepositoryTestProfile;
@@ -23,23 +20,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @TestProfile(JpaRepositoryTestProfile.class)
+@TestTransaction
 public class JpaBookRepositoryTest {
 
     @Inject
     BookRepository repository;
 
-    @Inject
-    @PersistenceUnit("books-db")
-    EntityManager entityManager;
-    
-    @AfterEach
-    @Transactional
-    void cleanUp() {
-        entityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
-    }
-
     @Test
-    @Transactional
     void saveAndFindByIdSuccessful() {
         Book bookToSave = CatalogTestUtils.createValidBook();
         Book savedBook = repository.save(bookToSave);
@@ -51,14 +38,12 @@ public class JpaBookRepositoryTest {
     }
 
     @Test
-    @Transactional
     void findByIdNotFound() {
         Optional<Book> retrievedBook = repository.findById(UUID.randomUUID());
         assertFalse(retrievedBook.isPresent());
     }
 
     @Test
-    @Transactional
     void findAllSuccessful() {
         repository.save(CatalogTestUtils.createValidBook());
         repository.save(CatalogTestUtils.createValidBook());
@@ -67,14 +52,12 @@ public class JpaBookRepositoryTest {
     }
 
     @Test
-    @Transactional
     void findAllSuccessfulNoBooks() {
         List<Book> allBooks = repository.findAll(null, null, null);
         assertTrue(allBooks.isEmpty());
     }
 
     @Test
-    @Transactional
     void deleteByIdSuccessful() {
         Book bookToDelete = CatalogTestUtils.createValidBook();
         Book savedBook = repository.save(bookToDelete);

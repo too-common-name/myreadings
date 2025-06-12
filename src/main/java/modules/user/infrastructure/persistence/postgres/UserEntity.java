@@ -20,16 +20,16 @@ public class UserEntity {
     @Column(name = "keycloak_user_id", unique = true, nullable = false)
     private UUID keycloakUserId;
 
-    @Column(name = "first_name", nullable = false, length = 30)
+    @Column(name = "first_name", nullable = false, length = 50)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false, length = 30)
+    @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
-    @Column(name = "username", unique = true, nullable = false, length = 30)
+    @Column(name = "username", unique = true, nullable = false, length = 80)
     private String username;
 
-    @Column(name = "email", unique = true, nullable = false)
+    @Column(name = "email", unique = true, nullable = false, length = 100)
     private String email;
 
     @Column(name = "theme_preference")

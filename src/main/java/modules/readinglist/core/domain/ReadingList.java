@@ -1,4 +1,4 @@
-package modules.readinglist.domain;
+package modules.readinglist.core.domain;
 
 import java.time.LocalDateTime;
 import java.util.List;

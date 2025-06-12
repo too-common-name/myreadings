@@ -1,16 +1,13 @@
 package modules.user.infrastructure.repository;
 
-import io.quarkus.hibernate.orm.PersistenceUnit;
+import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 import modules.user.core.domain.UiTheme;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.repositories.UserRepository;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -20,20 +17,11 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
+@TestTransaction
 public class JpaUserRepositoryTest {
 
     @Inject
     UserRepository userRepository;
-
-    @Inject
-    @PersistenceUnit("users-db")
-    EntityManager entityManager;
-
-    @AfterEach
-    @Transactional
-    public void cleanUp() {
-        entityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
-    }
 
     @Test
     public void testSaveAndFindById() {

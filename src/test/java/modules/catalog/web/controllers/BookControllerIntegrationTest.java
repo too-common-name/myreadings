@@ -1,16 +1,12 @@
 package modules.catalog.web.controllers;
 
-import io.quarkus.hibernate.orm.PersistenceUnit;
+import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -20,17 +16,8 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.*;
 
 @QuarkusTest
+@TestTransaction
 public class BookControllerIntegrationTest {
-
-        @Inject
-        @PersistenceUnit("books-db")
-        EntityManager entityManager;
-
-        @AfterEach
-        @Transactional
-        void setUp() {
-                entityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
-        }
 
         @Test
         @TestSecurity(user = "adminUser", roles = "admin")

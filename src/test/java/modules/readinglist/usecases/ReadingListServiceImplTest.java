@@ -2,8 +2,9 @@ package modules.readinglist.usecases;
 
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.BookService;
-import modules.readinglist.domain.ReadingList;
-import modules.readinglist.infrastructure.ReadingListRepository;
+import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.core.usecases.ReadingListServiceImpl;
+import modules.readinglist.core.usecases.repositories.ReadingListRepository;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.readinglist.utils.ReadingListTestUtils;
 import modules.user.core.domain.User;
