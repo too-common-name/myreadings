@@ -21,12 +21,8 @@ public class KeycloakUserEventListener {
 
     private static final Logger log = LoggerFactory.getLogger(KeycloakUserEventListener.class);
 
-    private final UserService userService;
-
     @Inject
-    public KeycloakUserEventListener(UserService userService) {
-        this.userService = userService;
-    }
+    UserService userService;
 
     @Incoming("registrations")
     public void processUserEvent(byte[] event) {
