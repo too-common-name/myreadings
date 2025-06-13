@@ -6,10 +6,14 @@ import modules.review.utils.ReviewTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import common.InMemoryRepositoryTestProfile;
+import io.quarkus.test.junit.TestProfile;
+
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@TestProfile(InMemoryRepositoryTestProfile.class)
 public class InMemoryReviewRepositoryTest {
 
     private InMemoryReviewRepository repository;
