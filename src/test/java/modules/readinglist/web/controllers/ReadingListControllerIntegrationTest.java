@@ -246,7 +246,6 @@ public class ReadingListControllerIntegrationTest {
                                 .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
                                 .when().post("/{readingListId}/books")
                                 .then()
-                                .log().all()
                                 .statusCode(200)
                                 .body(is("Book added to reading list."));
         }
