@@ -2,6 +2,7 @@ package modules.readinglist.infrastructure.persistence.in_memory;
 
 import modules.catalog.core.domain.Book;
 import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
 
 import java.util.*;
@@ -17,9 +18,26 @@ public class InMemoryReadingListRepository implements ReadingListRepository {
     private Map<UUID, ReadingList> readingLists = new HashMap<>();
 
     @Override
-    public ReadingList save(ReadingList readingList) {
+    public ReadingList create(ReadingList readingList) {
         readingLists.put(readingList.getReadingListId(), readingList);
         return readingList;
+    }
+
+    @Override
+    public ReadingList update(ReadingList list) {
+        ReadingList existingList = readingLists.get(list.getReadingListId());
+
+        ReadingList updatedList = ReadingListImpl.builder()
+                .readingListId(existingList.getReadingListId())
+                .userId(existingList.getUserId())
+                .name(list.getName())
+                .description(list.getDescription())
+                .creationDate(existingList.getCreationDate())
+                .books(existingList.getBooks())
+                .build();
+
+        readingLists.put(updatedList.getReadingListId(), updatedList);
+        return updatedList;
     }
 
     @Override
@@ -27,14 +45,13 @@ public class InMemoryReadingListRepository implements ReadingListRepository {
         return Optional.ofNullable(readingLists.get(readingListId));
     }
 
-
     @Override
     public List<ReadingList> findByUserId(UUID userId) {
         return readingLists.values().stream()
                 .filter(readingList -> readingList.getUserId().equals(userId))
                 .collect(Collectors.toList());
     }
-    
+
     @Override
     public void deleteById(UUID readingListId) {
         readingLists.remove(readingListId);

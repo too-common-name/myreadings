@@ -80,7 +80,7 @@ public class ReadingListServiceImpl implements ReadingListService {
     @Override
     @Transactional
     public ReadingList createReadingList(ReadingList readingList) {
-        return readingListRepository.save(readingList);
+        return readingListRepository.create(readingList);
     }
 
     @Override
@@ -88,7 +88,7 @@ public class ReadingListServiceImpl implements ReadingListService {
     public ReadingList updateReadingList(ReadingList readingList) {
         readingListRepository.findById(readingList.getReadingListId())
                 .orElseThrow(() -> new IllegalArgumentException("ReadingList not found for update: " + readingList.getReadingListId()));
-        return readingListRepository.save(readingList);
+        return readingListRepository.update(readingList);
     }
 
     @Override

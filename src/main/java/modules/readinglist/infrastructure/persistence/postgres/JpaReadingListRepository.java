@@ -28,10 +28,22 @@ public class JpaReadingListRepository implements ReadingListRepository {
     ReadingListPersistenceMapper mapper;
 
     @Override
-    public ReadingList save(ReadingList list) {
-        ReadingListEntity entity = mapper.toEntity(list);
-        ReadingListEntity mergedEntity = entityManager.merge(entity);
-        return mapper.toDomain(mergedEntity);
+    public ReadingList create(ReadingList list) {
+        ReadingListEntity newEntity = mapper.toEntity(list);
+        entityManager.persist(newEntity);
+        return mapper.toDomain(newEntity);
+    }
+
+    @Override
+    public ReadingList update(ReadingList list) {
+        ReadingListEntity managedEntity = entityManager.find(ReadingListEntity.class, list.getReadingListId());
+
+        if (managedEntity != null) {
+            mapper.updateEntityFromDomain(managedEntity, list);
+            return mapper.toDomain(managedEntity);
+        } else {
+            throw new IllegalArgumentException("ReadingList with ID " + list.getReadingListId() + " not found for update.");
+        }
     }
 
     @Override
@@ -78,7 +90,7 @@ public class JpaReadingListRepository implements ReadingListRepository {
 
     @Override
     public List<Book> getBooksInReadingList(UUID readingListId) {
-        String jpql = "SELECT i.bookId FROM ReadingListItemEntity i WHERE i.readingList.id = :readingListId";
+        String jpql = "SELECT i.id.bookId FROM ReadingListItemEntity i WHERE i.readingList.id = :readingListId";
         TypedQuery<UUID> query = entityManager.createQuery(jpql, UUID.class);
         query.setParameter("readingListId", readingListId);
 

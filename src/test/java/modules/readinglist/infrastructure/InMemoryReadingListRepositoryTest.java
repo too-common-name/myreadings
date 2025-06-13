@@ -30,7 +30,7 @@ public class InMemoryReadingListRepositoryTest {
     @Test
     void testSaveReadingList() {
         ReadingList readingList = ReadingListTestUtils.createValidReadingList();
-        ReadingList savedReadingList = repository.save(readingList);
+        ReadingList savedReadingList = repository.create(readingList);
         assertNotNull(savedReadingList);
         assertEquals(readingList.getReadingListId(), savedReadingList.getReadingListId());
     }
@@ -38,7 +38,7 @@ public class InMemoryReadingListRepositoryTest {
     @Test
     void testFindReadingListByIdSuccessful() {
         ReadingList readingList = ReadingListTestUtils.createValidReadingList();
-        ReadingList savedReadingList = repository.save(readingList);
+        ReadingList savedReadingList = repository.create(readingList);
         Optional<ReadingList> retrievedReadingListOpt =
                 repository.findById(savedReadingList.getReadingListId());
         assertTrue(retrievedReadingListOpt.isPresent());
@@ -56,7 +56,7 @@ public class InMemoryReadingListRepositoryTest {
     @Test
     void testDeleteReadingListById() {
         ReadingList readingList = ReadingListTestUtils.createValidReadingList();
-        ReadingList savedReadingList = repository.save(readingList);
+        ReadingList savedReadingList = repository.create(readingList);
         repository.deleteById(savedReadingList.getReadingListId());
         Optional<ReadingList> deletedReadingListOpt =
                 repository.findById(savedReadingList.getReadingListId());
@@ -66,7 +66,7 @@ public class InMemoryReadingListRepositoryTest {
     @Test
     void testAddBookToReadingList() {
         ReadingList readingList = ReadingListTestUtils.createValidReadingList();
-        ReadingList savedReadingList = repository.save(readingList);
+        ReadingList savedReadingList = repository.create(readingList);
         Book book1 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
         Book book2 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
 
@@ -84,7 +84,7 @@ public class InMemoryReadingListRepositoryTest {
         ReadingList readingList = ReadingListTestUtils.createValidReadingList();
         readingList.getBooks().add(bookToRemove);
         readingList.getBooks().add(CatalogTestUtils.createValidBookWithId(UUID.randomUUID()));
-        ReadingList savedReadingList = repository.save(readingList);
+        ReadingList savedReadingList = repository.create(readingList);
 
         repository.removeBookFromReadingList(savedReadingList.getReadingListId(),
                 bookToRemove.getBookId());
@@ -102,7 +102,7 @@ public class InMemoryReadingListRepositoryTest {
         Book book2 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
         readingList.getBooks().add(book1);
         readingList.getBooks().add(book2);
-        ReadingList savedReadingList = repository.save(readingList);
+        ReadingList savedReadingList = repository.create(readingList);
 
         List<Book> booksInList =
                 repository.getBooksInReadingList(savedReadingList.getReadingListId());
@@ -114,7 +114,7 @@ public class InMemoryReadingListRepositoryTest {
     @Test
     void testGetBooksInReadingListFails() {
         ReadingList readingList = ReadingListTestUtils.createValidReadingList();
-        ReadingList savedReadingList = repository.save(readingList);
+        ReadingList savedReadingList = repository.create(readingList);
         List<Book> booksInList =
                 repository.getBooksInReadingList(savedReadingList.getReadingListId());
         assertTrue(booksInList.isEmpty());
@@ -127,8 +127,8 @@ public class InMemoryReadingListRepositoryTest {
                 ReadingListTestUtils.createValidReadingListForUser(user, "List 1");
         ReadingList readingList2 =
                 ReadingListTestUtils.createValidReadingListForUser(user, "List 2");
-        repository.save(readingList1);
-        repository.save(readingList2);
+        repository.create(readingList1);
+        repository.create(readingList2);
 
         List<ReadingList> userReadingLists = repository.findByUserId(user.getKeycloakUserId());
 

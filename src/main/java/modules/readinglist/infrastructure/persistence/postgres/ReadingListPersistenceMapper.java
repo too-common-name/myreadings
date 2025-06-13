@@ -39,7 +39,6 @@ public class ReadingListPersistenceMapper {
         }
 
         var entity = ReadingListEntity.builder()
-                .id(domain.getReadingListId())
                 .userId(domain.getUserId())
                 .name(domain.getName())
                 .description(domain.getDescription())
@@ -58,5 +57,10 @@ public class ReadingListPersistenceMapper {
 
         entity.setItems(items);
         return entity;
+    }
+
+    public void updateEntityFromDomain(ReadingListEntity entity, ReadingList domain) {
+        entity.setName(domain.getName());
+        entity.setDescription(domain.getDescription());
     }
 }
