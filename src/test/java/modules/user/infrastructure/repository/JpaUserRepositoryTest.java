@@ -2,6 +2,7 @@ package modules.user.infrastructure.repository;
 
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import modules.user.core.domain.UiTheme;
 import modules.user.core.domain.User;
@@ -9,6 +10,8 @@ import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.repositories.UserRepository;
 
 import org.junit.jupiter.api.Test;
+
+import common.JpaRepositoryTestProfile;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @TestTransaction
+@TestProfile(JpaRepositoryTestProfile.class)
 public class JpaUserRepositoryTest {
 
     @Inject

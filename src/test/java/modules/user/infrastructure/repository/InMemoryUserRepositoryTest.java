@@ -3,6 +3,8 @@ package modules.user.infrastructure.repository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import common.InMemoryRepositoryTestProfile;
+import io.quarkus.test.junit.TestProfile;
 import modules.user.core.domain.UiTheme;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
@@ -14,6 +16,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@TestProfile(InMemoryRepositoryTestProfile.class)
 public class InMemoryUserRepositoryTest {
 
     private InMemoryUserRepository userRepository;

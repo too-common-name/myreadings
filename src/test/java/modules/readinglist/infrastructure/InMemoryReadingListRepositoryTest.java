@@ -9,6 +9,10 @@ import modules.user.core.domain.User;
 import modules.user.utils.UserTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import common.InMemoryRepositoryTestProfile;
+import io.quarkus.test.junit.TestProfile;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@TestProfile(InMemoryRepositoryTestProfile.class)
 public class InMemoryReadingListRepositoryTest {
     private InMemoryReadingListRepository repository;
 
