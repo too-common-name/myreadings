@@ -64,7 +64,6 @@ public class JpaReadingListRepository implements ReadingListRepository {
         ReadingListItemEntity newItem = new ReadingListItemEntity();
         newItem.setId(new ReadingListItemId(readingListId, book.getBookId()));
         newItem.setReadingList(listEntity);
-        newItem.setBookId(book.getBookId()); 
 
         listEntity.getItems().add(newItem);
     }
@@ -73,7 +72,7 @@ public class JpaReadingListRepository implements ReadingListRepository {
     public void removeBookFromReadingList(UUID readingListId, UUID bookId) {
         ReadingListEntity listEntity = entityManager.find(ReadingListEntity.class, readingListId);
         if (listEntity != null) {
-            listEntity.getItems().removeIf(item -> item.getBookId().equals(bookId));
+            listEntity.getItems().removeIf(item -> item.getId().getBookId().equals(bookId));
         }
     }
 
