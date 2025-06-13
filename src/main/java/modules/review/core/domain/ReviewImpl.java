@@ -1,4 +1,4 @@
-package modules.review.domain;
+package modules.review.core.domain;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

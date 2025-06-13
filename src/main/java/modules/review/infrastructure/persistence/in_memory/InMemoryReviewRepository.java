@@ -1,7 +1,9 @@
-package modules.review.infrastructure;
+package modules.review.infrastructure.persistence.in_memory;
 
-import modules.review.domain.Review;
-import jakarta.enterprise.context.ApplicationScoped; 
+import jakarta.enterprise.context.ApplicationScoped;
+import modules.review.core.domain.Review;
+import modules.review.core.usecases.repositories.ReviewRepository;
+
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.Optional;

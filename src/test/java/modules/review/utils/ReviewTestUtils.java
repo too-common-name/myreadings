@@ -3,8 +3,8 @@ package modules.review.utils;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import modules.catalog.utils.CatalogTestUtils;
-import modules.review.domain.Review;
-import modules.review.domain.ReviewImpl;
+import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewImpl;
 import modules.user.utils.UserTestUtils;
 
 public class ReviewTestUtils {

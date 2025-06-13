@@ -15,8 +15,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import modules.review.domain.Review;
-import modules.review.infrastructure.ReviewRepository;
+import modules.review.core.domain.Review;
+import modules.review.core.usecases.ReviewServiceImpl;
+import modules.review.core.usecases.repositories.ReviewRepository;
 import modules.review.utils.ReviewTestUtils;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.BookService;

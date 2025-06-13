@@ -1,6 +1,7 @@
 package modules.review.infrastructure;
 
-import modules.review.domain.Review;
+import modules.review.core.domain.Review;
+import modules.review.infrastructure.persistence.in_memory.InMemoryReviewRepository;
 import modules.review.utils.ReviewTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
