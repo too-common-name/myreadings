@@ -53,7 +53,7 @@ public class JpaReadingListRepositoryTest {
     void testSaveAndFindById() {
         ReadingList readingList = ReadingListTestUtils.createValidReadingListForUser(testUser1, "My List");
         
-        ReadingList savedReadingList = readingListRepository.save(readingList);
+        ReadingList savedReadingList = readingListRepository.create(readingList);
         
         Optional<ReadingList> retrieved = readingListRepository.findById(savedReadingList.getReadingListId());
         
@@ -63,7 +63,7 @@ public class JpaReadingListRepositoryTest {
 
     @Test
     void testDeleteReadingListById() {
-        ReadingList readingList = readingListRepository.save(
+        ReadingList readingList = readingListRepository.create(
             ReadingListTestUtils.createValidReadingListForUser(testUser1, "To Delete")
         );
         UUID listId = readingList.getReadingListId();
@@ -75,7 +75,7 @@ public class JpaReadingListRepositoryTest {
 
     @Test
     void testAddAndGetBooksInReadingList() {
-        ReadingList savedReadingList = readingListRepository.save(
+        ReadingList savedReadingList = readingListRepository.create(
             ReadingListTestUtils.createValidReadingListForUser(testUser1, "Sci-Fi")
         );
         
@@ -92,7 +92,7 @@ public class JpaReadingListRepositoryTest {
 
     @Test
     void testRemoveBookFromReadingList() {
-        ReadingList savedReadingList = readingListRepository.save(
+        ReadingList savedReadingList = readingListRepository.create(
             ReadingListTestUtils.createValidReadingListForUser(testUser1, "My Books")
         );
         readingListRepository.addBookToReadingList(savedReadingList.getReadingListId(), testBook1);
@@ -107,9 +107,9 @@ public class JpaReadingListRepositoryTest {
 
     @Test
     void testFindByUserId() {
-        readingListRepository.save(ReadingListTestUtils.createValidReadingListForUser(testUser1, "List 1"));
-        readingListRepository.save(ReadingListTestUtils.createValidReadingListForUser(testUser1, "List 2"));
-        readingListRepository.save(ReadingListTestUtils.createValidReadingListForUser(testUser2, "Other List"));
+        readingListRepository.create(ReadingListTestUtils.createValidReadingListForUser(testUser1, "List 1"));
+        readingListRepository.create(ReadingListTestUtils.createValidReadingListForUser(testUser1, "List 2"));
+        readingListRepository.create(ReadingListTestUtils.createValidReadingListForUser(testUser2, "Other List"));
 
         List<ReadingList> userReadingLists = readingListRepository.findByUserId(testUser1.getKeycloakUserId());
 

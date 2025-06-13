@@ -109,12 +109,12 @@ public class ReadingListServiceImplTest {
     @Test
     void createReadingListSuccessful() {
         ReadingList readingListToCreate = ReadingListTestUtils.createValidReadingList();
-        when(readingListRepository.save(any(ReadingList.class))).thenReturn(readingListToCreate);
+        when(readingListRepository.create(any(ReadingList.class))).thenReturn(readingListToCreate);
         
         ReadingList result = readingListService.createReadingList(readingListToCreate);
         
         assertEquals(readingListToCreate, result);
-        verify(readingListRepository).save(readingListToCreate);
+        verify(readingListRepository).create(readingListToCreate);
     }
     
     @Test
@@ -126,7 +126,7 @@ public class ReadingListServiceImplTest {
         assertThrows(IllegalArgumentException.class, () -> readingListService.updateReadingList(updatedReadingList));
         
         verify(readingListRepository).findById(readingListId);
-        verify(readingListRepository, never()).save(any());
+        verify(readingListRepository, never()).update(any());
     }
 
     @Test
