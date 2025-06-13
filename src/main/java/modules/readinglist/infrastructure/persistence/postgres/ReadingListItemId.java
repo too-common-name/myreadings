@@ -1,5 +1,6 @@
 package modules.readinglist.infrastructure.persistence.postgres;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import java.io.Serializable;
 import java.util.Objects;
@@ -16,7 +17,10 @@ import lombok.Setter;
 @AllArgsConstructor
 public class ReadingListItemId implements Serializable {
 
+    @Column(name = "reading_list_id")
     private UUID readingListId;
+
+    @Column(name = "book_id")
     private UUID bookId;
 
     @Override

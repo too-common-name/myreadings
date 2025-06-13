@@ -1,8 +1,5 @@
 package modules.readinglist.infrastructure.persistence.postgres;
 
-import java.util.UUID;
-
-import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -25,6 +22,4 @@ public class ReadingListItemEntity {
     @JoinColumn(name = "reading_list_id")
     private ReadingListEntity readingList;
 
-    @Column(name = "book_id")
-    private UUID bookId;
 }

@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 public class ReadingListEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "user_id", nullable = false)

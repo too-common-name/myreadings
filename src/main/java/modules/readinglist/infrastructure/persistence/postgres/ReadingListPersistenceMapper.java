@@ -19,7 +19,7 @@ public class ReadingListPersistenceMapper {
 
         List<Book> partialBooks = entity.getItems().stream()
                 .map(itemEntity -> BookImpl.builder()
-                        .bookId(itemEntity.getBookId()) 
+                        .bookId(itemEntity.getId().getBookId()) 
                         .build()) 
                 .collect(Collectors.toList());
 
@@ -51,7 +51,6 @@ public class ReadingListPersistenceMapper {
                 .map(book -> {
                     var item = new ReadingListItemEntity();
                     item.setId(new ReadingListItemId(domain.getReadingListId(), book.getBookId()));
-                    item.setBookId(book.getBookId()); 
                     item.setReadingList(entity);      
                     return item;
                 })
