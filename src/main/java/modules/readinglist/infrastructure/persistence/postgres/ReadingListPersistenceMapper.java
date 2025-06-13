@@ -38,7 +38,7 @@ public class ReadingListPersistenceMapper {
             return null;
         }
 
-        var entity = ReadingListEntity.builder()
+        ReadingListEntity entity = ReadingListEntity.builder()
                 .userId(domain.getUserId())
                 .name(domain.getName())
                 .description(domain.getDescription())
@@ -47,8 +47,8 @@ public class ReadingListPersistenceMapper {
 
         
         List<ReadingListItemEntity> items = domain.getBooks().stream()
-                .map(book -> {
-                    var item = new ReadingListItemEntity();
+                .map((Book book) -> {
+                    ReadingListItemEntity item = new ReadingListItemEntity();
                     item.setId(new ReadingListItemId(domain.getReadingListId(), book.getBookId()));
                     item.setReadingList(entity);      
                     return item;

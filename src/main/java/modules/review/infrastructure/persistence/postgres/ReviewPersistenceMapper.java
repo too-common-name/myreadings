@@ -1,9 +1,11 @@
 package modules.review.infrastructure.persistence.postgres;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.review.core.domain.Review;
 import modules.review.core.domain.ReviewImpl;
+import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 
 @ApplicationScoped
@@ -14,8 +16,8 @@ public class ReviewPersistenceMapper {
             return null;
         }
 
-        var partialBook = BookImpl.builder().bookId(entity.getBookId()).build();
-        var partialUser = UserImpl.builder().keycloakUserId(entity.getUserId()).build();
+        Book partialBook = BookImpl.builder().bookId(entity.getBookId()).build();
+        User partialUser = UserImpl.builder().keycloakUserId(entity.getUserId()).build();
 
         return ReviewImpl.builder()
                 .reviewId(entity.getReviewId())
