@@ -57,7 +57,7 @@ public class ReviewServiceImplTest {
 
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
         when(userService.findUserProfileById(userId)).thenReturn(Optional.of(existingUser));
-        when(reviewRepository.save(any(Review.class))).thenReturn(reviewToCreate);
+        when(reviewRepository.create(any(Review.class))).thenReturn(reviewToCreate);
 
 
 
@@ -68,7 +68,7 @@ public class ReviewServiceImplTest {
         assertNotNull(createdReview, "createReview should return a Review object");
         assertEquals(reviewToCreate.getReviewId(), createdReview.getReviewId(),
                 "Returned review should have the same ID as the input review");
-        verify(reviewRepository, times(1)).save(reviewToCreate);
+        verify(reviewRepository, times(1)).create(reviewToCreate);
         verify(bookService, times(1)).getBookById(bookId);
         verify(userService, times(1)).findUserProfileById(userId);
     }
@@ -84,7 +84,7 @@ public class ReviewServiceImplTest {
             reviewService.createReview(reviewToCreate);
         }, "createReview should throw IllegalArgumentException if Book not found");
 
-        verify(reviewRepository, never()).save(any(Review.class));
+        verify(reviewRepository, never()).create(any(Review.class));
         verify(bookService, times(1)).getBookById(bookId);
     }
 
@@ -103,7 +103,7 @@ public class ReviewServiceImplTest {
             reviewService.createReview(reviewToCreate);
         }, "createReview should throw IllegalArgumentException if User not found");
 
-        verify(reviewRepository, never()).save(any(Review.class));
+        verify(reviewRepository, never()).create(any(Review.class));
         verify(userService, times(1)).findUserProfileById(userId);
     }
 
@@ -251,14 +251,14 @@ public class ReviewServiceImplTest {
 
         when(reviewRepository.findById(reviewToUpdate.getReviewId()))
                 .thenReturn(Optional.of(reviewToUpdate));
-        when(reviewRepository.save(any(Review.class))).thenReturn(reviewToUpdate);
+        when(reviewRepository.update(any(Review.class))).thenReturn(reviewToUpdate);
 
         Review updatedReview = reviewService.updateReview(reviewToUpdate);
 
         assertNotNull(updatedReview, "updateReview should return a Review object");
         assertEquals(reviewToUpdate.getReviewId(), updatedReview.getReviewId(),
                 "Returned review should have the same ID as the input review");
-        verify(reviewRepository, times(1)).save(reviewToUpdate);
+        verify(reviewRepository, times(1)).update(reviewToUpdate);
     }
 
 

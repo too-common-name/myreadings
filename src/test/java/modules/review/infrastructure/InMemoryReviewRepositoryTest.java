@@ -22,7 +22,7 @@ public class InMemoryReviewRepositoryTest {
     @Test
     void saveSuccessful() {
         Review reviewToSave = ReviewTestUtils.createValidReviewWithText("test");
-        Review savedReview = repository.save(reviewToSave);
+        Review savedReview = repository.create(reviewToSave);
         Optional<Review> retrievedReview = repository.findById(savedReview.getReviewId());
         assertTrue(retrievedReview.isPresent());
         assertEquals(savedReview.getReviewId(), retrievedReview.get().getReviewId());
@@ -87,8 +87,8 @@ public class InMemoryReviewRepositoryTest {
 
     @Test
     void findAllReviewsExist() {
-        repository.save(ReviewTestUtils.createValidReviewWithText("test1"));
-        repository.save(ReviewTestUtils.createValidReviewWithText("test2"));
+        repository.create(ReviewTestUtils.createValidReviewWithText("test1"));
+        repository.create(ReviewTestUtils.createValidReviewWithText("test2"));
         List<Review> allReviews = repository.findAll();
         assertEquals(2, allReviews.size());
     }
@@ -102,7 +102,7 @@ public class InMemoryReviewRepositoryTest {
     @Test
     void deleteByIdSuccessful() {
         Review reviewToDelete = ReviewTestUtils.createValidReviewWithText("test");
-        Review savedReview = repository.save(reviewToDelete);
+        Review savedReview = repository.create(reviewToDelete);
         repository.deleteById(savedReview.getReviewId());
         Optional<Review> deletedReview = repository.findById(savedReview.getReviewId());
         assertFalse(deletedReview.isPresent());
@@ -155,7 +155,7 @@ public class InMemoryReviewRepositoryTest {
         UUID userId = UUID.randomUUID();
         UUID bookId = UUID.randomUUID();
         Review expectedReview = ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Specific review by user for book");
-        repository.save(expectedReview);
+        repository.create(expectedReview);
 
         Optional<Review> retrievedReviewOpt = repository.findByUserIdAndBookId(userId, bookId);
         assertTrue(retrievedReviewOpt.isPresent());

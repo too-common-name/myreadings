@@ -3,6 +3,7 @@ package modules.review.core.usecases;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 
 import java.util.Optional;
 import java.util.List;
@@ -35,7 +36,12 @@ public class ReviewServiceImpl implements ReviewService {
             throw new IllegalArgumentException("User not found: " + review.getUser().getKeycloakUserId());
         }
 
-        return reviewRepository.save(review);
+        return persistNewReview(review);
+    }
+
+    @Transactional
+    protected Review persistNewReview(Review review) {
+        return reviewRepository.create(review);
     }
 
     @Override
@@ -62,15 +68,17 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    @Transactional
     public Review updateReview(Review review) {
         if (reviewRepository.findById(review.getReviewId()).isEmpty()) {
             throw new IllegalArgumentException(
                     "Review not found for update: " + review.getReviewId());
         }
-        return reviewRepository.save(review);
+        return reviewRepository.update(review);
     }
 
     @Override
+    @Transactional
     public void deleteReviewById(UUID reviewId) {
         if (reviewRepository.findById(reviewId).isEmpty()) {
             throw new IllegalArgumentException("Review not found for deletion: " + reviewId);
