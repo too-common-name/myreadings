@@ -8,7 +8,8 @@ import java.util.Optional;
 import java.util.List;
 
 public interface ReviewRepository {
-    Review save(Review review);
+    Review create(Review review);
+    Review update(Review review);
     List<Review> saveAll(Iterable<Review> reviews);
     Optional<Review> findById(UUID reviewId);
     Optional<Review> findByUserIdAndBookId(UUID userId, UUID bookId);
