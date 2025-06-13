@@ -1,9 +1,11 @@
-package modules.review.usecases;
+package modules.review.core.usecases;
 
 import java.util.UUID;
+
+import modules.review.core.domain.Review;
+
 import java.util.Optional;
 import java.util.List;
-import modules.review.domain.Review;
 
 public interface ReviewService {
 

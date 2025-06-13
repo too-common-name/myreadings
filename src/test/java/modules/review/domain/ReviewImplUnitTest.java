@@ -15,6 +15,8 @@ import java.util.UUID;
 
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
+import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewImpl;
 import modules.user.core.domain.UiTheme;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;

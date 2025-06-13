@@ -1,4 +1,4 @@
-package modules.review.usecases;
+package modules.review.core.usecases;
 
 import java.util.UUID;
 
@@ -8,8 +8,8 @@ import java.util.Optional;
 import java.util.List;
 
 import modules.catalog.core.usecases.BookService;
-import modules.review.domain.Review;
-import modules.review.infrastructure.ReviewRepository;
+import modules.review.core.domain.Review;
+import modules.review.core.usecases.repositories.ReviewRepository;
 import modules.user.core.usecases.UserService;
 
 @ApplicationScoped

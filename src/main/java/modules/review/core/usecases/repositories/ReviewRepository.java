@@ -1,7 +1,9 @@
-package modules.review.infrastructure;
+package modules.review.core.usecases.repositories;
 
-import modules.review.domain.Review;
 import java.util.UUID;
+
+import modules.review.core.domain.Review;
+
 import java.util.Optional;
 import java.util.List;
 
