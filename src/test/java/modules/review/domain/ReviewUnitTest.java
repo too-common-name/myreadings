@@ -16,12 +16,12 @@ import java.util.UUID;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
+
 import modules.user.core.domain.UiTheme;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 
-public class ReviewImplUnitTest {
+public class ReviewUnitTest {
 
     private static Validator validator;
 
@@ -33,7 +33,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithValidDataSuccessful() {
-        Review review = ReviewImpl.builder()
+        Review review = Review.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(createValidUser())
@@ -49,7 +49,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithoutBookFailsValidation() {
-        Review review = ReviewImpl.builder()
+        Review review = Review.builder()
                 .reviewId(UUID.randomUUID())
                 .book(null) // Book is null, should fail @NotNull
                 .user(createValidUser())
@@ -66,7 +66,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithoutUserFailsValidation() {
-        Review review = ReviewImpl.builder()
+        Review review = Review.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(null) // User is null, should fail @NotNull
@@ -85,7 +85,7 @@ public class ReviewImplUnitTest {
     void createReviewWithTooLongReviewTextFailsValidation() {
         String longReviewText = "This review text is intentionally made very long to exceed the 200 character limit imposed by the @Size annotation. We need to make sure that validation correctly identifies this as an invalid review text because it is too long....................................................................................................................."; // Exceeds 200 chars
 
-        Review review = ReviewImpl.builder()
+        Review review = Review.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(createValidUser())
@@ -102,7 +102,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithRatingTooLowFailsValidation() {
-        Review review = ReviewImpl.builder()
+        Review review = Review.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(createValidUser())
@@ -119,7 +119,7 @@ public class ReviewImplUnitTest {
 
     @Test
     void createReviewWithRatingTooHighFailsValidation() {
-        Review review = ReviewImpl.builder()
+        Review review = Review.builder()
                 .reviewId(UUID.randomUUID())
                 .book(createValidBook())
                 .user(createValidUser())

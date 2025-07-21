@@ -2,7 +2,6 @@ package modules.review.infrastructure.persistence.in_memory;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
 import modules.review.core.usecases.repositories.ReviewRepository;
 
 import java.util.UUID;
@@ -11,6 +10,7 @@ import java.util.stream.Collectors;
 import io.quarkus.arc.properties.IfBuildProperty;
 
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,7 +32,7 @@ public class InMemoryReviewRepository implements ReviewRepository {
     public Review update(Review review) {
         Review existingReview = reviews.get(review.getReviewId());
 
-        Review updatedReview = ReviewImpl.builder()
+        Review updatedReview = Review.builder()
                 .reviewId(existingReview.getReviewId())
                 .book(existingReview.getBook())
                 .user(existingReview.getUser())
@@ -92,4 +92,20 @@ public class InMemoryReviewRepository implements ReviewRepository {
                 .findFirst();
     }
 
+    @Override
+    public Long countReviewsByBookId(UUID bookId) {
+        return reviews.values().stream()
+                .filter(review -> review.getBook().getBookId().equals(bookId))
+                .count();
+    }
+
+    @Override
+    public Double findAverageRatingByBookId(UUID bookId) {
+        OptionalDouble average = reviews.values().stream()
+                .filter(review -> review.getBook().getBookId().equals(bookId))
+                .mapToDouble(Review::getRating)
+                .average();
+
+        return average.isPresent() ? average.getAsDouble() : null;
+    }
 }

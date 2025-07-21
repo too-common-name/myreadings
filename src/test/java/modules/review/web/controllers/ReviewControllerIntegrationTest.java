@@ -12,13 +12,13 @@ import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.BookServiceImpl;
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
+
 import modules.review.core.usecases.ReviewServiceImpl;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserServiceImpl;
 
-import org.junit.jupiter.api.AfterEach; // Importa AfterEach
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -71,16 +71,21 @@ public class ReviewControllerIntegrationTest {
                         .isbn("978-0321765723")
                         .title("The Lord of the Rings")
                         .build();
+        private final Book anotherTestBook = BookImpl.builder()
+                        .isbn("978-1234567890")
+                        .title("Another Great Book")
+                        .build();
 
         private UUID aliceReviewId;
         private Book createdBook;
+        private Book createdAnotherBook;
 
         @BeforeEach
         void setUp() {
                 setUpUsers();
                 setUpBooks();
 
-                Review aliceReview = ReviewImpl.builder()
+                Review aliceReview = Review.builder()
                                 .reviewId(UUID.randomUUID())
                                 .book(createdBook)
                                 .user(alice)
@@ -125,6 +130,7 @@ public class ReviewControllerIntegrationTest {
         @Transactional
         void setUpBooks() {
                 createdBook = bookService.createBook(testBook);
+                createdAnotherBook = bookService.createBook(anotherTestBook);
         }
 
         protected String getAccessToken(String userName) {
@@ -231,6 +237,44 @@ public class ReviewControllerIntegrationTest {
                                 .then()
                                 .statusCode(200)
                                 .body("[0].userId", equalTo(alice.getKeycloakUserId().toString()));
+        }
+
+        @Test
+        void testGetBookReviewStatsForBookWithReviews() {
+                given()
+                                .auth().oauth2(getAccessToken(alice.getUsername()))
+                                .pathParam("bookId", createdBook.getBookId())
+                                .when().get("/books/{bookId}/stats")
+                                .then()
+                                .statusCode(200)
+                                .body("bookId", equalTo(createdBook.getBookId().toString()))
+                                .body("totalReviews", is(1))
+                                .body("averageRating", equalTo(5.0f));
+        }
+
+        @Test
+        void testGetBookReviewStatsForBookWithoutReviews() {
+                given()
+                                .auth().oauth2(getAccessToken(alice.getUsername()))
+                                .pathParam("bookId", createdAnotherBook.getBookId())
+                                .when().get("/books/{bookId}/stats")
+                                .then()
+                                .statusCode(200)
+                                .body("bookId", equalTo(createdAnotherBook.getBookId().toString()))
+                                .body("totalReviews", is(0))
+                                .body("averageRating", equalTo(0.0f));
+        }
+
+        @Test
+        void testGetBookReviewStatsForNonExistentBook() {
+                UUID nonExistentBookId = UUID.randomUUID();
+                given()
+                                .auth().oauth2(getAccessToken(alice.getUsername()))
+                                .pathParam("bookId", nonExistentBookId)
+                                .when().get("/books/{bookId}/stats")
+                                .then()
+                                .statusCode(404)
+                                .body(equalTo("Book not found with ID: " + nonExistentBookId)); // Messaggio dal service
         }
 
 }

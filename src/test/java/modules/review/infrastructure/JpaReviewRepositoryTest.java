@@ -9,7 +9,7 @@ import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
+
 import modules.review.core.usecases.repositories.ReviewRepository;
 import modules.review.utils.ReviewTestUtils;
 import modules.user.core.domain.User;
@@ -48,7 +48,7 @@ public class JpaReviewRepositoryTest {
     @Test
     void testCreateAndFindById() {
         Review reviewToCreate = ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
-                testBook1.getBookId(), "Great book!");
+                testBook1.getBookId(), "Great book!", 5);
 
         Review createdReview = reviewRepository.create(reviewToCreate);
         assertNotNull(createdReview.getReviewId(), "Created review should have a non-null ID");
@@ -64,9 +64,9 @@ public class JpaReviewRepositoryTest {
     void testUpdateReview() {
         Review createdReview = reviewRepository.create(
                 ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(),
-                        "Original Text"));
+                        "Original Text", 5));
 
-        Review reviewToUpdate = ReviewImpl.builder()
+        Review reviewToUpdate = Review.builder()
                 .reviewId(createdReview.getReviewId())
                 .user(createdReview.getUser())
                 .book(createdReview.getBook())
@@ -85,7 +85,7 @@ public class JpaReviewRepositoryTest {
     @Test
     void testDeleteById() {
         Review createdReview = reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(
-                testUser1.getKeycloakUserId(), testBook1.getBookId(), "To be deleted"));
+                testUser1.getKeycloakUserId(), testBook1.getBookId(), "To be deleted", 5));
         UUID reviewId = createdReview.getReviewId();
 
         reviewRepository.deleteById(reviewId);
@@ -98,11 +98,11 @@ public class JpaReviewRepositoryTest {
     void testGetBookReviews() {
         Book anotherBook = bookRepository.save(CatalogTestUtils.createValidBook());
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
-                testBook1.getBookId(), "Review 1 for book 1"));
+                testBook1.getBookId(), "Review 1 for book 1", 5));
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
-                testBook1.getBookId(), "Review 2 for book 1"));
+                testBook1.getBookId(), "Review 2 for book 1", 5));
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
-                anotherBook.getBookId(), "Review for another book"));
+                anotherBook.getBookId(), "Review for another book", 5));
 
         List<Review> reviews = reviewRepository.getBookReviews(testBook1.getBookId());
 
@@ -114,11 +114,11 @@ public class JpaReviewRepositoryTest {
     void testGetUserReviews() {
         User anotherUser = userRepository.save(UserTestUtils.createValidUser());
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
-                testBook1.getBookId(), "Review 1 by user 1"));
+                testBook1.getBookId(), "Review 1 by user 1", 5));
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
-                testBook1.getBookId(), "Review 2 by user 1"));
+                testBook1.getBookId(), "Review 2 by user 1", 5));
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(anotherUser.getKeycloakUserId(),
-                testBook1.getBookId(), "Review by another user"));
+                testBook1.getBookId(), "Review by another user", 5));
 
         List<Review> reviews = reviewRepository.getUserReviews(testUser1.getKeycloakUserId());
 
@@ -130,7 +130,7 @@ public class JpaReviewRepositoryTest {
     @Test
     void testFindByUserIdAndBookId() {
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
-                testBook1.getBookId(), "Specific review"));
+                testBook1.getBookId(), "Specific review", 5));
 
         Optional<Review> foundReview = reviewRepository.findByUserIdAndBookId(testUser1.getKeycloakUserId(),
                 testBook1.getBookId());
@@ -141,5 +141,43 @@ public class JpaReviewRepositoryTest {
         Optional<Review> notFoundReview = reviewRepository.findByUserIdAndBookId(testUser1.getKeycloakUserId(),
                 UUID.randomUUID());
         assertTrue(notFoundReview.isEmpty());
+    }
+    @Test
+    void testCountReviewsByBookId() {
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "Review 1", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "Review 2", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "Review for other book", 5));
+
+        long count = reviewRepository.countReviewsByBookId(testBook1.getBookId());
+        assertEquals(3, count);
+
+        long countNonExistent = reviewRepository.countReviewsByBookId(UUID.randomUUID());
+        assertEquals(0, countNonExistent);
+    }
+
+    @Test
+    void testFindAverageRatingByBookId_WithReviews() {
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "", 4));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "", 3));
+
+        Double averageRating1 = reviewRepository.findAverageRatingByBookId(testBook1.getBookId());
+        assertNotNull(averageRating1);
+        assertEquals(4.0, averageRating1, 0.001);
+    }
+
+    @Test
+    void testFindAverageRatingByBookId_NoReviews() {
+        Double averageRating = reviewRepository.findAverageRatingByBookId(testBook1.getBookId());
+        assertNull(averageRating);
+
+        Double averageRatingNonExistentBook = reviewRepository.findAverageRatingByBookId(UUID.randomUUID());
+        assertNull(averageRatingNonExistentBook);
+    }
+
+    @Test
+    void testFindAverageRatingByBookId_NonExistentBookId() {
+        Double averageRatingNonExistentBook = reviewRepository.findAverageRatingByBookId(UUID.randomUUID());
+        assertNull(averageRatingNonExistentBook);
     }
 }

@@ -4,7 +4,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 
@@ -19,7 +18,7 @@ public class ReviewPersistenceMapper {
         Book partialBook = BookImpl.builder().bookId(entity.getBookId()).build();
         User partialUser = UserImpl.builder().keycloakUserId(entity.getUserId()).build();
 
-        return ReviewImpl.builder()
+        return Review.builder()
                 .reviewId(entity.getReviewId())
                 .book(partialBook)
                 .user(partialUser)

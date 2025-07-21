@@ -1,14 +1,16 @@
 package modules.review.web.controllers;
 
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.BookService;
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
+import modules.review.core.domain.ReviewStats;
 import modules.review.core.usecases.ReviewService;
 import modules.review.web.dto.ReviewRequestDTO;
 import modules.review.web.dto.ReviewResponseDTO;
+import modules.review.web.dto.ReviewStatsResponseDTO;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserService;
@@ -77,7 +79,7 @@ public class ReviewControllerUnitTest {
                 .reviewText("This is a test review.")
                 .build();
 
-        mockReview = ReviewImpl.builder()
+        mockReview = Review.builder()
                 .reviewId(testReviewId)
                 .book(mockBook)
                 .user(mockUser)
@@ -163,7 +165,7 @@ public class ReviewControllerUnitTest {
     @Test
     void testUpdateReviewShouldReturnOkAndReviewDTOForOwner() {
         ReviewRequestDTO updateRequestDTO = ReviewRequestDTO.builder().rating(5).reviewText("Updated review.").bookId(testBookId).build();
-        Review updatedReview = ReviewImpl.builder()
+        Review updatedReview = Review.builder()
                 .reviewId(testReviewId)
                 .book(mockBook)
                 .user(mockUser)
@@ -280,5 +282,64 @@ public class ReviewControllerUnitTest {
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedList, response.getEntity());
         verify(reviewService, times(1)).getReviewsForUser(testUserId);
+    }
+
+    @Test
+    void testGetBookReviewStatsShouldReturnOkWithStatsForExistingBookWithReviews() {
+        ReviewStats mockReviewStats = ReviewStats.builder()
+                .totalReviews(5L)
+                .averageRating(4.2)
+                .build();
+        ReviewStatsResponseDTO expectedStatsResponseDTO = ReviewStatsResponseDTO.builder()
+                .bookId(testBookId.toString())
+                .totalReviews(5L)
+                .averageRating(4.2)
+                .build();
+
+        when(reviewService.getReviewStatsForBook(testBookId)).thenReturn(mockReviewStats);
+
+        Response response = reviewController.getBookReviewStats(testBookId);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(expectedStatsResponseDTO, response.getEntity());
+        
+        verify(bookService, never()).getBookById(any());
+        verify(reviewService, times(1)).getReviewStatsForBook(testBookId);
+    }
+
+    @Test
+    void testGetBookReviewStatsShouldReturnOkWithZeroStatsForExistingBookWithoutReviews() {
+        ReviewStats mockReviewStats = ReviewStats.builder()
+                .totalReviews(0L)
+                .averageRating(0.0)
+                .build();
+        ReviewStatsResponseDTO expectedStatsResponseDTO = ReviewStatsResponseDTO.builder()
+                .bookId(testBookId.toString())
+                .totalReviews(0L)
+                .averageRating(0.0)
+                .build();
+
+        when(reviewService.getReviewStatsForBook(testBookId)).thenReturn(mockReviewStats);
+
+        Response response = reviewController.getBookReviewStats(testBookId);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(expectedStatsResponseDTO, response.getEntity());
+        
+        verify(bookService, never()).getBookById(any());
+        verify(reviewService, times(1)).getReviewStatsForBook(testBookId);
+    }
+
+    @Test
+    void testGetBookReviewStatsShouldReturnNotFoundIfBookDoesNotExist() {
+        when(reviewService.getReviewStatsForBook(testBookId)).thenThrow(new NotFoundException("Book not found with ID: " + testBookId));
+
+        Response response = reviewController.getBookReviewStats(testBookId);
+
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        assertEquals("Book not found with ID: " + testBookId, response.getEntity());
+        
+        verify(bookService, never()).getBookById(any());
+        verify(reviewService, times(1)).getReviewStatsForBook(testBookId);
     }
 }

@@ -6,6 +6,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import jakarta.ws.rs.NotFoundException;
+
 import java.util.Optional;
 import java.util.UUID;
 import java.util.ArrayList;
@@ -16,6 +18,7 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewStats;
 import modules.review.core.usecases.ReviewServiceImpl;
 import modules.review.core.usecases.repositories.ReviewRepository;
 import modules.review.utils.ReviewTestUtils;
@@ -139,11 +142,12 @@ public class ReviewServiceImplTest {
 
     @Test
     void testGetReviewsForBookSuccessful() {
+        UUID userId = UUID.randomUUID();
         UUID bookId = UUID.randomUUID();
         Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
         List<Review> expectedReviews =
-                Arrays.asList(ReviewTestUtils.createValidReviewForBook(bookId, "Review 1"),
-                        ReviewTestUtils.createValidReviewForBook(bookId, "Review 2"));
+                Arrays.asList(ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Review 1", 5),
+                        ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Review 2", 5));
 
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
         when(reviewRepository.getBookReviews(bookId)).thenReturn(expectedReviews);
@@ -194,10 +198,12 @@ public class ReviewServiceImplTest {
     @Test
     void testGetReviewsForUserSuccessful() {
         UUID userId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
         User existingUser = UserTestUtils.createValidUserWithId(userId);
         List<Review> expectedReviews =
-                Arrays.asList(ReviewTestUtils.createValidReviewForUser(userId, "Review 1"),
-                        ReviewTestUtils.createValidReviewForUser(userId, "Review 2"));
+                Arrays.asList(ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Review 1", 5),
+                        ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Review 2", 5));
 
         when(userService.findUserProfileById(userId)).thenReturn(Optional.of(existingUser));
         when(reviewRepository.getUserReviews(userId)).thenReturn(expectedReviews);
@@ -287,48 +293,65 @@ public class ReviewServiceImplTest {
     }
 
     @Test
-    void testGetAverageRatingForBookSuccessful() {
+    void testGetRatingStatsForBookSuccessful() {
         UUID bookId = UUID.randomUUID();
         Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
-        List<Review> reviewsForBook =
-                Arrays.asList(ReviewTestUtils.createReviewWithRatingForBook(bookId, 4),
-                        ReviewTestUtils.createReviewWithRatingForBook(bookId, 5),
-                        ReviewTestUtils.createReviewWithRatingForBook(bookId, 3));
+
+        when(reviewRepository.countReviewsByBookId(bookId)).thenReturn(3L);
+        when(reviewRepository.findAverageRatingByBookId(bookId)).thenReturn(4.0);
+
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(reviewRepository.getBookReviews(bookId)).thenReturn(reviewsForBook);
 
-        double averageRating = reviewService.getAverageRatingForBook(bookId);
+        ReviewStats stats = reviewService.getReviewStatsForBook(bookId);
 
-        assertEquals(4.0, averageRating, 0.001, "Average rating should be calculated correctly");
-        verify(reviewRepository, times(1)).getBookReviews(bookId);
+        assertNotNull(stats, "ReviewStats should not be null");
+        assertEquals(3L, stats.getTotalReviews(), "Total reviews should be 3");
+        assertEquals(4.0, stats.getAverageRating(), 0.001, "Average rating should be calculated correctly");
+
+        verify(bookService, times(1)).getBookById(bookId);
+        verify(reviewRepository, times(1)).countReviewsByBookId(bookId);
+        verify(reviewRepository, times(1)).findAverageRatingByBookId(bookId);
     }
 
     @Test
-    void testGetAverageRatingForBookFails() {
+    void testGetRatingStatsForBookFails() {
         UUID bookId = UUID.randomUUID();
+
         when(bookService.getBookById(bookId)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.getAverageRatingForBook(bookId);
-        }, "getAverageRatingForBook should throw IllegalArgumentException if Book not found");
+        when(reviewRepository.countReviewsByBookId(bookId)).thenReturn(0L);
+        when(reviewRepository.findAverageRatingByBookId(bookId)).thenReturn(null);
 
-        verify(reviewRepository, never()).getBookReviews(any());
+        assertThrows(NotFoundException.class, () -> {
+            reviewService.getReviewStatsForBook(bookId);
+        });
+
         verify(bookService, times(1)).getBookById(bookId);
+        verify(reviewRepository, never()).countReviewsByBookId(any());
+        verify(reviewRepository, never()).findAverageRatingByBookId(any()); 
 
     }
 
 
     @Test
-    void testGetZeroAverageRatingForBookSuccessful() {
+    void testGetZeroRatingStatsForBookSuccessful() {
         UUID bookId = UUID.randomUUID();
         Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
+
+        when(reviewRepository.countReviewsByBookId(bookId)).thenReturn(0L);
+        when(reviewRepository.findAverageRatingByBookId(bookId)).thenReturn(0.0);
+
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(reviewRepository.getBookReviews(bookId)).thenReturn(new ArrayList<>());
 
-        double averageRating = reviewService.getAverageRatingForBook(bookId);
+        ReviewStats stats = reviewService.getReviewStatsForBook(bookId);
 
-        assertEquals(0.0, averageRating, 0.001, "Average rating should be 0 when no reviews exist");
-        verify(reviewRepository, times(1)).getBookReviews(bookId);
+        assertNotNull(stats, "ReviewStats should not be null");
+        assertEquals(0L, stats.getTotalReviews(), "Total reviews should be 0");
+        assertEquals(0.0, stats.getAverageRating(), 0.001, "Average rating should be 0 when no reviews exist");
+
+        verify(bookService, times(1)).getBookById(bookId);
+        verify(reviewRepository, times(1)).countReviewsByBookId(bookId);
+        verify(reviewRepository, times(1)).findAverageRatingByBookId(bookId);
     }
 
     @Test
