@@ -342,4 +342,79 @@ public class ReviewControllerUnitTest {
         verify(bookService, never()).getBookById(any());
         verify(reviewService, times(1)).getReviewStatsForBook(testBookId);
     }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnOkAndReviewDTOWhenReviewExists() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenReturn(Optional.of(mockBook));
+        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.of(mockUser));
+        when(reviewService.findReviewByUserAndBook(any(UUID.class), any(UUID.class))).thenReturn(Optional.of(mockReview));
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(expectedResponseDTO, response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, times(1)).findUserProfileById(testUserId);
+        verify(reviewService, times(1)).findReviewByUserAndBook(testUserId, testBookId);
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnNotFoundWhenReviewDoesNotExist() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenReturn(Optional.of(mockBook));
+        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.of(mockUser));
+        when(reviewService.findReviewByUserAndBook(any(UUID.class), any(UUID.class))).thenReturn(Optional.empty());
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        assertEquals("Review not found for this user and book.", response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, times(1)).findUserProfileById(testUserId);
+        verify(reviewService, times(1)).findReviewByUserAndBook(testUserId, testBookId);
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnNotFoundIfBookDoesNotExist() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenReturn(Optional.empty());
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        assertEquals("Book not found.", response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, times(1)).findUserProfileById(any());
+        verify(reviewService, never()).findReviewByUserAndBook(any(), any());
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnUnauthorizedIfAuthenticatedUserIsNotFound() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenReturn(Optional.of(mockBook));
+        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.empty());
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
+        assertEquals("Authenticated user not found.", response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, times(1)).findUserProfileById(testUserId);
+        verify(reviewService, never()).findReviewByUserAndBook(any(), any());
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnInternalServerErrorOnUnexpectedException() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenThrow(new RuntimeException("Database connection failed"));
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("An unexpected error occurred: Database connection failed", response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, never()).findUserProfileById(any());
+        verify(reviewService, never()).findReviewByUserAndBook(any(), any());
+    }
 }
