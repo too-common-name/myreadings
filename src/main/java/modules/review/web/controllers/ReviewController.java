@@ -220,7 +220,43 @@ public class ReviewController {
         } catch (NotFoundException e) {
             return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
         }
-    }    
+    }
+
+    @GET
+    @Path("/books/{bookId}/my-review")
+    @RolesAllowed({ "user", "admin" })
+    public Response getMyReviewForBook(@PathParam("bookId") UUID bookId) {
+        try {
+            UUID currentUserId = getCurrentUserIdFromJwt();
+
+            Optional<Book> book = bookService.getBookById(bookId);
+            Optional<User> user = userService.findUserProfileById(currentUserId);
+
+            if (book.isEmpty()) {
+                return Response.status(Response.Status.NOT_FOUND).entity("Book not found.").build();
+            }
+            if (user.isEmpty()) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity("Authenticated user not found.").build();
+            }
+
+            Optional<Review> existingReviewOptional = reviewService
+                    .findReviewByUserAndBook(user.get().getKeycloakUserId(), book.get().getBookId());
+
+            if (existingReviewOptional.isEmpty()) {
+                throw new NotFoundException("Review not found for this user and book.");
+            }
+
+            return Response.ok(mapToReviewResponseDTO(existingReviewOptional.get())).build();
+
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("An unexpected error occurred: " + e.getMessage()).build();
+        }
+    }
 
     @GET
     @Path("/users/{userId}")

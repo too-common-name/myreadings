@@ -274,7 +274,54 @@ public class ReviewControllerIntegrationTest {
                                 .when().get("/books/{bookId}/stats")
                                 .then()
                                 .statusCode(404)
-                                .body(equalTo("Book not found with ID: " + nonExistentBookId)); // Messaggio dal service
+                                .body(equalTo("Book not found with ID: " + nonExistentBookId));
         }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnOkAndReviewDTOWhenReviewExists() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("bookId", createdBook.getBookId())
+                .when().get("/books/{bookId}/my-review")
+                .then()
+                .statusCode(200)
+                .body("reviewId", equalTo(aliceReviewId.toString()))
+                .body("bookId", equalTo(createdBook.getBookId().toString()))
+                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
+                .body("rating", is(5))
+                .body("reviewText", equalTo("Excellent book!"));
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnNotFoundWhenReviewDoesNotExist() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("bookId", createdAnotherBook.getBookId()) // Use a book Alice hasn't reviewed
+                .when().get("/books/{bookId}/my-review")
+                .then()
+                .statusCode(404)
+                .body(equalTo("Review not found for this user and book."));
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnNotFoundIfBookDoesNotExist() {
+        UUID nonExistentBookId = UUID.randomUUID();
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("bookId", nonExistentBookId)
+                .when().get("/books/{bookId}/my-review")
+                .then()
+                .statusCode(404)
+                .body(equalTo("Book not found."));
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnUnauthorizedIfUserIsNotAuthenticated() {
+        given()
+                .pathParam("bookId", createdBook.getBookId())
+                .when().get("/books/{bookId}/my-review")
+                .then()
+                .statusCode(401);
+    }
 
 }
