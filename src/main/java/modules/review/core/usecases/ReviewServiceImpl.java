@@ -4,12 +4,15 @@ import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
 
 import java.util.Optional;
 import java.util.List;
 
+import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.BookService;
 import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewStats;
 import modules.review.core.usecases.repositories.ReviewRepository;
 import modules.user.core.usecases.UserService;
 
@@ -87,17 +90,6 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public double getAverageRatingForBook(UUID bookId) {
-        if (!bookService.getBookById(bookId).isPresent()) {
-            throw new IllegalArgumentException(
-                    "Book not found: " + bookId + ". Cannot calculate average rating.");
-        }
-        List<Review> reviewsForBook = getReviewsForBook(bookId);
-
-        return reviewsForBook.stream().mapToInt(Review::getRating).average().orElse(0);
-    }
-
-    @Override
     public Optional<Review> findReviewByUserAndBook(UUID userId, UUID bookId) {
         if (!bookService.getBookById(bookId).isPresent()) {
             throw new IllegalArgumentException(
@@ -109,5 +101,25 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         return reviewRepository.findByUserIdAndBookId(userId, bookId);
+    }
+
+    @Override
+    public ReviewStats getReviewStatsForBook(UUID bookId) {
+       Optional<Book> book = bookService.getBookById(bookId);
+        if (book.isEmpty()) {
+            throw new NotFoundException("Book not found with ID: " + bookId);
+        }
+
+        Long totalReviews = reviewRepository.countReviewsByBookId(bookId);
+        Double averageRating = reviewRepository.findAverageRatingByBookId(bookId);
+        
+        if (averageRating == null) {
+            averageRating = 0.0;
+        }
+
+        return ReviewStats.builder()
+                .totalReviews(totalReviews)
+                .averageRating(averageRating)
+                .build();
     }
 }

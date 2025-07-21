@@ -11,16 +11,15 @@ import jakarta.ws.rs.core.SecurityContext;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.BookService;
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
+import modules.review.core.domain.ReviewStats;
 import modules.review.core.usecases.ReviewService;
 import modules.review.web.dto.ReviewRequestDTO;
 import modules.review.web.dto.ReviewResponseDTO;
+import modules.review.web.dto.ReviewStatsResponseDTO;
 import modules.user.core.domain.User;
 import modules.user.core.usecases.UserService;
 
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.ForbiddenException;
 
 import io.quarkus.security.Authenticated;
 
@@ -99,7 +98,7 @@ public class ReviewController {
                 return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
             }
 
-            Review reviewToCreate = ReviewImpl.builder()
+            Review reviewToCreate = Review.builder()
                     .reviewId(UUID.randomUUID())
                     .book(book.get())
                     .user(user.get())
@@ -154,7 +153,7 @@ public class ReviewController {
                 return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
             }
 
-            Review reviewToUpdate = ReviewImpl.builder()
+            Review reviewToUpdate = Review.builder()
                     .reviewId(reviewId)
                     .book(existingReview.getBook())
                     .user(existingReview.getUser())
@@ -203,6 +202,25 @@ public class ReviewController {
                 .map(this::mapToReviewResponseDTO)
                 .collect(Collectors.toList())).build();
     }
+
+    @GET
+    @Path("/books/{bookId}/stats")
+    @RolesAllowed({ "user", "admin" })
+    public Response getBookReviewStats(@PathParam("bookId") UUID bookId) {
+        try {
+            ReviewStats stats = reviewService.getReviewStatsForBook(bookId);
+
+            ReviewStatsResponseDTO responseDTO = ReviewStatsResponseDTO.builder()
+                    .bookId(bookId.toString())
+                    .totalReviews(stats.getTotalReviews())
+                    .averageRating(stats.getAverageRating())
+                    .build();
+
+            return Response.ok(responseDTO).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+        }
+    }    
 
     @GET
     @Path("/users/{userId}")

@@ -3,6 +3,7 @@ package modules.review.core.usecases;
 import java.util.UUID;
 
 import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewStats;
 
 import java.util.Optional;
 import java.util.List;
@@ -23,5 +24,5 @@ public interface ReviewService {
 
     void deleteReviewById(UUID reviewId);
 
-    double getAverageRatingForBook(UUID bookId);
+    ReviewStats getReviewStatsForBook(UUID bookId);
 }

@@ -17,4 +17,6 @@ public interface ReviewRepository {
     void deleteById(UUID reviewId);
     List<Review> getBookReviews(UUID bookId);
     List<Review> getUserReviews(UUID userId);
+    Long countReviewsByBookId(UUID bookId);
+    Double findAverageRatingByBookId(UUID bookId);
 }

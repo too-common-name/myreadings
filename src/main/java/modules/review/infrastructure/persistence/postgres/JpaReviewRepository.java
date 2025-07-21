@@ -102,5 +102,21 @@ public class JpaReviewRepository implements ReviewRepository {
         query.setParameter("bookId", bookId);
         return query.getResultStream().map(mapper::toDomain).findFirst();
     }
+
+    @Override
+    public Long countReviewsByBookId(UUID bookId) {
+        TypedQuery<Long> query = entityManager.createQuery(
+            "SELECT COUNT(r) FROM ReviewEntity r WHERE r.bookId = :bookId", Long.class);
+        query.setParameter("bookId", bookId);
+        return query.getSingleResult();
+    }
+
+    @Override
+    public Double findAverageRatingByBookId(UUID bookId) {
+        TypedQuery<Double> query = entityManager.createQuery(
+            "SELECT AVG(r.rating) FROM ReviewEntity r WHERE r.bookId = :bookId", Double.class);
+        query.setParameter("bookId", bookId);
+        return query.getSingleResult();
+    }
 }
 
