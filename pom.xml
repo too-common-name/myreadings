@@ -139,6 +139,11 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <systemProperties>
+                        <quarkus.devservices.enabled>false</quarkus.devservices.enabled>
+                    </systemProperties>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
