@@ -10,12 +10,15 @@ import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Builder.Default;
 
 @Data
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class BookImpl implements Book {
 
+    @EqualsAndHashCode.Include
     private final UUID bookId;
     @NotBlank
     private final String isbn;

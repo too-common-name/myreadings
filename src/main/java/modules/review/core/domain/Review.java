@@ -10,11 +10,14 @@ import modules.catalog.core.domain.Book;
 import modules.user.core.domain.User;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Review {
 
+    @EqualsAndHashCode.Include
     private final UUID reviewId;
     @NotNull
     private final Book book; 

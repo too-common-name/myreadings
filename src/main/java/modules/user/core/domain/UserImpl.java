@@ -7,11 +7,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class UserImpl implements User {
 
+    @EqualsAndHashCode.Include
     private final UUID keycloakUserId;
     @NotBlank
     @Size(max = 50)

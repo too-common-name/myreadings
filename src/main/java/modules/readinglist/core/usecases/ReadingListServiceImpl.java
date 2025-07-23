@@ -102,13 +102,20 @@ public class ReadingListServiceImpl implements ReadingListService {
 
     @Override
     public void addBookToReadingList(UUID readingListId, UUID bookId) {
-        readingListRepository.findById(readingListId)
+        ReadingList targetList = readingListRepository.findById(readingListId)
                 .orElseThrow(() -> new IllegalArgumentException("ReadingList not found: " + readingListId));
 
         Book book = bookService.getBookById(bookId)
                 .orElseThrow(() -> new IllegalArgumentException("Book not found in catalog: " + bookId));
 
-        persistBookInList(readingListId, book);
+        Optional<ReadingList> currentListForBookOptional = findReadingListForBookAndUser(targetList.getUserId(), bookId);
+        if (currentListForBookOptional.isPresent()) {
+            throw new IllegalArgumentException(
+                "Book is already in reading list: '" + currentListForBookOptional.get().getName() + "'. Use moveBookBetweenReadingLists to change its list."
+            );
+        } else {
+            persistBookInList(readingListId, book);
+        }
     }
 
     @Transactional
@@ -122,5 +129,45 @@ public class ReadingListServiceImpl implements ReadingListService {
         readingListRepository.findById(readingListId)
                 .orElseThrow(() -> new IllegalArgumentException("ReadingList not found: " + readingListId));
         readingListRepository.removeBookFromReadingList(readingListId, bookId);
+    }
+
+    @Override
+    public Optional<ReadingList> findReadingListForBookAndUser(UUID userId, UUID bookId) {
+        return readingListRepository.findReadingListContainingBookForUser(userId, bookId);
+    }
+
+
+    @Transactional
+    protected void moveBookBetweenReadingLists(Book book, UUID sourceListId, UUID targetListId) {
+        readingListRepository.removeBookFromReadingList(sourceListId, book.getBookId());
+        readingListRepository.addBookToReadingList(targetListId, book);
+    }
+
+    @Override
+    public void moveBookBetweenReadingLists(UUID userId, UUID bookId, UUID sourceListId, UUID targetListId) {
+        ReadingList sourceList = readingListRepository.findById(sourceListId)
+            .orElseThrow(() -> new IllegalArgumentException("Source ReadingList not found: " + sourceListId));
+        
+        ReadingList targetList = readingListRepository.findById(targetListId)
+            .orElseThrow(() -> new IllegalArgumentException("Target ReadingList not found: " + targetListId));
+
+        if (!sourceList.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("Source list does not belong to the current user.");
+        }
+        if (!targetList.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("Target list does not belong to the current user.");
+        }
+
+        if (!getBooksInReadingList(sourceListId).stream().anyMatch(b -> b.getBookId().equals(bookId))) {
+            throw new IllegalArgumentException("Book is not in the source reading list: " + sourceList.getName());
+        }
+        if (sourceListId.equals(targetListId)) {
+            throw new IllegalArgumentException("Cannot move book to the same reading list.");
+        }
+        
+        Book bookToMove = bookService.getBookById(bookId)
+                .orElseThrow(() -> new IllegalArgumentException("Book not found in catalog for move operation: " + bookId));
+        
+        moveBookBetweenReadingLists(bookToMove, sourceListId, targetListId);
     }
 }

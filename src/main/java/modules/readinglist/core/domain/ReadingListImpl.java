@@ -11,11 +11,14 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class ReadingListImpl implements ReadingList {
 
+    @EqualsAndHashCode.Include
     private final UUID readingListId;
     @NotNull
     private final UUID userId;
