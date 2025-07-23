@@ -11,6 +11,7 @@ import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.ReadingListService;
 import modules.readinglist.web.dto.AddBookRequestDTO;
+import modules.readinglist.web.dto.MoveBookRequestDTO;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
 import modules.readinglist.web.dto.ReadingListResponseDTO;
 import modules.user.core.domain.User;
@@ -233,6 +234,61 @@ public class ReadingListController {
             return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
         } catch (ForbiddenException e) {
             return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/books/{bookId}/in-my-list") 
+    @RolesAllowed({"user", "admin"})
+    public Response getReadingListForBookAndUser(@PathParam("bookId") UUID bookId) {
+        try {
+            UUID currentUserId = getCurrentUserIdFromJwt();
+            Optional<ReadingList> readingListOptional = readingListService.findReadingListForBookAndUser(currentUserId, bookId);
+
+            if (readingListOptional.isPresent()) {
+                
+                return Response.ok(mapToReadingListResponseDTO(readingListOptional.get())).build();
+            } else {
+                
+                return Response.status(Response.Status.NOT_FOUND).entity("Book not found in any of your reading lists.").build();
+            }
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An unexpected error occurred: " + e.getMessage()).build();
+        }
+    }
+
+    
+    @PUT 
+    @Path("/books/{bookId}/move") 
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"user", "admin"})
+    public Response moveBookBetweenReadingLists(
+        @PathParam("bookId") UUID bookId,
+        @Valid MoveBookRequestDTO moveRequestDTO) { 
+        try {
+            UUID currentUserId = getCurrentUserIdFromJwt();
+            
+            
+            readingListService.moveBookBetweenReadingLists(
+                currentUserId,
+                bookId,
+                moveRequestDTO.getSourceListId(),
+                moveRequestDTO.getTargetListId()
+            );
+            
+            return Response.ok().entity("Book moved successfully.").build();
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (NotFoundException e) { 
+            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+        } catch (ForbiddenException e) { 
+            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
+        } catch (IllegalArgumentException e) { 
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (Exception e) { 
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An unexpected error occurred: " + e.getMessage()).build();
         }
     }
 }

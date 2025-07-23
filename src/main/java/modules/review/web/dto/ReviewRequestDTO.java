@@ -4,7 +4,6 @@ import lombok.Builder;
 import lombok.Data;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
@@ -19,6 +18,5 @@ public class ReviewRequestDTO {
     @Max(5)
     private int rating;
 
-    @NotBlank(message = "Review text is mandatory")
     private String reviewText;
 }

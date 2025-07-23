@@ -17,4 +17,5 @@ public interface ReadingListRepository {
     void addBookToReadingList(UUID readingListId, Book book);
     void removeBookFromReadingList(UUID readingListId, UUID bookId);
     List<Book> getBooksInReadingList(UUID readingListId);
+    Optional<ReadingList> findReadingListContainingBookForUser(UUID userId, UUID bookId);
 }

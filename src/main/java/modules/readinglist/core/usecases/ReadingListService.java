@@ -13,9 +13,10 @@ public interface ReadingListService {
     List<ReadingList> getReadingListsForUser(UUID userId);
     ReadingList updateReadingList(ReadingList readingList);
     void deleteReadingListById(UUID readingListId);
-
     void addBookToReadingList(UUID readingListId, UUID bookId);
     void removeBookFromReadingList(UUID readingListId, UUID bookId);
-
     List<Book> getBooksInReadingList(UUID readingListId);
+    Optional<ReadingList> findReadingListForBookAndUser(UUID userId, UUID bookId);
+    void moveBookBetweenReadingLists(UUID userId, UUID bookId, UUID sourceListId, UUID targetListId);
+
 }
