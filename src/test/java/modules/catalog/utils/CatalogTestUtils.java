@@ -23,7 +23,7 @@ public class CatalogTestUtils {
     }
 
     public static Book createValidBook() {
-        return createBookWithText("Generic test book");
+        return createTestBook("Generic test book", "Generic test book");
     }
 
     public static Book createValidBookWithId(UUID bookId) {
@@ -35,12 +35,21 @@ public class CatalogTestUtils {
     }
 
 
-    public static Book createBookWithText(String reviewText) {
+    public static Book createTestBook(String title, String description) {
         return BookImpl.builder().bookId(UUID.randomUUID()).isbn(generateSimpleRandomISBN13())
-                .title("Test Book Title").authors(Arrays.asList("Test Author"))
+                .title(title).authors(Arrays.asList("Test Author"))
                 .publicationDate(LocalDate.now().minusYears(5)).publisher("Test Publisher")
-                .description("Test book description").pageCount(300).coverImageId("coverTest123")
+                .description(description).pageCount(300).coverImageId("coverTest123")
                 .originalLanguage("en").build();
+    }
+
+    public static Book createTestBookWithDate(String title, String description, LocalDate publicationDate) {
+        return BookImpl.builder().bookId(UUID.randomUUID()).isbn(generateSimpleRandomISBN13())
+                .title(title).authors(Arrays.asList("Test Author"))
+                .publicationDate(publicationDate).publisher("Test Publisher")
+                .description(description).pageCount(300).coverImageId("coverTest123")
+                .originalLanguage("en").genre("Fiction") // Aggiunto genere di default
+                .build();
     }
 
     public static BookRequestDTO createValidBookRequestDTO() {

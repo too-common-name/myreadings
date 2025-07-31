@@ -3,6 +3,7 @@ package modules.catalog.infrastructure.persistence.in_memory;
 import jakarta.enterprise.context.ApplicationScoped;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
+import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.repositories.BookRepository;
 
 import java.util.UUID;
@@ -84,5 +85,62 @@ public class InMemoryBookRepository implements BookRepository {
     @Override
     public void deleteById(UUID bookId) {
         books.remove(bookId);
+    }
+
+    @Override
+    public DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder) {
+        String lowerCaseQuery = query.toLowerCase();
+
+        Stream<Book> filteredStream = books.values().stream()
+                .filter(book -> (book.getTitle() != null && book.getTitle().toLowerCase().contains(lowerCaseQuery)) ||
+                        (book.getDescription() != null
+                                && book.getDescription().toLowerCase().contains(lowerCaseQuery)));
+                                
+        Comparator<Book> comparator = null;
+        if (sortBy != null && !sortBy.trim().isEmpty()) {
+            switch (sortBy.toLowerCase()) {
+                case "title":
+                    comparator = Comparator.comparing(Book::getTitle,
+                            Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                    break;
+                case "publicationdate":
+                    comparator = Comparator.comparing(Book::getPublicationDate,
+                            Comparator.nullsLast(Comparator.naturalOrder()));
+                    break;
+
+                default:
+                    System.err.println("Warning: Unsupported sort field for search in-memory: " + sortBy);
+                    break;
+            }
+        }
+
+        if (comparator != null) {
+            if (sortOrder != null && sortOrder.equalsIgnoreCase("desc")) {
+                comparator = comparator.reversed();
+            }
+            filteredStream = filteredStream.sorted(comparator);
+        }
+
+        List<Book> allFilteredBooks = filteredStream.collect(Collectors.toList());
+        long totalElements = allFilteredBooks.size();
+
+        int skip = page * size;
+        List<Book> pagedContent = allFilteredBooks.stream()
+                .skip(skip)
+                .limit(size)
+                .collect(Collectors.toList());
+
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        boolean isLast = (page + 1) * size >= totalElements;
+        boolean isFirst = page == 0;
+
+        return new DomainPage<>(
+                pagedContent,
+                totalElements,
+                totalPages,
+                page,
+                size,
+                isLast,
+                isFirst);
     }
 }

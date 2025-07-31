@@ -1,6 +1,7 @@
 package modules.catalog.core.usecases;
 
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -42,5 +43,10 @@ public class BookServiceImpl implements BookService {
     @Transactional
     public void deleteBookById(UUID bookId) {
         bookRepository.deleteById(bookId);
+    }
+
+    @Override
+    public DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder) {
+        return bookRepository.searchBooks(query, page, size, sortBy, sortOrder);
     }
 }

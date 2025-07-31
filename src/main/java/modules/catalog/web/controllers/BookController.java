@@ -2,6 +2,7 @@ package modules.catalog.web.controllers;
 
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -12,12 +13,17 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
+import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.BookService;
 import modules.catalog.web.dto.BookResponseDTO;
+import modules.catalog.web.dto.PagedResponse;
 import modules.catalog.web.dto.BookRequestDTO;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -99,6 +105,33 @@ public class BookController {
                                                     .collect(Collectors.toList());
         return Response.ok(responseDTOs)
                        .build();
+    }
+
+    @GET
+    @Path("/search")
+    @RolesAllowed({"user", "admin"})
+    public PagedResponse<BookResponseDTO> searchBooks(
+            @NotNull @NotBlank @QueryParam("query") String query,
+            @DefaultValue("0") @QueryParam("page") int page,
+            @DefaultValue("10") @QueryParam("size") int size,
+            @DefaultValue("title") @QueryParam("sort") String sortBy,
+            @DefaultValue("asc") @QueryParam("order") String sortOrder) {
+
+        DomainPage<Book> searchResultPage = bookService.searchBooks(query, page, size, sortBy, sortOrder);
+
+        List<BookResponseDTO> content = searchResultPage.content().stream()
+                .map(this::mapToBookResponseDTO) // Map domain objects to DTOs
+                .collect(Collectors.toList());
+
+        return new PagedResponse<BookResponseDTO>(
+                content,
+                searchResultPage.pageNumber(),
+                searchResultPage.pageSize(),
+                searchResultPage.totalElements(),
+                searchResultPage.totalPages(),
+                searchResultPage.isLast(),
+                searchResultPage.isFirst()
+        );
     }
 
     private BookResponseDTO mapToBookResponseDTO(Book book) {
