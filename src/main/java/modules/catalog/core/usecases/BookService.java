@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.DomainPage;
 
 public interface BookService {
     Book createBook(Book book);
@@ -12,4 +13,5 @@ public interface BookService {
     List<Book> getAllBooks(String sort, String order, Integer limit);
     Book updateBook(Book book);
     void deleteBookById(UUID bookId);
+    DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder);
 }

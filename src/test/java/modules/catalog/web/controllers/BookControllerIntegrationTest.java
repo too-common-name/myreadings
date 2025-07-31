@@ -14,6 +14,7 @@ import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.hasSize;
 
 @QuarkusTest
 @TestTransaction
@@ -154,5 +155,78 @@ public class BookControllerIntegrationTest {
 
                 given().when().get("/api/v1/books").then().statusCode(200).body("size()",
                                 org.hamcrest.Matchers.greaterThanOrEqualTo(2));
+        }
+
+        @Test
+        @TestSecurity(user = "adminUser", roles = "admin")
+        void testSearchBooksSuccessful() {
+
+                BookRequestDTO book1 = CatalogTestUtils.createValidBookRequestDTO();
+                book1.setTitle("The Great Gatsby");
+                book1.setDescription("A novel about the roaring twenties.");
+                book1.setIsbn("1111111111111");
+
+                BookRequestDTO book2 = CatalogTestUtils.createValidBookRequestDTO();
+                book2.setTitle("1984");
+                book2.setDescription("A dystopian novel by George Orwell.");
+                book2.setIsbn("2222222222222");
+
+                BookRequestDTO book3 = CatalogTestUtils.createValidBookRequestDTO();
+                book3.setTitle("Brave New World");
+                book3.setDescription("Another dystopian classic.");
+                book3.setIsbn("3333333333333");
+
+                given().contentType(ContentType.JSON).body(book1).when().post("/api/v1/books").then().statusCode(201);
+                given().contentType(ContentType.JSON).body(book2).when().post("/api/v1/books").then().statusCode(201);
+                given().contentType(ContentType.JSON).body(book3).when().post("/api/v1/books").then().statusCode(201);
+
+                given().queryParam("query", "great")
+                                .queryParam("page", 0)
+                                .queryParam("size", 10)
+                                .when().get("/api/v1/books/search")
+                                .then()
+                                .statusCode(200)
+                                .body("content", hasSize(1))
+                                .body("content[0].title", equalTo("The Great Gatsby"))
+                                .body("totalElements", equalTo(1))
+                                .body("totalPages", equalTo(1));
+
+                given().queryParam("query", "dystopian")
+                                .queryParam("page", 0)
+                                .queryParam("size", 10)
+                                .when().get("/api/v1/books/search")
+                                .then()
+                                .statusCode(200)
+                                .body("content", hasSize(2))
+                                .body("totalElements", equalTo(2))
+                                .body("totalPages", equalTo(1))
+                                .body("content.title", hasItems("1984", "Brave New World"));
+
+                given().queryParam("query", "nonexistent")
+                                .queryParam("page", 0)
+                                .queryParam("size", 10)
+                                .when().get("/api/v1/books/search")
+                                .then()
+                                .statusCode(200)
+                                .body("content", hasSize(0))
+                                .body("totalElements", equalTo(0));
+        }
+
+        @Test
+        @TestSecurity(user = "user", roles = "user")
+        void testSearchBooksWithoutQueryShouldReturnBadRequest() {
+                given().queryParam("page", 0)
+                                .queryParam("size", 10)
+                                .when().get("/api/v1/books/search")
+                                .then()
+                                .statusCode(400);
+        }
+
+        @Test
+        void testSearchBooksWithoutRoleShouldReturnUnauthorized() {
+                given().queryParam("query", "test")
+                                .when().get("/api/v1/books/search")
+                                .then()
+                                .statusCode(401);
         }
 }

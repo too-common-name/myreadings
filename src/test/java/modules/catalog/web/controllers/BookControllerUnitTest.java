@@ -1,10 +1,12 @@
 package modules.catalog.web.controllers;
 
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.BookService;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
 import modules.catalog.web.dto.BookResponseDTO;
+import modules.catalog.web.dto.PagedResponse;
 import jakarta.ws.rs.core.Response;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -164,5 +166,38 @@ public class BookControllerUnitTest {
         assertFalse(violations.isEmpty());
         assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("pageCount")
                 && v.getMessage().equals("Page count cannot be negative")));
+    }
+
+    @Test
+    void testSearchBooksSuccessful() {
+        String query = "test";
+        int page = 0;
+        int size = 10;
+        String sortBy = "title";
+        String sortOrder = "asc";
+
+        List<Book> mockDomainBooks = Arrays.asList(
+                CatalogTestUtils.createTestBook("Test Book A", "Description A"),
+                CatalogTestUtils.createTestBook("Another Test Book B", "Description B"));
+
+        DomainPage<Book> mockDomainPage = new DomainPage<>(mockDomainBooks, 2, 1, page, size, true, true);
+
+        when(bookService.searchBooks(query, page, size, sortBy, sortOrder)).thenReturn(mockDomainPage);
+
+        PagedResponse<BookResponseDTO> response = bookController.searchBooks(query, page, size, sortBy, sortOrder);
+
+        verify(bookService, times(1)).searchBooks(query, page, size, sortBy, sortOrder);
+
+        assertNotNull(response);
+        assertEquals(2, response.content().size());
+        assertEquals(2, response.totalElements());
+        assertEquals(1, response.totalPages());
+        assertEquals(page, response.page());
+        assertEquals(size, response.size());
+        assertTrue(response.last());
+        assertTrue(response.first());
+
+        assertEquals(mockDomainBooks.get(0).getTitle(), response.content().get(0).getTitle());
+        assertEquals(mockDomainBooks.get(1).getTitle(), response.content().get(1).getTitle());
     }
 }
