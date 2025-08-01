@@ -5,10 +5,11 @@ import jakarta.inject.Inject;
 import jakarta.json.JsonObject;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.domain.UserRegistrationEvent;
-import modules.user.usecases.UserService;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.domain.UserRegistrationEvent;
+import modules.user.core.usecases.UserService;
+
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,12 +21,8 @@ public class KeycloakUserEventListener {
 
     private static final Logger log = LoggerFactory.getLogger(KeycloakUserEventListener.class);
 
-    private final UserService userService;
-
     @Inject
-    public KeycloakUserEventListener(UserService userService) {
-        this.userService = userService;
-    }
+    UserService userService;
 
     @Incoming("registrations")
     public void processUserEvent(byte[] event) {
@@ -46,8 +43,8 @@ public class KeycloakUserEventListener {
                 
                 UUID keycloakUserId = UUID.fromString(root.getString("userId"));
 
-                User user = new UserImpl.UserBuilder()
-                        .userId(keycloakUserId)
+                User user = UserImpl.builder()
+                        .keycloakUserId(keycloakUserId)
                         .firstName(registrationEvent.getFirstName())
                         .lastName(registrationEvent.getLastName())
                         .username(registrationEvent.getUsername())

@@ -1,7 +1,7 @@
 package modules.user.infrastructure.messaging;
 
-import modules.user.domain.User;
-import modules.user.usecases.UserService;
+import modules.user.core.domain.User;
+import modules.user.core.usecases.UserService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,6 +61,6 @@ public class KeycloakUserEventListenerTest {
         assertEquals("drossi@redhat.com", capturedUser.getEmail());
         assertEquals("Daniele", capturedUser.getFirstName());
         assertEquals("Rossi", capturedUser.getLastName());
-        assertNotNull(capturedUser.getUserId());
+        assertNotNull(capturedUser.getKeycloakUserId());
     }
 }

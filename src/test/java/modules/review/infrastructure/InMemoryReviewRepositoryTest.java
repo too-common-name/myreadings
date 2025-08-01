@@ -1,173 +1,172 @@
 package modules.review.infrastructure;
 
-import modules.review.domain.Review;
+import modules.catalog.core.domain.Book;
+import modules.catalog.utils.CatalogTestUtils;
+import modules.review.core.domain.Review;
+import modules.review.infrastructure.persistence.in_memory.InMemoryReviewRepository;
 import modules.review.utils.ReviewTestUtils;
+import modules.user.core.domain.User;
+import modules.user.utils.UserTestUtils;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import common.InMemoryRepositoryTestProfile;
+import io.quarkus.test.junit.TestProfile;
 
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@TestProfile(InMemoryRepositoryTestProfile.class)
 public class InMemoryReviewRepositoryTest {
 
-    private InMemoryReviewRepository repository;
+    private InMemoryReviewRepository reviewRepository;
+
+    private User testUser1;
+    private Book testBook1;
 
     @BeforeEach
     void setUp() {
-        repository = new InMemoryReviewRepository();
-    }
-
-    @Test
-    void saveSuccessful() {
-        Review reviewToSave = ReviewTestUtils.createValidReviewWithText("test");
-        Review savedReview = repository.save(reviewToSave);
-        Optional<Review> retrievedReview = repository.findById(savedReview.getReviewId());
-        assertTrue(retrievedReview.isPresent());
-        assertEquals(savedReview.getReviewId(), retrievedReview.get().getReviewId());
-    }
-
-    @Test
-    void saveAllSuccessful() {
-        List<Review> reviewsToSave = Arrays.asList(
-            ReviewTestUtils.createValidReviewWithText("Review 1"),
-            ReviewTestUtils.createValidReviewWithText("Review 2"),
-            ReviewTestUtils.createValidReviewWithText("Review 3")
-        );
-
-        List<Review> savedReviews = repository.saveAll(reviewsToSave);
-
-        assertNotNull(savedReviews, "saveAll should return a list of saved reviews");
-        assertEquals(reviewsToSave.size(), savedReviews.size(), "saveAll should save all reviews in the input list");
-
-        for (Review savedReview : savedReviews) {
-            assertTrue(repository.findById(savedReview.getReviewId()).isPresent(), "Each review should be saved and exist in repository");
-            Optional<Review> retrievedReviewOpt = repository.findById(savedReview.getReviewId());
-            assertTrue(retrievedReviewOpt.isPresent());
-            assertEquals(savedReview.getReviewId(), retrievedReviewOpt.get().getReviewId());
-        }
-
-        assertEquals(reviewsToSave.size(), repository.findAll().size(), "Repository count should match the number of saved reviews");
-    }
-
-    @Test
-    void saveAllEmptyList() {
-        List<Review> emptyReviewsList = new ArrayList<>();
-
-        List<Review> savedReviews = repository.saveAll(emptyReviewsList);
-
-        assertNotNull(savedReviews, "saveAll should return a list even for empty input");
-        assertTrue(savedReviews.isEmpty(), "saveAll should return an empty list if input is empty");
-        assertEquals(0, repository.findAll().size(), "Repository count should remain 0 if no reviews are saved");
-    }
-
-    @Test
-    void saveAllDuplicateIdsShouldOverwrite() {
-        UUID duplicateReviewId = UUID.randomUUID();
-        Review review1 = ReviewTestUtils.createValidReviewWithIdAndText(duplicateReviewId, "Review with ID");
-        Review review2WithDuplicateId = ReviewTestUtils.createValidReviewWithIdAndText(duplicateReviewId, "Review with DUPLICATE ID - overwrites");
-        List<Review> reviewsToSave = Arrays.asList(review1, review2WithDuplicateId);
-
-        List<Review> savedReviews = repository.saveAll(reviewsToSave);
-
-        assertEquals(reviewsToSave.size(), savedReviews.size(), "saveAll should process all reviews in the input list");
-        assertEquals(1, repository.findAll().size(), "Repository should contain only 1 review after saveAll with duplicate ID"); 
+        reviewRepository = new InMemoryReviewRepository();
         
-        Optional<Review> retrievedReviewOpt = repository.findById(duplicateReviewId);
-        assertTrue(retrievedReviewOpt.isPresent(), "Review with duplicate ID should exist");
-        assertEquals("Review with DUPLICATE ID - overwrites", retrievedReviewOpt.get().getReviewText(), "Last review with duplicate ID should overwrite previous one"); 
+        testUser1 = UserTestUtils.createValidUser();
+        testBook1 = CatalogTestUtils.createValidBook();
+    }
+
+     @Test
+    void testCreateAndFindById() {
+        Review reviewToCreate = ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
+                testBook1.getBookId(), "Great book!", 5);
+
+        Review createdReview = reviewRepository.create(reviewToCreate);
+        assertNotNull(createdReview.getReviewId());
+
+        Optional<Review> retrieved = reviewRepository.findById(createdReview.getReviewId());
+
+        assertTrue(retrieved.isPresent());
+        assertEquals(createdReview.getReviewId(), retrieved.get().getReviewId());
+        assertEquals("Great book!", retrieved.get().getReviewText());
     }
 
     @Test
-    void findByIdNotFound() {
-        Optional<Review> retrievedReview = repository.findById(UUID.randomUUID());
-        assertFalse(retrievedReview.isPresent());
+    void testUpdateReview() {
+        Review createdReview = reviewRepository.create(
+                ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(),
+                        "Original Text", 5));
+
+        Review reviewToUpdate = Review.builder()
+                .reviewId(createdReview.getReviewId())
+                .user(createdReview.getUser())
+                .book(createdReview.getBook())
+                .publicationDate(createdReview.getPublicationDate())
+                .rating(5)
+                .reviewText("Updated Text!")
+                .build();
+
+        Review updatedReview = reviewRepository.update(reviewToUpdate);
+
+        assertEquals(createdReview.getReviewId(), updatedReview.getReviewId());
+        assertEquals(5, updatedReview.getRating());
+        assertEquals("Updated Text!", updatedReview.getReviewText());
+
+        Optional<Review> retrieved = reviewRepository.findById(createdReview.getReviewId());
+        assertTrue(retrieved.isPresent());
+        assertEquals(5, retrieved.get().getRating());
+        assertEquals("Updated Text!", retrieved.get().getReviewText());
     }
 
     @Test
-    void findAllReviewsExist() {
-        repository.save(ReviewTestUtils.createValidReviewWithText("test1"));
-        repository.save(ReviewTestUtils.createValidReviewWithText("test2"));
-        List<Review> allReviews = repository.findAll();
-        assertEquals(2, allReviews.size());
+    void testDeleteById() {
+        Review createdReview = reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(
+                testUser1.getKeycloakUserId(), testBook1.getBookId(), "To be deleted", 5));
+        UUID reviewId = createdReview.getReviewId();
+
+        reviewRepository.deleteById(reviewId);
+
+        Optional<Review> result = reviewRepository.findById(reviewId);
+        assertTrue(result.isEmpty());
     }
 
     @Test
-    void findAllNoReviews() {
-        List<Review> allReviews = repository.findAll();
-        assertTrue(allReviews.isEmpty());
+    void testGetBookReviews() {
+        Book anotherBook = CatalogTestUtils.createValidBook();
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
+                testBook1.getBookId(), "Review 1 for book 1", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
+                testBook1.getBookId(), "Review 2 for book 1", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
+                anotherBook.getBookId(), "Review for another book", 5));
+
+        List<Review> reviews = reviewRepository.getBookReviews(testBook1.getBookId());
+
+        assertEquals(2, reviews.size());
+        assertTrue(reviews.stream().allMatch(r -> r.getBook().getBookId().equals(testBook1.getBookId())));
     }
 
     @Test
-    void deleteByIdSuccessful() {
-        Review reviewToDelete = ReviewTestUtils.createValidReviewWithText("test");
-        Review savedReview = repository.save(reviewToDelete);
-        repository.deleteById(savedReview.getReviewId());
-        Optional<Review> deletedReview = repository.findById(savedReview.getReviewId());
-        assertFalse(deletedReview.isPresent());
+    void testGetUserReviews() {
+        User anotherUser = UserTestUtils.createValidUser();
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
+                testBook1.getBookId(), "Review 1 by user 1", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
+                testBook1.getBookId(), "Review 2 by user 1", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(anotherUser.getKeycloakUserId(),
+                testBook1.getBookId(), "Review by another user", 5));
+
+        List<Review> reviews = reviewRepository.getUserReviews(testUser1.getKeycloakUserId());
+
+        assertEquals(2, reviews.size());
+        assertTrue(
+                reviews.stream().allMatch(r -> r.getUser().getKeycloakUserId().equals(testUser1.getKeycloakUserId())));
     }
 
     @Test
-    void findReviewsByBookIdSuccessful() {
-        UUID bookId1 = UUID.randomUUID();
-        UUID bookId2 = UUID.randomUUID();
-        Review reviewForBook1_1 = ReviewTestUtils.createValidReviewForBook(bookId1, "Review for book 1 - 1");
-        Review reviewForBook1_2 = ReviewTestUtils.createValidReviewForBook(bookId1, "Review for book 1 - 2");
-        Review reviewForBook2 = ReviewTestUtils.createValidReviewForBook(bookId2, "Review for book 2");
-        repository.saveAll(Arrays.asList(reviewForBook1_1, reviewForBook1_2, reviewForBook2));
+    void testFindByUserIdAndBookId() {
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
+                testBook1.getBookId(), "Specific review", 5));
 
-        List<Review> reviewsForBook1 = repository.getBookReviews(bookId1);
-        assertEquals(2, reviewsForBook1.size());
-        assertTrue(reviewsForBook1.stream().allMatch(review -> review.getBook().getBookId().equals(bookId1)));
+        Optional<Review> foundReview = reviewRepository.findByUserIdAndBookId(testUser1.getKeycloakUserId(),
+                testBook1.getBookId());
+
+        assertTrue(foundReview.isPresent());
+        assertEquals("Specific review", foundReview.get().getReviewText());
+
+        Optional<Review> notFoundReview = reviewRepository.findByUserIdAndBookId(testUser1.getKeycloakUserId(),
+                UUID.randomUUID());
+        assertTrue(notFoundReview.isEmpty());
     }
 
     @Test
-    void findReviewsByBookIdFails() {
-        UUID bookId = UUID.randomUUID();
-        List<Review> reviewsForBook = repository.getBookReviews(bookId);
-        assertTrue(reviewsForBook.isEmpty());
+    void testCountReviewsByBookId() {
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "Review 1", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "Review 2", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "Review for other book", 5));
+
+        long count = reviewRepository.countReviewsByBookId(testBook1.getBookId());
+        assertEquals(3, count);
+
+        long countNonExistent = reviewRepository.countReviewsByBookId(UUID.randomUUID());
+        assertEquals(0, countNonExistent);
     }
 
     @Test
-    void findReviewsByUserIdSuccessful() {
-        UUID userId1 = UUID.randomUUID();
-        UUID userId2 = UUID.randomUUID();
-        Review reviewForUser1_1 = ReviewTestUtils.createValidReviewForUser(userId1, "Review for user 1 - 1");
-        Review reviewForUser1_2 = ReviewTestUtils.createValidReviewForUser(userId1, "Review for user 1 - 2");
-        Review reviewForUser2 = ReviewTestUtils.createValidReviewForUser(userId2, "Review for user 2");
-        repository.saveAll(Arrays.asList(reviewForUser1_1, reviewForUser1_2, reviewForUser2));
+    void testFindAverageRatingByBookId_WithReviews() {
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "", 4));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "", 5));
+        reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "", 3));
 
-        List<Review> reviewsForUser1 = repository.getUserReviews(userId1);
-        assertEquals(2, reviewsForUser1.size());
-        assertTrue(reviewsForUser1.stream().allMatch(review -> review.getUser().getUserId().equals(userId1)));
+        Double averageRating1 = reviewRepository.findAverageRatingByBookId(testBook1.getBookId());
+        assertNotNull(averageRating1);
+        assertEquals(4.0, averageRating1, 0.001);
     }
 
     @Test
-    void findReviewsByUserIdFails() {
-        UUID userId = UUID.randomUUID();
-        List<Review> reviewsForUser = repository.getUserReviews(userId);
-        assertTrue(reviewsForUser.isEmpty());
-    }
+    void testFindAverageRatingByBookId_NoReviews() {
+        Double averageRating = reviewRepository.findAverageRatingByBookId(testBook1.getBookId());
+        assertNull(averageRating);
 
-    @Test
-    void findReviewsByUserIdAndUserIdSuccessful() {
-        UUID userId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
-        Review expectedReview = ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Specific review by user for book");
-        repository.save(expectedReview);
-
-        Optional<Review> retrievedReviewOpt = repository.findByUserIdAndBookId(userId, bookId);
-        assertTrue(retrievedReviewOpt.isPresent());
-        assertEquals(expectedReview.getReviewId(), retrievedReviewOpt.get().getReviewId());
-        assertEquals(userId, retrievedReviewOpt.get().getUser().getUserId());
-        assertEquals(bookId, retrievedReviewOpt.get().getBook().getBookId());
-    }
-
-    @Test
-    void findReviewsByUserIdAndUserIdFails() {
-        UUID userId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
-        Optional<Review> retrievedReviewOpt = repository.findByUserIdAndBookId(userId, bookId);
-        assertFalse(retrievedReviewOpt.isPresent());
+        Double averageRatingNonExistentBook = reviewRepository.findAverageRatingByBookId(UUID.randomUUID());
+        assertNull(averageRatingNonExistentBook);
     }
 }

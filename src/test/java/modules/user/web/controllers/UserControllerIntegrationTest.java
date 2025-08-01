@@ -4,10 +4,11 @@ import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
 import jakarta.inject.Inject;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.usecases.UserServiceImpl;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserServiceImpl;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,26 +20,26 @@ import static org.hamcrest.CoreMatchers.equalTo;
 @QuarkusTest
 @TestHTTPEndpoint(UserController.class)
 public class UserControllerIntegrationTest {
-
     @Inject
     UserServiceImpl userService;
+
     KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
     // TODO: This info should be fetched from config/quarkus-realm.json
-    private final User alice = new UserImpl.UserBuilder()
-    .userId(UUID.fromString( "eb4123a3-b722-4798-9af5-8957f823657a"))
-    .firstName("Alice")
-    .lastName("Silverstone")
-    .username("alice")
-    .email("asilverstone@test.com")
-    .build();
-    private final User admin = new UserImpl.UserBuilder()
-    .userId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
-    .firstName("Bruce")
-    .lastName("Wayne")
-    .username("admin")
-    .email("bwayne@test.com")
-    .build();
+    private final User alice = UserImpl.builder()
+            .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
+            .firstName("Alice")
+            .lastName("Silverstone")
+            .username("alice")
+            .email("asilverstone@test.com")
+            .build();
+    private final User admin = UserImpl.builder()
+            .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
+            .firstName("Bruce")
+            .lastName("Wayne")
+            .username("admin")
+            .email("bwayne@test.com")
+            .build();
 
     @BeforeEach
     void setUp() {
@@ -46,15 +47,21 @@ public class UserControllerIntegrationTest {
         userService.createUserProfile(admin);
     }
 
+    @AfterEach
+    void cleanUp() {
+        userService.deleteUserProfile(alice.getKeycloakUserId());
+        userService.deleteUserProfile(admin.getKeycloakUserId());
+    }
+
     @Test
     void testUserCanAccessHisInformations() {
         given()
                 .auth().oauth2(getAccessToken(alice.getUsername()))
-                .pathParam("userId", alice.getUserId().toString())
+                .pathParam("userId", alice.getKeycloakUserId().toString())
                 .when().get("/{userId}")
                 .then()
                 .statusCode(200)
-                .body("userId", equalTo(alice.getUserId().toString()))
+                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
                 .body("firstName", equalTo(alice.getFirstName()))
                 .body("lastName", equalTo(alice.getLastName()))
                 .body("username", equalTo(alice.getUsername()))
@@ -65,11 +72,11 @@ public class UserControllerIntegrationTest {
     void testAdminCanAccessOthersInformations() {
         given()
                 .auth().oauth2(getAccessToken(admin.getUsername()))
-                .pathParam("userId", alice.getUserId())
+                .pathParam("userId", alice.getKeycloakUserId())
                 .when().get("/{userId}")
                 .then()
                 .statusCode(200)
-                .body("userId", equalTo(alice.getUserId().toString()))
+                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
                 .body("firstName", equalTo(alice.getFirstName()))
                 .body("lastName", equalTo(alice.getLastName()))
                 .body("username", equalTo(alice.getUsername()))
@@ -80,7 +87,7 @@ public class UserControllerIntegrationTest {
     void testUserCannotAccessOthersInformations() {
         given()
                 .auth().oauth2(getAccessToken(alice.getUsername()))
-                .pathParam("userId", admin.getUserId())
+                .pathParam("userId", admin.getKeycloakUserId())
                 .when().get("/{userId}")
                 .then()
                 .statusCode(403);
@@ -95,7 +102,6 @@ public class UserControllerIntegrationTest {
                 .then()
                 .statusCode(404);
     }
-
 
     protected String getAccessToken(String userName) {
         return keycloakClient.getAccessToken(userName);

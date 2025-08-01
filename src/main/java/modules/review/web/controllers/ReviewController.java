@@ -8,19 +8,18 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
-import modules.catalog.domain.Book;
-import modules.catalog.usecases.BookService;
-import modules.review.domain.Review;
-import modules.review.domain.ReviewImpl;
-import modules.review.usecases.ReviewService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.BookService;
+import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewStats;
+import modules.review.core.usecases.ReviewService;
 import modules.review.web.dto.ReviewRequestDTO;
 import modules.review.web.dto.ReviewResponseDTO;
-import modules.user.domain.User;
-import modules.user.usecases.UserService;
+import modules.review.web.dto.ReviewStatsResponseDTO;
+import modules.user.core.domain.User;
+import modules.user.core.usecases.UserService;
 
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.ForbiddenException;
 
 import io.quarkus.security.Authenticated;
 
@@ -62,7 +61,7 @@ public class ReviewController {
         return ReviewResponseDTO.builder()
                 .reviewId(review.getReviewId())
                 .bookId(review.getBook().getBookId())
-                .userId(review.getUser().getUserId())
+                .userId(review.getUser().getKeycloakUserId())
                 .reviewText(review.getReviewText())
                 .rating(review.getRating())
                 .publicationDate(review.getPublicationDate())
@@ -76,7 +75,7 @@ public class ReviewController {
             throw new NotFoundException("Review not found with ID: " + reviewId);
         }
         Review existingReview = existingReviewOptional.get();
-        if (!existingReview.getUser().getUserId().equals(currentUserId)) {
+        if (!existingReview.getUser().getKeycloakUserId().equals(currentUserId)) {
             throw new ForbiddenException("You are not authorized to access this review.");
         }
         return existingReview;
@@ -99,7 +98,7 @@ public class ReviewController {
                 return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
             }
 
-            Review reviewToCreate = new ReviewImpl.ReviewBuilder()
+            Review reviewToCreate = Review.builder()
                     .reviewId(UUID.randomUUID())
                     .book(book.get())
                     .user(user.get())
@@ -154,7 +153,7 @@ public class ReviewController {
                 return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
             }
 
-            Review reviewToUpdate = new ReviewImpl.ReviewBuilder()
+            Review reviewToUpdate = Review.builder()
                     .reviewId(reviewId)
                     .book(existingReview.getBook())
                     .user(existingReview.getUser())
@@ -202,6 +201,61 @@ public class ReviewController {
         return Response.ok(reviews.stream()
                 .map(this::mapToReviewResponseDTO)
                 .collect(Collectors.toList())).build();
+    }
+
+    @GET
+    @Path("/books/{bookId}/stats")
+    @RolesAllowed({ "user", "admin" })
+    public Response getBookReviewStats(@PathParam("bookId") UUID bookId) {
+        try {
+            ReviewStats stats = reviewService.getReviewStatsForBook(bookId);
+
+            ReviewStatsResponseDTO responseDTO = ReviewStatsResponseDTO.builder()
+                    .bookId(bookId.toString())
+                    .totalReviews(stats.getTotalReviews())
+                    .averageRating(stats.getAverageRating())
+                    .build();
+
+            return Response.ok(responseDTO).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/books/{bookId}/my-review")
+    @RolesAllowed({ "user", "admin" })
+    public Response getMyReviewForBook(@PathParam("bookId") UUID bookId) {
+        try {
+            UUID currentUserId = getCurrentUserIdFromJwt();
+
+            Optional<Book> book = bookService.getBookById(bookId);
+            Optional<User> user = userService.findUserProfileById(currentUserId);
+
+            if (book.isEmpty()) {
+                return Response.status(Response.Status.NOT_FOUND).entity("Book not found.").build();
+            }
+            if (user.isEmpty()) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity("Authenticated user not found.").build();
+            }
+
+            Optional<Review> existingReviewOptional = reviewService
+                    .findReviewByUserAndBook(user.get().getKeycloakUserId(), book.get().getBookId());
+
+            if (existingReviewOptional.isEmpty()) {
+                throw new NotFoundException("Review not found for this user and book.");
+            }
+
+            return Response.ok(mapToReviewResponseDTO(existingReviewOptional.get())).build();
+
+        } catch (NotAuthorizedException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (NotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("An unexpected error occurred: " + e.getMessage()).build();
+        }
     }
 
     @GET

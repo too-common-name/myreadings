@@ -1,10 +1,12 @@
 package modules.catalog.web.controllers;
 
-import modules.catalog.domain.Book;
-import modules.catalog.usecases.BookService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.DomainPage;
+import modules.catalog.core.usecases.BookService;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
 import modules.catalog.web.dto.BookResponseDTO;
+import modules.catalog.web.dto.PagedResponse;
 import jakarta.ws.rs.core.Response;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -75,8 +77,8 @@ public class BookControllerUnitTest {
     @Test
     void testGetBookByIdShouldReturnOkAndBookDTO() {
         UUID bookId = UUID.randomUUID();
-        Book mockBook =
-        CatalogTestUtils.createValidBookBuilder(CatalogTestUtils.createValidBookRequestDTO()).bookId(bookId).title("Test Title").isbn("123-456").build();
+        Book mockBook = CatalogTestUtils.createValidBookBuilder(CatalogTestUtils.createValidBookRequestDTO())
+                .bookId(bookId).title("Test Title").isbn("123-456").build();
         BookResponseDTO expectedResponse = CatalogTestUtils.mapBookToResponseDto(mockBook);
         when(bookService.getBookById(bookId)).thenReturn(Optional.of(mockBook));
 
@@ -99,18 +101,20 @@ public class BookControllerUnitTest {
 
     @Test
     void testGetAllBooksShouldReturnOkAndListOfBookDTOs() {
-        List<Book> mockBooks =
-                Arrays.asList(CatalogTestUtils.createValidBookBuilder(CatalogTestUtils.createValidBookRequestDTO()).title("Book 1").isbn("111-111").build(),
-                        CatalogTestUtils.createValidBookBuilder(CatalogTestUtils.createValidBookRequestDTO()).title("Book 2").isbn("222-222").build());
-        List<BookResponseDTO> expectedResponses =
-                mockBooks.stream().map(book -> CatalogTestUtils.mapBookToResponseDto(book)).collect(Collectors.toList());
-        when(bookService.getAllBooks()).thenReturn(mockBooks);
-        Response response = bookController.getAllBooks();
+        List<Book> mockBooks = Arrays.asList(
+                CatalogTestUtils.createValidBookBuilder(CatalogTestUtils.createValidBookRequestDTO()).title("Book 1")
+                        .isbn("111-111").build(),
+                CatalogTestUtils.createValidBookBuilder(CatalogTestUtils.createValidBookRequestDTO()).title("Book 2")
+                        .isbn("222-222").build());
+        List<BookResponseDTO> expectedResponses = mockBooks.stream()
+                .map(book -> CatalogTestUtils.mapBookToResponseDto(book)).collect(Collectors.toList());
+        when(bookService.getAllBooks(null, null, null)).thenReturn(mockBooks);
+        Response response = bookController.getAllBooks(null, null, null);
         @SuppressWarnings("unchecked")
         List<BookResponseDTO> actualResponses = (List<BookResponseDTO>) response.getEntity();
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedResponses, actualResponses);
-        verify(bookService, times(1)).getAllBooks();
+        verify(bookService, times(1)).getAllBooks(null, null, null);
     }
 
     @Test
@@ -119,7 +123,8 @@ public class BookControllerUnitTest {
         bookRequest.setIsbn(null);
         Set<ConstraintViolation<BookRequestDTO>> violations = validator.validate(bookRequest);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("isbn") && v.getMessage().equals("ISBN is required")));
+        assertTrue(violations.stream().anyMatch(
+                v -> v.getPropertyPath().toString().equals("isbn") && v.getMessage().equals("ISBN is required")));
     }
 
     @Test
@@ -128,7 +133,8 @@ public class BookControllerUnitTest {
         bookRequest.setTitle(null);
         Set<ConstraintViolation<BookRequestDTO>> violations = validator.validate(bookRequest);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("title") && v.getMessage().equals("Title is required")));
+        assertTrue(violations.stream().anyMatch(
+                v -> v.getPropertyPath().toString().equals("title") && v.getMessage().equals("Title is required")));
     }
 
     @Test
@@ -138,7 +144,8 @@ public class BookControllerUnitTest {
         bookRequest.setTitle(longTitle);
         Set<ConstraintViolation<BookRequestDTO>> violations = validator.validate(bookRequest);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("title") && v.getMessage().equals("Title cannot exceed 255 characters")));
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("title")
+                && v.getMessage().equals("Title cannot exceed 255 characters")));
     }
 
     @Test
@@ -147,7 +154,8 @@ public class BookControllerUnitTest {
         bookRequest.setPublicationDate(LocalDate.now().plusDays(1));
         Set<ConstraintViolation<BookRequestDTO>> violations = validator.validate(bookRequest);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("publicationDate") && v.getMessage().equals("Publication date must be in the past or present")));
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("publicationDate")
+                && v.getMessage().equals("Publication date must be in the past or present")));
     }
 
     @Test
@@ -156,6 +164,40 @@ public class BookControllerUnitTest {
         bookRequest.setPageCount(-1);
         Set<ConstraintViolation<BookRequestDTO>> violations = validator.validate(bookRequest);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("pageCount") && v.getMessage().equals("Page count cannot be negative")));
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("pageCount")
+                && v.getMessage().equals("Page count cannot be negative")));
+    }
+
+    @Test
+    void testSearchBooksSuccessful() {
+        String query = "test";
+        int page = 0;
+        int size = 10;
+        String sortBy = "title";
+        String sortOrder = "asc";
+
+        List<Book> mockDomainBooks = Arrays.asList(
+                CatalogTestUtils.createTestBook("Test Book A", "Description A"),
+                CatalogTestUtils.createTestBook("Another Test Book B", "Description B"));
+
+        DomainPage<Book> mockDomainPage = new DomainPage<>(mockDomainBooks, 2, 1, page, size, true, true);
+
+        when(bookService.searchBooks(query, page, size, sortBy, sortOrder)).thenReturn(mockDomainPage);
+
+        PagedResponse<BookResponseDTO> response = bookController.searchBooks(query, page, size, sortBy, sortOrder);
+
+        verify(bookService, times(1)).searchBooks(query, page, size, sortBy, sortOrder);
+
+        assertNotNull(response);
+        assertEquals(2, response.content().size());
+        assertEquals(2, response.totalElements());
+        assertEquals(1, response.totalPages());
+        assertEquals(page, response.page());
+        assertEquals(size, response.size());
+        assertTrue(response.last());
+        assertTrue(response.first());
+
+        assertEquals(mockDomainBooks.get(0).getTitle(), response.content().get(0).getTitle());
+        assertEquals(mockDomainBooks.get(1).getTitle(), response.content().get(1).getTitle());
     }
 }

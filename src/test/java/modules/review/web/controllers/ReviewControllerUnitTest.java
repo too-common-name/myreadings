@@ -1,17 +1,20 @@
 package modules.review.web.controllers;
 
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
-import modules.catalog.domain.Book;
-import modules.catalog.domain.BookImpl;
-import modules.catalog.usecases.BookService;
-import modules.review.domain.Review;
-import modules.review.domain.ReviewImpl;
-import modules.review.usecases.ReviewService;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
+import modules.catalog.core.usecases.BookService;
+import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewStats;
+import modules.review.core.usecases.ReviewService;
 import modules.review.web.dto.ReviewRequestDTO;
 import modules.review.web.dto.ReviewResponseDTO;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.usecases.UserService;
+import modules.review.web.dto.ReviewStatsResponseDTO;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserService;
+
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,8 +70,8 @@ public class ReviewControllerUnitTest {
         testBookId = UUID.randomUUID();
         testReviewId = UUID.randomUUID();
 
-        mockBook = new BookImpl.BookBuilder().bookId(testBookId).title("Test Book").build();
-        mockUser = new UserImpl.UserBuilder().userId(testUserId).username("testuser").build();
+        mockBook = BookImpl.builder().bookId(testBookId).title("Test Book").build();
+        mockUser = UserImpl.builder().keycloakUserId(testUserId).username("testuser").build();
 
         mockReviewRequestDTO = ReviewRequestDTO.builder()
                 .bookId(testBookId)
@@ -76,7 +79,7 @@ public class ReviewControllerUnitTest {
                 .reviewText("This is a test review.")
                 .build();
 
-        mockReview = new ReviewImpl.ReviewBuilder()
+        mockReview = Review.builder()
                 .reviewId(testReviewId)
                 .book(mockBook)
                 .user(mockUser)
@@ -162,7 +165,7 @@ public class ReviewControllerUnitTest {
     @Test
     void testUpdateReviewShouldReturnOkAndReviewDTOForOwner() {
         ReviewRequestDTO updateRequestDTO = ReviewRequestDTO.builder().rating(5).reviewText("Updated review.").bookId(testBookId).build();
-        Review updatedReview = new ReviewImpl.ReviewBuilder()
+        Review updatedReview = Review.builder()
                 .reviewId(testReviewId)
                 .book(mockBook)
                 .user(mockUser)
@@ -279,5 +282,139 @@ public class ReviewControllerUnitTest {
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedList, response.getEntity());
         verify(reviewService, times(1)).getReviewsForUser(testUserId);
+    }
+
+    @Test
+    void testGetBookReviewStatsShouldReturnOkWithStatsForExistingBookWithReviews() {
+        ReviewStats mockReviewStats = ReviewStats.builder()
+                .totalReviews(5L)
+                .averageRating(4.2)
+                .build();
+        ReviewStatsResponseDTO expectedStatsResponseDTO = ReviewStatsResponseDTO.builder()
+                .bookId(testBookId.toString())
+                .totalReviews(5L)
+                .averageRating(4.2)
+                .build();
+
+        when(reviewService.getReviewStatsForBook(testBookId)).thenReturn(mockReviewStats);
+
+        Response response = reviewController.getBookReviewStats(testBookId);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(expectedStatsResponseDTO, response.getEntity());
+        
+        verify(bookService, never()).getBookById(any());
+        verify(reviewService, times(1)).getReviewStatsForBook(testBookId);
+    }
+
+    @Test
+    void testGetBookReviewStatsShouldReturnOkWithZeroStatsForExistingBookWithoutReviews() {
+        ReviewStats mockReviewStats = ReviewStats.builder()
+                .totalReviews(0L)
+                .averageRating(0.0)
+                .build();
+        ReviewStatsResponseDTO expectedStatsResponseDTO = ReviewStatsResponseDTO.builder()
+                .bookId(testBookId.toString())
+                .totalReviews(0L)
+                .averageRating(0.0)
+                .build();
+
+        when(reviewService.getReviewStatsForBook(testBookId)).thenReturn(mockReviewStats);
+
+        Response response = reviewController.getBookReviewStats(testBookId);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(expectedStatsResponseDTO, response.getEntity());
+        
+        verify(bookService, never()).getBookById(any());
+        verify(reviewService, times(1)).getReviewStatsForBook(testBookId);
+    }
+
+    @Test
+    void testGetBookReviewStatsShouldReturnNotFoundIfBookDoesNotExist() {
+        when(reviewService.getReviewStatsForBook(testBookId)).thenThrow(new NotFoundException("Book not found with ID: " + testBookId));
+
+        Response response = reviewController.getBookReviewStats(testBookId);
+
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        assertEquals("Book not found with ID: " + testBookId, response.getEntity());
+        
+        verify(bookService, never()).getBookById(any());
+        verify(reviewService, times(1)).getReviewStatsForBook(testBookId);
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnOkAndReviewDTOWhenReviewExists() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenReturn(Optional.of(mockBook));
+        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.of(mockUser));
+        when(reviewService.findReviewByUserAndBook(any(UUID.class), any(UUID.class))).thenReturn(Optional.of(mockReview));
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(expectedResponseDTO, response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, times(1)).findUserProfileById(testUserId);
+        verify(reviewService, times(1)).findReviewByUserAndBook(testUserId, testBookId);
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnNotFoundWhenReviewDoesNotExist() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenReturn(Optional.of(mockBook));
+        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.of(mockUser));
+        when(reviewService.findReviewByUserAndBook(any(UUID.class), any(UUID.class))).thenReturn(Optional.empty());
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        assertEquals("Review not found for this user and book.", response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, times(1)).findUserProfileById(testUserId);
+        verify(reviewService, times(1)).findReviewByUserAndBook(testUserId, testBookId);
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnNotFoundIfBookDoesNotExist() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenReturn(Optional.empty());
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        assertEquals("Book not found.", response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, times(1)).findUserProfileById(any());
+        verify(reviewService, never()).findReviewByUserAndBook(any(), any());
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnUnauthorizedIfAuthenticatedUserIsNotFound() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenReturn(Optional.of(mockBook));
+        when(userService.findUserProfileById(testUserId)).thenReturn(Optional.empty());
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
+        assertEquals("Authenticated user not found.", response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, times(1)).findUserProfileById(testUserId);
+        verify(reviewService, never()).findReviewByUserAndBook(any(), any());
+    }
+
+    @Test
+    void testGetMyReviewForBookShouldReturnInternalServerErrorOnUnexpectedException() {
+        when(jwt.getClaim("sub")).thenReturn(testUserId.toString());
+        when(bookService.getBookById(testBookId)).thenThrow(new RuntimeException("Database connection failed"));
+
+        Response response = reviewController.getMyReviewForBook(testBookId);
+
+        assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("An unexpected error occurred: Database connection failed", response.getEntity());
+        verify(bookService, times(1)).getBookById(testBookId);
+        verify(userService, never()).findUserProfileById(any());
+        verify(reviewService, never()).findReviewByUserAndBook(any(), any());
     }
 }
