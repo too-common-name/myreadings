@@ -3,6 +3,11 @@ package modules.readinglist.domain;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.core.domain.ReadingListImpl;
+import modules.user.core.domain.UiTheme;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
 import jakarta.validation.ConstraintViolation;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -13,11 +18,6 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
-
-import modules.user.domain.UserImpl;
-import modules.readinglist.domain.ReadingListImpl.ReadingListBuilder;
-import modules.user.domain.UiTheme;
-import modules.user.domain.User;
 
 public class ReadingListImplUnitTest {
 
@@ -38,7 +38,7 @@ public class ReadingListImplUnitTest {
 
     @Test
     void createReadingListWithoutUserFailsValidation() {
-        ReadingList readingList = createValidReadingListBuilder().user(null).build();
+        ReadingList readingList = createValidReadingListBuilder().userId(null).build();
         Set<ConstraintViolation<ReadingList>> violations = validator.validate(readingList);
         assertFalse(violations.isEmpty(), "Validation should fail for missing user");
     }
@@ -71,10 +71,10 @@ public class ReadingListImplUnitTest {
         return createValidReadingListBuilder().build();
     }
 
-    private ReadingListBuilder createValidReadingListBuilder() {
-        return new ReadingListImpl.ReadingListBuilder()
+    private ReadingListImpl.ReadingListImplBuilder createValidReadingListBuilder() {
+        return ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
-                .user(createValidUser())
+                .userId(createValidUser().getKeycloakUserId())
                 .books(Arrays.asList())
                 .name("My Reading List")
                 .description("This is a valid description within the limit")
@@ -82,8 +82,8 @@ public class ReadingListImplUnitTest {
     }
 
     private User createValidUser() {
-        return new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        return UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")

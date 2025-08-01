@@ -2,7 +2,7 @@ package modules.user.web.dto;
 
 import lombok.Builder;
 import lombok.Data;
-import modules.user.domain.UiTheme;
+import modules.user.core.domain.UiTheme;
 
 import java.util.UUID;
 

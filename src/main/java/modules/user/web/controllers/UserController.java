@@ -9,8 +9,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import modules.user.domain.User;
-import modules.user.usecases.UserService;
+import modules.user.core.domain.User;
+import modules.user.core.usecases.UserService;
 import modules.user.web.dto.UserResponseDTO;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,7 +55,7 @@ public class UserController {
 
     private UserResponseDTO mapToUserResponseDTO(User user) {
         return UserResponseDTO.builder()
-                .userId(user.getUserId())
+                .userId(user.getKeycloakUserId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .username(user.getUsername())

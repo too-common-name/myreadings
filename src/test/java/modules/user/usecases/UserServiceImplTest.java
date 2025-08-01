@@ -1,8 +1,9 @@
 package modules.user.usecases;
 
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.infrastructure.repository.UserRepository;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserServiceImpl;
+import modules.user.core.usecases.repositories.UserRepository;
 import modules.user.utils.UserTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,8 +32,8 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        testUser = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        testUser = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .username("testuser")
                 .firstName("Test")
                 .lastName("User")
@@ -53,7 +54,7 @@ class UserServiceImplTest {
 
     @Test
     void testFindUserProfileByIdSuccessful() {
-        UUID userId = testUser.getUserId();
+        UUID userId = testUser.getKeycloakUserId();
         when(userRepositoryMock.findById(userId)).thenReturn(Optional.of(testUser));
 
         Optional<User> foundUserOptional = userService.findUserProfileById(userId);
@@ -90,7 +91,7 @@ class UserServiceImplTest {
 
     @Test
     void testDeleteUserProfileSuccessful() {
-        UUID userIdToDelete = testUser.getUserId();
+        UUID userIdToDelete = testUser.getKeycloakUserId();
         doNothing().when(userRepositoryMock).deleteById(userIdToDelete);
 
         userService.deleteUserProfile(userIdToDelete);

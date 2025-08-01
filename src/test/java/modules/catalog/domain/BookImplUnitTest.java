@@ -3,6 +3,8 @@ package modules.catalog.domain;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
 import jakarta.validation.ConstraintViolation;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -118,8 +120,8 @@ public class BookImplUnitTest {
                 "Validation error should be on field 'originalLanguage'");
     }
 
-    private BookImpl.BookBuilder createValidBookBuilder() {
-        return new BookImpl.BookBuilder()
+    private BookImpl.BookImplBuilder createValidBookBuilder() {
+        return BookImpl.builder()
                 .bookId(UUID.randomUUID())
                 .isbn("978-0321765723")
                 .title("Refactoring")

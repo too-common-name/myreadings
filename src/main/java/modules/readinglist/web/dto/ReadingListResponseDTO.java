@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import lombok.Builder;
 import lombok.Data;
-import modules.catalog.domain.Book;
 
 @Data
 @Builder
@@ -13,5 +12,5 @@ public class ReadingListResponseDTO {
     private UUID readingListId;
     private String name;
     private String description;
-    private List<Book> books;
+    private List<UUID> books;
 }

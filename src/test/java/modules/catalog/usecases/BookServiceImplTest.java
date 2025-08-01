@@ -1,9 +1,12 @@
 package modules.catalog.usecases;
 
-import modules.catalog.domain.Book;
-import modules.catalog.infrastructure.BookRepository;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.DomainPage;
+import modules.catalog.core.usecases.BookServiceImpl;
+import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -14,6 +17,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -75,26 +80,26 @@ public class BookServiceImplTest {
     void testGetAllBooksSuccessful() {
         List<Book> expectedBooks = Arrays.asList(CatalogTestUtils.createValidBook(),
                 CatalogTestUtils.createValidBook());
-        when(bookRepository.findAll()).thenReturn(expectedBooks);
+        when(bookRepository.findAll(null, null, null)).thenReturn(expectedBooks);
 
-        List<Book> retrievedBooks = bookService.getAllBooks();
+        List<Book> retrievedBooks = bookService.getAllBooks(null, null, null);
 
         assertNotNull(retrievedBooks, "getAllBooks should return a list");
         assertFalse(retrievedBooks.isEmpty(), "List of books should not be empty when books exist");
         assertEquals(expectedBooks.size(), retrievedBooks.size(),
                 "List should contain the expected number of books");
-        verify(bookRepository, times(1)).findAll();
+        verify(bookRepository, times(1)).findAll(null, null, null);
     }
 
     @Test
     void testGetAllBooksFails() {
-        when(bookRepository.findAll()).thenReturn(new ArrayList<>());
+        when(bookRepository.findAll(null, null, null)).thenReturn(new ArrayList<>());
 
-        List<Book> retrievedBooks = bookService.getAllBooks();
+        List<Book> retrievedBooks = bookService.getAllBooks(null, null, null);
 
         assertNotNull(retrievedBooks, "getAllBooks should return a list even if no books exist");
         assertTrue(retrievedBooks.isEmpty(), "List of books should be empty when no books exist");
-        verify(bookRepository, times(1)).findAll();
+        verify(bookRepository, times(1)).findAll(null, null, null);
     }
 
     @Test
@@ -118,5 +123,33 @@ public class BookServiceImplTest {
         bookService.deleteBookById(bookIdToDelete);
 
         verify(bookRepository, times(1)).deleteById(bookIdToDelete);
+    }
+
+    @Test
+    @DisplayName("Should search books by delegating to repository")
+    void testSearchBooksDelegation() {
+        String query = "test query";
+        int page = 0;
+        int size = 10;
+        String sortBy = "title";
+        String sortOrder = "asc";
+
+        List<Book> mockContent = Arrays.asList(
+            CatalogTestUtils.createTestBook("Test Book 1", "Description 1"),
+            CatalogTestUtils.createTestBook("Another Test Book", "Description 2")
+        );
+        DomainPage<Book> mockDomainPage = new DomainPage<>(mockContent, 2, 1, page, size, true, true);
+
+        when(bookRepository.searchBooks(anyString(), anyInt(), anyInt(), anyString(), anyString()))
+            .thenReturn(mockDomainPage);
+
+        DomainPage<Book> resultPage = bookService.searchBooks(query, page, size, sortBy, sortOrder);
+
+        verify(bookRepository, times(1)).searchBooks(query, page, size, sortBy, sortOrder);
+
+        assertNotNull(resultPage, "Result page should not be null");
+        assertEquals(mockDomainPage.totalElements(), resultPage.totalElements(), "Total elements should match");
+        assertEquals(mockDomainPage.content().size(), resultPage.content().size(), "Content size should match");
+        assertEquals(mockDomainPage.content().get(0).getTitle(), resultPage.content().get(0).getTitle(), "First book title should match");
     }
 }

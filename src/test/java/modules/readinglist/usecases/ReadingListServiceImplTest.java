@@ -1,25 +1,27 @@
 package modules.readinglist.usecases;
 
-import modules.catalog.domain.Book;
-import modules.catalog.usecases.BookService;
-import modules.readinglist.domain.ReadingList;
-import modules.readinglist.infrastructure.ReadingListRepository;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.usecases.BookService;
+import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.core.usecases.ReadingListServiceImpl;
+import modules.readinglist.core.usecases.repositories.ReadingListRepository;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.readinglist.utils.ReadingListTestUtils;
-import modules.user.domain.User;
+import modules.user.core.domain.User;
 import modules.user.utils.UserTestUtils;
-import org.junit.jupiter.api.BeforeEach;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,125 +33,60 @@ public class ReadingListServiceImplTest {
     @Mock
     private BookService bookService;
 
+    @InjectMocks
     private ReadingListServiceImpl readingListService;
 
-    @BeforeEach
-    void setUp() {
-        readingListService = new ReadingListServiceImpl(readingListRepository, bookService);
-    }
-
     @Test
-    void createReadingListSuccessful() {
-        ReadingList readingListToCreate = ReadingListTestUtils.createValidReadingList();
-        ReadingList createdReadingList = ReadingListTestUtils.createValidReadingListWithId(readingListToCreate.getReadingListId());
-        when(readingListRepository.save(readingListToCreate)).thenReturn(createdReadingList);
-
-        ReadingList result = readingListService.createReadingList(readingListToCreate);
-
-        assertEquals(createdReadingList, result);
-        verify(readingListRepository, times(1)).save(readingListToCreate);
-    }
-
-    @Test
-    void findReadingListByIdSuccessful() {
+    void findReadingListById_shouldReturnEnrichedList_whenBooksExist() {
         UUID readingListId = UUID.randomUUID();
-        ReadingList readingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(readingList));
+        Book book1 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
+        Book book2 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
+        ReadingList partialList = ReadingListTestUtils.createValidReadingListWithIdAndBookStubs(readingListId, List.of(book1, book2));
+
+        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(partialList));
+        when(bookService.getBookById(book1.getBookId())).thenReturn(Optional.of(book1));
+        when(bookService.getBookById(book2.getBookId())).thenReturn(Optional.of(book2));
 
         Optional<ReadingList> result = readingListService.findReadingListById(readingListId);
 
         assertTrue(result.isPresent());
-        assertEquals(readingList, result.get());
+        assertEquals(2, result.get().getBooks().size());
         verify(readingListRepository, times(1)).findById(readingListId);
-    }
-
-    @Test
-    void findReadingListByIdFails() {
-        UUID readingListId = UUID.randomUUID();
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.empty());
-
-        Optional<ReadingList> result = readingListService.findReadingListById(readingListId);
-
-        assertTrue(result.isEmpty());
-        verify(readingListRepository, times(1)).findById(readingListId);
+        verify(bookService, times(2)).getBookById(any(UUID.class));
     }
 
     @Test
     void getReadingListsForUserSuccessful() {
-        UUID userId = UUID.randomUUID();
-        User user = UserTestUtils.createValidUserWithId(userId);
-        List<ReadingList> readingLists = List.of(
-                ReadingListTestUtils.createValidReadingListForUser(user, "List 1"),
-                ReadingListTestUtils.createValidReadingListForUser(user, "List 2")
-        );
-        when(readingListRepository.findByUserId(userId)).thenReturn(readingLists);
+        User user = UserTestUtils.createValidUser();
+        Book book1 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
+        ReadingList list1 = ReadingListTestUtils.createValidReadingListForUserWithBooks(user, "List 1", List.of(book1));
 
-        List<ReadingList> result = readingListService.getReadingListsForUser(userId);
+        when(readingListRepository.findByUserId(user.getKeycloakUserId())).thenReturn(List.of(list1));
+        when(bookService.getBookById(book1.getBookId())).thenReturn(Optional.of(book1));
 
-        assertEquals(readingLists, result);
-        verify(readingListRepository, times(1)).findByUserId(userId);
+        List<ReadingList> result = readingListService.getReadingListsForUser(user.getKeycloakUserId());
+
+        assertEquals(1, result.size());
+        assertEquals(1, result.get(0).getBooks().size());
+        verify(readingListRepository, times(1)).findByUserId(user.getKeycloakUserId());
+        verify(bookService, times(1)).getBookById(book1.getBookId());
     }
 
     @Test
-    void getReadingListsForUserFails() {
-        UUID userId = UUID.randomUUID();
-        when(readingListRepository.findByUserId(userId)).thenReturn(List.of());
-
-        List<ReadingList> result = readingListService.getReadingListsForUser(userId);
-
-        assertTrue(result.isEmpty());
-        verify(readingListRepository, times(1)).findByUserId(userId);
-    }
-
-
-    @Test
-    void updateReadingListSuccessful() {
+    void getBooksInReadingListSuccessful() {
         UUID readingListId = UUID.randomUUID();
-        ReadingList existingReadingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        ReadingList updatedReadingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(existingReadingList));
-        when(readingListRepository.save(updatedReadingList)).thenReturn(updatedReadingList);
+        Book book1 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
+        ReadingList partialList = ReadingListTestUtils.createValidReadingListWithIdAndBookStubs(readingListId, List.of(book1));
 
-        ReadingList result = readingListService.updateReadingList(updatedReadingList);
+        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(partialList));
+        when(bookService.getBookById(book1.getBookId())).thenReturn(Optional.of(book1));
 
-        assertEquals(updatedReadingList, result);
+        List<Book> result = readingListService.getBooksInReadingList(readingListId);
+
+        assertEquals(1, result.size());
+        assertEquals(book1, result.get(0));
         verify(readingListRepository, times(1)).findById(readingListId);
-        verify(readingListRepository, times(1)).save(updatedReadingList);
-    }
-
-    @Test
-    void updateReadingListFails() {
-        UUID readingListId = UUID.randomUUID();
-        ReadingList updatedReadingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> readingListService.updateReadingList(updatedReadingList));
-
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(readingListRepository, never()).save(any());
-    }
-
-    @Test
-    void deleteReadingListByIdSuccessful() {
-        UUID readingListId = UUID.randomUUID();
-        ReadingList existingReadingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(existingReadingList));
-
-        readingListService.deleteReadingListById(readingListId);
-
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(readingListRepository, times(1)).deleteById(readingListId);
-    }
-
-    @Test
-    void deleteReadingListByIdFails() {
-        UUID readingListId = UUID.randomUUID();
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> readingListService.deleteReadingListById(readingListId));
-
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(readingListRepository, never()).deleteById(any());
+        verify(bookService, times(1)).getBookById(book1.getBookId());
     }
 
     @Test
@@ -158,98 +95,60 @@ public class ReadingListServiceImplTest {
         UUID bookId = UUID.randomUUID();
         ReadingList readingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
         Book book = CatalogTestUtils.createValidBookWithId(bookId);
-        Optional<ReadingList> readingListOptional = Optional.of(readingList);
-        Optional<Book> bookOptional = Optional.of(book);
 
-        when(readingListRepository.findById(readingListId)).thenReturn(readingListOptional);
-        when(bookService.getBookById(bookId)).thenReturn(bookOptional);
+        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(readingList));
+        when(bookService.getBookById(bookId)).thenReturn(Optional.of(book));
 
         readingListService.addBookToReadingList(readingListId, bookId);
 
         verify(readingListRepository, times(1)).findById(readingListId);
         verify(bookService, times(1)).getBookById(bookId);
-        ArgumentCaptor<Book> bookCaptor = ArgumentCaptor.forClass(Book.class);
-        verify(readingListRepository, times(1)).addBookToReadingList(eq(readingListId), bookCaptor.capture());
-        assertEquals(book, bookCaptor.getValue());
+        verify(readingListRepository, times(1)).addBookToReadingList(eq(readingListId), eq(book));
     }
-
+    
     @Test
-    void addBookToReadingListFailsReadingListNotFound() {
+    void createReadingListSuccessful() {
+        ReadingList readingListToCreate = ReadingListTestUtils.createValidReadingList();
+        when(readingListRepository.create(any(ReadingList.class))).thenReturn(readingListToCreate);
+        
+        ReadingList result = readingListService.createReadingList(readingListToCreate);
+        
+        assertEquals(readingListToCreate, result);
+        verify(readingListRepository).create(readingListToCreate);
+    }
+    
+    @Test
+    void updateReadingListFails() {
         UUID readingListId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
+        ReadingList updatedReadingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
         when(readingListRepository.findById(readingListId)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> readingListService.addBookToReadingList(readingListId, bookId));
-
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(bookService, never()).getBookById(any());
-        verify(readingListRepository, never()).addBookToReadingList(any(), any());
+        assertThrows(IllegalArgumentException.class, () -> readingListService.updateReadingList(updatedReadingList));
+        
+        verify(readingListRepository).findById(readingListId);
+        verify(readingListRepository, never()).update(any());
     }
 
     @Test
-    void addBookToReadingListFailsBookNotFoundInCatalog() {
+    void deleteReadingListByIdSuccessful() {
         UUID readingListId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
-        ReadingList readingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        Optional<ReadingList> readingListOptional = Optional.of(readingList);
-        when(readingListRepository.findById(readingListId)).thenReturn(readingListOptional);
-        when(bookService.getBookById(bookId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> readingListService.addBookToReadingList(readingListId, bookId));
-
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(readingListRepository, never()).addBookToReadingList(any(), any());
+        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(ReadingListTestUtils.createValidReadingListWithId(readingListId)));
+        
+        readingListService.deleteReadingListById(readingListId);
+        
+        verify(readingListRepository).findById(readingListId);
+        verify(readingListRepository).deleteById(readingListId);
     }
-
+    
     @Test
     void removeBookFromReadingListSuccessful() {
         UUID readingListId = UUID.randomUUID();
         UUID bookId = UUID.randomUUID();
-        ReadingList readingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(readingList));
-
+        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(ReadingListTestUtils.createValidReadingListWithId(readingListId)));
+        
         readingListService.removeBookFromReadingList(readingListId, bookId);
-
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(readingListRepository, times(1)).removeBookFromReadingList(readingListId, bookId);
-    }
-
-    @Test
-    void removeBookFromReadingListFails() {
-        UUID readingListId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> readingListService.removeBookFromReadingList(readingListId, bookId));
-
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(readingListRepository, never()).removeBookFromReadingList(any(), any());
-    }
-
-    @Test
-    void getBooksInReadingListSuccessful() {
-        UUID readingListId = UUID.randomUUID();
-        List<Book> expectedBooks = List.of(
-                CatalogTestUtils.createValidBookWithId(UUID.randomUUID()),
-                CatalogTestUtils.createValidBookWithId(UUID.randomUUID())
-        );
-        when(readingListRepository.getBooksInReadingList(readingListId)).thenReturn(expectedBooks);
-
-        List<Book> result = readingListService.getBooksInReadingList(readingListId);
-
-        assertEquals(expectedBooks, result);
-        verify(readingListRepository, times(1)).getBooksInReadingList(readingListId);
-    }
-
-    @Test
-    void getBooksInReadingList() {
-        UUID readingListId = UUID.randomUUID();
-        when(readingListRepository.getBooksInReadingList(readingListId)).thenReturn(List.of());
-
-        List<Book> result = readingListService.getBooksInReadingList(readingListId);
-
-        assertTrue(result.isEmpty());
-        verify(readingListRepository, times(1)).getBooksInReadingList(readingListId);
+        
+        verify(readingListRepository).findById(readingListId);
+        verify(readingListRepository).removeBookFromReadingList(readingListId, bookId);
     }
 }

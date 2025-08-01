@@ -1,9 +1,9 @@
 package modules.user.web.controllers;
 
 import jakarta.ws.rs.core.Response;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
-import modules.user.usecases.UserService;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserService;
 import modules.user.web.dto.UserResponseDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,8 +49,8 @@ public class UserControllerUnitTest {
         testUserId = UUID.randomUUID();
         authenticatedUserId = testUserId; 
 
-        mockUser = new UserImpl.UserBuilder()
-                .userId(testUserId)
+        mockUser = UserImpl.builder()
+                .keycloakUserId(testUserId)
                 .firstName("Daniele")
                 .lastName("Rossi")
                 .username("drossi")

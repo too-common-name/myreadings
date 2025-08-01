@@ -1,10 +1,14 @@
 package modules.user.infrastructure.repository;
 
-import modules.user.domain.UiTheme;
-import modules.user.domain.User;
-import modules.user.domain.UserImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import common.InMemoryRepositoryTestProfile;
+import io.quarkus.test.junit.TestProfile;
+import modules.user.core.domain.UiTheme;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.infrastructure.persistence.in_memory.InMemoryUserRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +16,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@TestProfile(InMemoryRepositoryTestProfile.class)
 public class InMemoryUserRepositoryTest {
 
     private InMemoryUserRepository userRepository;
@@ -23,9 +28,9 @@ public class InMemoryUserRepositoryTest {
 
     @Test
     public void testSaveAndFindById() {
-        UUID userId = UUID.randomUUID();
-        User user = new UserImpl.UserBuilder()
-                .userId(userId)
+        UUID keycloakUserId = UUID.randomUUID();
+        User user = UserImpl.builder()
+                .keycloakUserId(keycloakUserId)
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
@@ -36,30 +41,30 @@ public class InMemoryUserRepositoryTest {
         User savedUser = userRepository.save(user);
         assertEquals(user, savedUser);
 
-        Optional<User> foundUser = userRepository.findById(userId);
+        Optional<User> foundUser = userRepository.findById(keycloakUserId);
         assertTrue(foundUser.isPresent());
         assertEquals(user, foundUser.get());
     }
 
     @Test
     public void testFindByIdFails() {
-        UUID userId = UUID.randomUUID();
-        Optional<User> foundUser = userRepository.findById(userId);
+        UUID keycloakUserId = UUID.randomUUID();
+        Optional<User> foundUser = userRepository.findById(keycloakUserId);
         assertFalse(foundUser.isPresent());
     }
 
     @Test
     public void testFindAll() {
-        User user1 = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user1 = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("Alice")
                 .lastName("Smith")
                 .username("alicesmith")
                 .email("alice.smith@example.com")
                 .themePreference(UiTheme.DARK)
                 .build();
-        User user2 = new UserImpl.UserBuilder()
-                .userId(UUID.randomUUID())
+        User user2 = UserImpl.builder()
+                .keycloakUserId(UUID.randomUUID())
                 .firstName("Bob")
                 .lastName("Johnson")
                 .username("bobjohnson")
@@ -84,9 +89,9 @@ public class InMemoryUserRepositoryTest {
 
     @Test
     public void testDeleteById() {
-        UUID userId = UUID.randomUUID();
-        User user = new UserImpl.UserBuilder()
-                .userId(userId)
+        UUID keycloakUserId = UUID.randomUUID();
+        User user = UserImpl.builder()
+                .keycloakUserId(keycloakUserId)
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
@@ -95,15 +100,15 @@ public class InMemoryUserRepositoryTest {
                 .build();
 
         userRepository.save(user);
-        userRepository.deleteById(userId);
+        userRepository.deleteById(keycloakUserId);
 
-        Optional<User> foundUser = userRepository.findById(userId);
+        Optional<User> foundUser = userRepository.findById(keycloakUserId);
         assertFalse(foundUser.isPresent());
     }
 
     @Test
     public void testDeleteByIdNotFound() {
-        UUID userId = UUID.randomUUID();
-        assertDoesNotThrow(() -> userRepository.deleteById(userId));
+        UUID keycloakUserId = UUID.randomUUID();
+        assertDoesNotThrow(() -> userRepository.deleteById(keycloakUserId));
     }
 }
