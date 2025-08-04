@@ -12,7 +12,6 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import modules.catalog.core.domain.Book;
-import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.BookService;
 import modules.catalog.web.dto.BookResponseDTO;
@@ -43,20 +42,7 @@ public class BookController {
     @POST
     @RolesAllowed("admin")
     public Response createBook(@Valid BookRequestDTO createBookRequestDTO) {
-        Book bookToCreate = BookImpl.builder()
-                .bookId(UUID.randomUUID())
-                .isbn(createBookRequestDTO.getIsbn())
-                .title(createBookRequestDTO.getTitle())
-                .authors(createBookRequestDTO.getAuthors())
-                .publicationDate(createBookRequestDTO.getPublicationDate())
-                .publisher(createBookRequestDTO.getPublisher())
-                .description(createBookRequestDTO.getDescription())
-                .pageCount(createBookRequestDTO.getPageCount())
-                .coverImageId(createBookRequestDTO.getCoverImageId())
-                .originalLanguage(createBookRequestDTO.getOriginalLanguage())
-                .build();
-
-        Book createdBook = bookService.createBook(bookToCreate);
+        Book createdBook = bookService.createBook(createBookRequestDTO);
 
         BookResponseDTO responseDTO = mapToBookResponseDTO(createdBook);
 

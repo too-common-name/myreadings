@@ -6,9 +6,10 @@ import java.util.UUID;
 
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.DomainPage;
+import modules.catalog.web.dto.BookRequestDTO;
 
 public interface BookService {
-    Book createBook(Book book);
+    Book createBook(BookRequestDTO createBookRequestDTO);
     Optional<Book> getBookById(UUID bookId);
     List<Book> getAllBooks(String sort, String order, Integer limit);
     Book updateBook(Book book);

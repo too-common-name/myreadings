@@ -1,8 +1,10 @@
 package modules.catalog.core.usecases;
 
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.repositories.BookRepository;
+import modules.catalog.web.dto.BookRequestDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -19,7 +21,19 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional
-    public Book createBook(Book book) {
+    public Book createBook(BookRequestDTO createBookRequestDTO) {
+        Book book = BookImpl.builder()
+                .bookId(UUID.randomUUID())
+                .isbn(createBookRequestDTO.getIsbn())
+                .title(createBookRequestDTO.getTitle())
+                .authors(createBookRequestDTO.getAuthors())
+                .publicationDate(createBookRequestDTO.getPublicationDate())
+                .publisher(createBookRequestDTO.getPublisher())
+                .description(createBookRequestDTO.getDescription())
+                .pageCount(createBookRequestDTO.getPageCount())
+                .coverImageId(createBookRequestDTO.getCoverImageId())
+                .originalLanguage(createBookRequestDTO.getOriginalLanguage())
+                .build();
         return bookRepository.save(book);
     }
 

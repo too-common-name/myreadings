@@ -5,9 +5,12 @@ import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.BookServiceImpl;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
+import modules.catalog.web.dto.BookRequestDTO;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -37,15 +40,16 @@ public class BookServiceImplTest {
 
     @Test
     void testCreateBookSuccessful() {
-        Book bookToCreate = CatalogTestUtils.createValidBook();
-        when(bookRepository.save(any(Book.class))).thenReturn(bookToCreate);
+        BookRequestDTO requestDTO = CatalogTestUtils.createValidBookRequestDTO();
+        ArgumentCaptor<Book> bookCaptor = ArgumentCaptor.forClass(Book.class);
+        when(bookRepository.save(bookCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+        Book createdBook = bookService.createBook(requestDTO);
 
-        Book createdBook = bookService.createBook(bookToCreate);
-
-        assertNotNull(createdBook, "createBook should return a Book object");
-        assertEquals(bookToCreate.getBookId(), createdBook.getBookId(),
-                "Returned book should have the same ID as the input book");
-        verify(bookRepository, times(1)).save(bookToCreate);
+        assertNotNull(createdBook, "Il libro creato non dovrebbe essere nullo");
+        assertNotNull(createdBook.getBookId(), "Il service dovrebbe aver generato un ID");
+        assertEquals(requestDTO.getTitle(), createdBook.getTitle());
+        assertEquals(requestDTO.getIsbn(), createdBook.getIsbn());
+        verify(bookRepository, times(1)).save(any(Book.class));
     }
 
     @Test
@@ -135,13 +139,12 @@ public class BookServiceImplTest {
         String sortOrder = "asc";
 
         List<Book> mockContent = Arrays.asList(
-            CatalogTestUtils.createTestBook("Test Book 1", "Description 1"),
-            CatalogTestUtils.createTestBook("Another Test Book", "Description 2")
-        );
+                CatalogTestUtils.createTestBook("Test Book 1", "Description 1"),
+                CatalogTestUtils.createTestBook("Another Test Book", "Description 2"));
         DomainPage<Book> mockDomainPage = new DomainPage<>(mockContent, 2, 1, page, size, true, true);
 
         when(bookRepository.searchBooks(anyString(), anyInt(), anyInt(), anyString(), anyString()))
-            .thenReturn(mockDomainPage);
+                .thenReturn(mockDomainPage);
 
         DomainPage<Book> resultPage = bookService.searchBooks(query, page, size, sortBy, sortOrder);
 
@@ -150,6 +153,7 @@ public class BookServiceImplTest {
         assertNotNull(resultPage, "Result page should not be null");
         assertEquals(mockDomainPage.totalElements(), resultPage.totalElements(), "Total elements should match");
         assertEquals(mockDomainPage.content().size(), resultPage.content().size(), "Content size should match");
-        assertEquals(mockDomainPage.content().get(0).getTitle(), resultPage.content().get(0).getTitle(), "First book title should match");
+        assertEquals(mockDomainPage.content().get(0).getTitle(), resultPage.content().get(0).getTitle(),
+                "First book title should match");
     }
 }
