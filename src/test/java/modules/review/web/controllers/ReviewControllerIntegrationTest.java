@@ -9,8 +9,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.MediaType;
 import modules.catalog.core.domain.Book;
-import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.BookServiceImpl;
+import modules.catalog.utils.CatalogTestUtils;
+import modules.catalog.web.dto.BookRequestDTO;
 import modules.review.core.domain.Review;
 
 import modules.review.core.usecases.ReviewServiceImpl;
@@ -67,14 +68,8 @@ public class ReviewControllerIntegrationTest {
                         .email("bwayne@test.com")
                         .build();
 
-        private final Book testBook = BookImpl.builder()
-                        .isbn("978-0321765723")
-                        .title("The Lord of the Rings")
-                        .build();
-        private final Book anotherTestBook = BookImpl.builder()
-                        .isbn("978-1234567890")
-                        .title("Another Great Book")
-                        .build();
+        private final BookRequestDTO testBookDTO = CatalogTestUtils.createValidBookRequestDTO();
+        private final BookRequestDTO anotherTestBookDTO = CatalogTestUtils.createValidBookRequestDTO();
 
         private UUID aliceReviewId;
         private Book createdBook;
@@ -129,8 +124,8 @@ public class ReviewControllerIntegrationTest {
 
         @Transactional
         void setUpBooks() {
-                createdBook = bookService.createBook(testBook);
-                createdAnotherBook = bookService.createBook(anotherTestBook);
+                createdBook = bookService.createBook(testBookDTO);
+                createdAnotherBook = bookService.createBook(anotherTestBookDTO);
         }
 
         protected String getAccessToken(String userName) {
@@ -139,8 +134,8 @@ public class ReviewControllerIntegrationTest {
 
         @Test
         void testUserCanCreateReview() {
-                Book created = bookService.createBook(
-                                BookImpl.builder().isbn("123").title("New Book").build());
+                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
+                Book created = bookService.createBook(bookRequest);
                 given()
                                 .auth().oauth2(getAccessToken(alice.getUsername()))
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -277,51 +272,51 @@ public class ReviewControllerIntegrationTest {
                                 .body(equalTo("Book not found with ID: " + nonExistentBookId));
         }
 
-    @Test
-    void testGetMyReviewForBookShouldReturnOkAndReviewDTOWhenReviewExists() {
-        given()
-                .auth().oauth2(getAccessToken(alice.getUsername()))
-                .pathParam("bookId", createdBook.getBookId())
-                .when().get("/books/{bookId}/my-review")
-                .then()
-                .statusCode(200)
-                .body("reviewId", equalTo(aliceReviewId.toString()))
-                .body("bookId", equalTo(createdBook.getBookId().toString()))
-                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
-                .body("rating", is(5))
-                .body("reviewText", equalTo("Excellent book!"));
-    }
+        @Test
+        void testGetMyReviewForBookShouldReturnOkAndReviewDTOWhenReviewExists() {
+                given()
+                                .auth().oauth2(getAccessToken(alice.getUsername()))
+                                .pathParam("bookId", createdBook.getBookId())
+                                .when().get("/books/{bookId}/my-review")
+                                .then()
+                                .statusCode(200)
+                                .body("reviewId", equalTo(aliceReviewId.toString()))
+                                .body("bookId", equalTo(createdBook.getBookId().toString()))
+                                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
+                                .body("rating", is(5))
+                                .body("reviewText", equalTo("Excellent book!"));
+        }
 
-    @Test
-    void testGetMyReviewForBookShouldReturnNotFoundWhenReviewDoesNotExist() {
-        given()
-                .auth().oauth2(getAccessToken(alice.getUsername()))
-                .pathParam("bookId", createdAnotherBook.getBookId()) // Use a book Alice hasn't reviewed
-                .when().get("/books/{bookId}/my-review")
-                .then()
-                .statusCode(404)
-                .body(equalTo("Review not found for this user and book."));
-    }
+        @Test
+        void testGetMyReviewForBookShouldReturnNotFoundWhenReviewDoesNotExist() {
+                given()
+                                .auth().oauth2(getAccessToken(alice.getUsername()))
+                                .pathParam("bookId", createdAnotherBook.getBookId()) // Use a book Alice hasn't reviewed
+                                .when().get("/books/{bookId}/my-review")
+                                .then()
+                                .statusCode(404)
+                                .body(equalTo("Review not found for this user and book."));
+        }
 
-    @Test
-    void testGetMyReviewForBookShouldReturnNotFoundIfBookDoesNotExist() {
-        UUID nonExistentBookId = UUID.randomUUID();
-        given()
-                .auth().oauth2(getAccessToken(alice.getUsername()))
-                .pathParam("bookId", nonExistentBookId)
-                .when().get("/books/{bookId}/my-review")
-                .then()
-                .statusCode(404)
-                .body(equalTo("Book not found."));
-    }
+        @Test
+        void testGetMyReviewForBookShouldReturnNotFoundIfBookDoesNotExist() {
+                UUID nonExistentBookId = UUID.randomUUID();
+                given()
+                                .auth().oauth2(getAccessToken(alice.getUsername()))
+                                .pathParam("bookId", nonExistentBookId)
+                                .when().get("/books/{bookId}/my-review")
+                                .then()
+                                .statusCode(404)
+                                .body(equalTo("Book not found."));
+        }
 
-    @Test
-    void testGetMyReviewForBookShouldReturnUnauthorizedIfUserIsNotAuthenticated() {
-        given()
-                .pathParam("bookId", createdBook.getBookId())
-                .when().get("/books/{bookId}/my-review")
-                .then()
-                .statusCode(401);
-    }
+        @Test
+        void testGetMyReviewForBookShouldReturnUnauthorizedIfUserIsNotAuthenticated() {
+                given()
+                                .pathParam("bookId", createdBook.getBookId())
+                                .when().get("/books/{bookId}/my-review")
+                                .then()
+                                .statusCode(401);
+        }
 
 }

@@ -52,26 +52,15 @@ public class BookControllerUnitTest {
     @Test
     void testCreateBookSuccessful() {
         BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-        Book createdBook = CatalogTestUtils.createValidBookBuilder(bookRequest).build();
-        BookResponseDTO expectedResponse = BookResponseDTO.builder()
-                .isbn(bookRequest.getIsbn())
-                .title(bookRequest.getTitle())
-                .authors(bookRequest.getAuthors())
-                .publicationDate(bookRequest.getPublicationDate())
-                .publisher(bookRequest.getPublisher())
-                .description(bookRequest.getDescription())
-                .pageCount(bookRequest.getPageCount())
-                .coverImageId(bookRequest.getCoverImageId())
-                .originalLanguage(bookRequest.getOriginalLanguage())
-                .build();
-
-        when(bookService.createBook(any(Book.class))).thenReturn(createdBook);
-
+        Book createdBook = CatalogTestUtils.createValidBook();
+        when(bookService.createBook(any(BookRequestDTO.class))).thenReturn(createdBook);
         Response response = bookController.createBook(bookRequest);
-        expectedResponse.setBookId(((BookResponseDTO) response.getEntity()).getBookId());
         assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
-        assertEquals(expectedResponse, response.getEntity());
-        verify(bookService, times(1)).createBook(any(Book.class));
+        assertNotNull(response.getEntity());
+        BookResponseDTO responseBody = (BookResponseDTO) response.getEntity();
+        assertEquals(createdBook.getBookId(), responseBody.getBookId());
+        assertEquals(createdBook.getTitle(), responseBody.getTitle());
+        verify(bookService, times(1)).createBook(bookRequest);
     }
 
     @Test

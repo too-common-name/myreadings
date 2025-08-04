@@ -9,8 +9,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.MediaType;
 import modules.catalog.core.domain.Book;
-import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.BookService;
+import modules.catalog.utils.CatalogTestUtils;
+import modules.catalog.web.dto.BookRequestDTO;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.ReadingListService;
@@ -68,10 +69,7 @@ public class ReadingListControllerIntegrationTest {
                         .email("bwayne@test.com")
                         .build();
 
-        private final Book testBook = BookImpl.builder()
-                        .isbn("123-456")
-                        .title("Test Book")
-                        .build();
+        private final BookRequestDTO testBookDTO = CatalogTestUtils.createValidBookRequestDTO();
 
         private UUID aliceListId;
         private UUID adminListId;
@@ -137,7 +135,7 @@ public class ReadingListControllerIntegrationTest {
 
         @Transactional
         void setUpBooks() {
-                createdBook = bookService.createBook(testBook);
+                createdBook = bookService.createBook(testBookDTO);
         }
 
         protected String getAccessToken(String userName) {
