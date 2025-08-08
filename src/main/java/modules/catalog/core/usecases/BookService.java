@@ -11,6 +11,7 @@ import modules.catalog.web.dto.BookRequestDTO;
 public interface BookService {
     Book createBook(BookRequestDTO createBookRequestDTO);
     Optional<Book> getBookById(UUID bookId);
+    List<Book> getBooksByIds(List<UUID> bookIds);
     List<Book> getAllBooks(String sort, String order, Integer limit);
     Book updateBook(Book book);
     void deleteBookById(UUID bookId);

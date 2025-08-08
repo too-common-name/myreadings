@@ -19,7 +19,7 @@ public class ReadingListTestUtils {
         User user = UserTestUtils.createValidUser();
         return ReadingListImpl.builder()
                 .readingListId(readingListId)
-                .userId(user.getKeycloakUserId())
+                .user(user)
                 .name("Test Reading List")
                 .description("A test reading list")
                 .creationDate(LocalDateTime.now())
@@ -30,7 +30,7 @@ public class ReadingListTestUtils {
         User user = UserTestUtils.createValidUser();
         return ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
-                .userId(user.getKeycloakUserId())
+                .user(user)
                 .name(name)
                 .description("A test reading list")
                 .creationDate(LocalDateTime.now())
@@ -40,7 +40,7 @@ public class ReadingListTestUtils {
     public static ReadingList createValidReadingListForUser(User user, String name) {
         return ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
-                .userId(user.getKeycloakUserId())
+                .user(user)
                 .name(name)
                 .description("A test reading list for a specific user")
                 .creationDate(LocalDateTime.now())
@@ -51,7 +51,7 @@ public class ReadingListTestUtils {
         User user = UserTestUtils.createValidUser();
         return ReadingListImpl.builder()
                 .readingListId(readingListId)
-                .userId(user.getKeycloakUserId())
+                .user(user)
                 .name("Test List With Books")
                 .description("A test list containing book stubs")
                 .creationDate(LocalDateTime.now())
@@ -62,7 +62,7 @@ public class ReadingListTestUtils {
     public static ReadingList createValidReadingListForUserWithBooks(User user, String name, List<Book> books) {
         return ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
-                .userId(user.getKeycloakUserId())
+                .user(user)
                 .name(name)
                 .description("A test reading list for a specific user with books")
                 .creationDate(LocalDateTime.now())

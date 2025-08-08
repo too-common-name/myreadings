@@ -30,10 +30,10 @@ public class JpaReviewRepository implements ReviewRepository {
 
     @Override
     public Review create(Review review) {
-        LOGGER.debugf("JPA: Persisting new review entity with ID: %s", review.getReviewId());
+        LOGGER.debugf("JPA: Creating review entity with ID: %s", review.getReviewId());
         ReviewEntity newEntity = mapper.toEntity(review);
-        entityManager.persist(newEntity);
-        return mapper.toDomain(newEntity);
+        ReviewEntity managedEntity = entityManager.merge(newEntity);
+        return mapper.toDomain(managedEntity);
     }
 
     @Override
