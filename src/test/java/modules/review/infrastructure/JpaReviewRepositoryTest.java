@@ -5,6 +5,7 @@ import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
@@ -26,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @TestProfile(JpaRepositoryTestProfile.class)
-@TestTransaction
 public class JpaReviewRepositoryTest {
 
     @Inject
@@ -37,15 +37,30 @@ public class JpaReviewRepositoryTest {
     BookRepository bookRepository;
 
     private User testUser1;
+    private User anotherUser;
     private Book testBook1;
+    private Book anotherBook;
 
     @BeforeEach
     void setUp() {
+        setupUsers();
+        setupBooks();
+    }
+
+    @Transactional
+    void setupUsers() {
         testUser1 = userRepository.save(UserTestUtils.createValidUser());
+        anotherUser = userRepository.save(UserTestUtils.createValidUser());
+    }
+
+    @Transactional
+    void setupBooks() {
         testBook1 = bookRepository.save(CatalogTestUtils.createValidBook());
+        anotherBook = bookRepository.save(CatalogTestUtils.createValidBook());
     }
 
     @Test
+    @TestTransaction
     void testCreateAndFindById() {
         Review reviewToCreate = ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
                 testBook1.getBookId(), "Great book!", 5);
@@ -61,6 +76,7 @@ public class JpaReviewRepositoryTest {
     }
 
     @Test
+    @TestTransaction
     void testUpdateReview() {
         Review createdReview = reviewRepository.create(
                 ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(),
@@ -83,6 +99,7 @@ public class JpaReviewRepositoryTest {
     }
 
     @Test
+    @TestTransaction
     void testDeleteById() {
         Review createdReview = reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(
                 testUser1.getKeycloakUserId(), testBook1.getBookId(), "To be deleted", 5));
@@ -95,8 +112,8 @@ public class JpaReviewRepositoryTest {
     }
 
     @Test
+    @TestTransaction
     void testGetBookReviews() {
-        Book anotherBook = bookRepository.save(CatalogTestUtils.createValidBook());
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
                 testBook1.getBookId(), "Review 1 for book 1", 5));
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
@@ -111,8 +128,8 @@ public class JpaReviewRepositoryTest {
     }
 
     @Test
+    @TestTransaction
     void testGetUserReviews() {
-        User anotherUser = userRepository.save(UserTestUtils.createValidUser());
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
                 testBook1.getBookId(), "Review 1 by user 1", 5));
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
@@ -128,6 +145,7 @@ public class JpaReviewRepositoryTest {
     }
 
     @Test
+    @TestTransaction
     void testFindByUserIdAndBookId() {
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
                 testBook1.getBookId(), "Specific review", 5));
@@ -142,7 +160,9 @@ public class JpaReviewRepositoryTest {
                 UUID.randomUUID());
         assertTrue(notFoundReview.isEmpty());
     }
+
     @Test
+    @TestTransaction
     void testCountReviewsByBookId() {
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "Review 1", 5));
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "Review 2", 5));
@@ -156,6 +176,7 @@ public class JpaReviewRepositoryTest {
     }
 
     @Test
+    @TestTransaction
     void testFindAverageRatingByBookId_WithReviews() {
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "", 4));
         reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(), "", 5));
@@ -167,12 +188,14 @@ public class JpaReviewRepositoryTest {
     }
 
     @Test
+    @TestTransaction
     void testFindAverageRatingByBookId_NoReviews() {
         Double averageRating = reviewRepository.findAverageRatingByBookId(testBook1.getBookId());
         assertNull(averageRating);
     }
 
     @Test
+    @TestTransaction
     void testFindAverageRatingByBookId_NonExistentBookId() {
         Double averageRatingNonExistentBook = reviewRepository.findAverageRatingByBookId(UUID.randomUUID());
         assertNull(averageRatingNonExistentBook);

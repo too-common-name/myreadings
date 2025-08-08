@@ -5,7 +5,6 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.TestTransaction;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
@@ -16,7 +15,6 @@ import modules.user.core.domain.User;
 import modules.user.core.usecases.repositories.UserRepository;
 import modules.readinglist.utils.ReadingListTestUtils;
 import modules.user.utils.UserTestUtils;
-import io.quarkus.hibernate.orm.PersistenceUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,19 +34,6 @@ public class JpaReadingListRepositoryTest {
     UserRepository userRepository;
     @Inject
     BookRepository bookRepository;
-    
-    @Inject
-    @PersistenceUnit("readinglist-db")
-    EntityManager readingListEntityManager;
-    @Inject
-    @PersistenceUnit("users-db")
-    EntityManager usersEntityManager;
-    @Inject
-    @PersistenceUnit("books-db")
-    EntityManager booksEntityManager;
-    @Inject
-    @PersistenceUnit("review-db")
-    EntityManager reviewEntityManager;
 
     private User testUser1;
     private User testUser2;

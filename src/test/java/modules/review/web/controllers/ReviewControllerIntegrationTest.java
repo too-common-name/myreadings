@@ -3,6 +3,7 @@ package modules.review.web.controllers;
 import io.quarkus.hibernate.orm.PersistenceUnit;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -12,15 +13,16 @@ import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
 import modules.review.core.usecases.repositories.ReviewRepository;
+import modules.review.utils.ReviewTestUtils;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.repositories.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import common.JpaRepositoryTestProfile;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
@@ -28,26 +30,23 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 
 @QuarkusTest
+@TestProfile(JpaRepositoryTestProfile.class)
 @TestHTTPEndpoint(ReviewController.class)
 public class ReviewControllerIntegrationTest {
 
     @Inject
     ReviewRepository reviewRepository;
-
     @Inject
     BookRepository bookRepository;
-
     @Inject
     UserRepository userRepository;
 
     @Inject
     @PersistenceUnit("review-db")
     EntityManager reviewsEntityManager;
-
     @Inject
     @PersistenceUnit("books-db")
     EntityManager booksEntityManager;
-
     @Inject
     @PersistenceUnit("users-db")
     EntityManager usersEntityManager;
@@ -56,52 +55,85 @@ public class ReviewControllerIntegrationTest {
 
     private User alice;
     private User admin;
+    private User anotherUser;
     private Book createdBook;
     private Book createdAnotherBook;
+    private Book newBook;
     private Review aliceReview;
 
     @BeforeEach
+    void setUp() {
+        setupUsers();
+        setupBooks();
+        setupReviews();
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanUpReviews();
+        cleanUpBooks();
+        cleanUpUsers();
+    }
+
     @Transactional
-    void setUp() {        
-        alice = UserImpl.builder()
+    void cleanUpReviews() {
+        reviewsEntityManager.createQuery("DELETE FROM ReviewEntity").executeUpdate();
+    }
+
+    @Transactional
+    void cleanUpBooks() {
+        booksEntityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
+    }
+
+    @Transactional
+    void cleanUpUsers() {
+        usersEntityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
+    }
+
+    @Transactional
+    void setupUsers() {
+        alice = userRepository.save(UserImpl.builder()
                 .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
                 .firstName("Alice").lastName("Silverstone").username("alice").email("asilverstone@test.com")
-                .build();
-        admin = UserImpl.builder()
+                .build());
+        admin = userRepository.save(UserImpl.builder()
                 .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
                 .firstName("Bruce").lastName("Wayne").username("admin").email("bwayne@test.com")
-                .build();
-        
-        userRepository.save(alice);
-        userRepository.save(admin);
+                .build());
+        anotherUser = userRepository
+                .save(UserImpl.builder()
+                        .keycloakUserId(UUID.fromString("1eed6a8e-a853-4597-b4c6-c4c2533546a0"))
+                        .firstName("John")
+                        .lastName("Doe")
+                        .username("jdoe")
+                        .email("john.doe@example.com")
+                        .build());
+    }
 
+    @Transactional
+    void setupBooks() {
         createdBook = bookRepository.save(CatalogTestUtils.createValidBook());
         createdAnotherBook = bookRepository.save(CatalogTestUtils.createValidBook());
-
-        aliceReview = ReviewImpl.builder()
-                .reviewId(UUID.randomUUID())
-                .book(createdBook)
-                .user(alice)
-                .rating(5)
-                .reviewText("Excellent book!")
-                .publicationDate(LocalDateTime.now())
-                .build();
-        
-        reviewRepository.create(aliceReview);
+        newBook = bookRepository.save(CatalogTestUtils.createValidBook());
     }
-    
+
+    @Transactional
+    void setupReviews() {
+        aliceReview = reviewRepository.create(ReviewTestUtils.createValidReviewForUserAndBook(alice.getKeycloakUserId(),
+                createdBook.getBookId(), "Excellent book!", 5));
+    }
+
     protected String getAccessToken(String userName) {
         return keycloakClient.getAccessToken(userName);
     }
 
     @Test
     void testUserCanCreateReview() {
-        Book newBook = bookRepository.save(CatalogTestUtils.createValidBook());
         given()
                 .auth().oauth2(getAccessToken(alice.getUsername()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"bookId\": \"" + newBook.getBookId()
-                                + "\", \"rating\": 5, \"reviewText\": \"Great!\"}")
+                        + "\", \"rating\": 5, \"reviewText\": \"Great!\"}")
                 .when().post()
                 .then()
                 .statusCode(201)
@@ -122,7 +154,7 @@ public class ReviewControllerIntegrationTest {
                 .body("reviewId", equalTo(aliceReview.getReviewId().toString()))
                 .body("userId", equalTo(alice.getKeycloakUserId().toString()));
     }
-    
+
     @Test
     void testAdminCanAccessOthersReview() {
         given()
@@ -141,7 +173,7 @@ public class ReviewControllerIntegrationTest {
                 .pathParam("reviewId", aliceReview.getReviewId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"bookId\": \"" + createdBook.getBookId()
-                                + "\", \"rating\": 3, \"reviewText\": \"Updated review text.\"}")
+                        + "\", \"rating\": 3, \"reviewText\": \"Updated review text.\"}")
                 .when().put("/{reviewId}")
                 .then()
                 .statusCode(200)
@@ -152,11 +184,11 @@ public class ReviewControllerIntegrationTest {
     @Test
     void testUserCannotUpdateOthersReview() {
         given()
-                .auth().oauth2(getAccessToken(admin.getUsername()))
+                .auth().oauth2(getAccessToken(anotherUser.getUsername()))
                 .pathParam("reviewId", aliceReview.getReviewId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"bookId\": \"" + createdBook.getBookId()
-                                + "\", \"rating\": 2, \"reviewText\": \"Attempting to update.\"}")
+                        + "\", \"rating\": 2, \"reviewText\": \"Attempting to update.\"}")
                 .when().put("/{reviewId}")
                 .then()
                 .statusCode(403);
@@ -171,7 +203,7 @@ public class ReviewControllerIntegrationTest {
                 .then()
                 .statusCode(204);
     }
-    
+
     @Test
     void testAdminCanDeleteOthersReview() {
         given()
@@ -184,7 +216,6 @@ public class ReviewControllerIntegrationTest {
 
     @Test
     void testUserCannotDeleteOthersReview() {
-        User anotherUser = userRepository.save(UserImpl.builder().keycloakUserId(UUID.randomUUID()).username("another").build());
         given()
                 .auth().oauth2(getAccessToken(anotherUser.getUsername()))
                 .pathParam("reviewId", aliceReview.getReviewId())

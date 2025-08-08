@@ -17,7 +17,7 @@ import org.jboss.logging.Logger;
 @ApplicationScoped
 @IfBuildProperty(name = "app.repository.type", stringValue = "jpa", enableIfMissing = true)
 public class JpaReadingListRepository implements ReadingListRepository {
-    
+
     private static final Logger LOGGER = Logger.getLogger(JpaReadingListRepository.class);
 
     @Inject
@@ -40,13 +40,12 @@ public class JpaReadingListRepository implements ReadingListRepository {
         LOGGER.debugf("JPA: Merging reading list entity with ID: %s", list.getReadingListId());
         ReadingListEntity managedEntity = entityManager.find(ReadingListEntity.class, list.getReadingListId());
 
-        if (managedEntity != null) {
-            mapper.updateEntityFromDomain(managedEntity, list);
-            return mapper.toDomain(managedEntity);
-        } else {
+        if (managedEntity == null) {
             throw new IllegalArgumentException(
                     "ReadingList with ID " + list.getReadingListId() + " not found for update.");
         }
+        mapper.updateEntityFromDomain(managedEntity, list);
+        return mapper.toDomain(managedEntity);
     }
 
     @Override
@@ -58,7 +57,8 @@ public class JpaReadingListRepository implements ReadingListRepository {
     @Override
     public List<ReadingList> findByUserId(UUID userId) {
         LOGGER.debugf("JPA: Finding reading list entities for user ID: %s", userId);
-        TypedQuery<ReadingListEntity> query = entityManager.createQuery("SELECT rl FROM ReadingListEntity rl WHERE rl.userId = :userId", ReadingListEntity.class);
+        TypedQuery<ReadingListEntity> query = entityManager
+                .createQuery("SELECT rl FROM ReadingListEntity rl WHERE rl.userId = :userId", ReadingListEntity.class);
         query.setParameter("userId", userId);
         return query.getResultList().stream().map(mapper::toDomain).collect(Collectors.toList());
     }
@@ -99,7 +99,8 @@ public class JpaReadingListRepository implements ReadingListRepository {
     @Override
     public List<UUID> getBookIdsInReadingList(UUID readingListId) {
         LOGGER.debugf("JPA: Getting book IDs for list %s", readingListId);
-        TypedQuery<UUID> query = entityManager.createQuery("SELECT i.id.bookId FROM ReadingListItemEntity i WHERE i.id.readingListId = :listId", UUID.class);
+        TypedQuery<UUID> query = entityManager.createQuery(
+                "SELECT i.id.bookId FROM ReadingListItemEntity i WHERE i.id.readingListId = :listId", UUID.class);
         query.setParameter("listId", readingListId);
         return query.getResultList();
     }
@@ -108,7 +109,8 @@ public class JpaReadingListRepository implements ReadingListRepository {
     public Optional<ReadingList> findReadingListContainingBookForUser(UUID userId, UUID bookId) {
         LOGGER.debugf("JPA: Finding if user %s has book %s in a list", userId, bookId);
         TypedQuery<ReadingListEntity> query = entityManager.createQuery(
-            "SELECT rl FROM ReadingListEntity rl JOIN rl.items i WHERE rl.userId = :userId AND i.id.bookId = :bookId", ReadingListEntity.class);
+                "SELECT rl FROM ReadingListEntity rl JOIN rl.items i WHERE rl.userId = :userId AND i.id.bookId = :bookId",
+                ReadingListEntity.class);
         query.setParameter("userId", userId);
         query.setParameter("bookId", bookId);
         return query.getResultStream().findFirst().map(mapper::toDomain);

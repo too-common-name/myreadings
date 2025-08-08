@@ -15,7 +15,6 @@ import modules.review.web.dto.ReviewStatsResponseDTO;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 import io.quarkus.security.Authenticated;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -90,7 +89,7 @@ public class ReviewController {
     @RolesAllowed({ "user", "admin" })
     public Response getReviewsByBookId(@PathParam("bookId") UUID bookId) {
         LOGGER.infof("Received request to get reviews for book ID: %s", bookId);
-        List<Review> reviews = reviewService.getReviewsForBook(bookId);
+        List<Review> reviews = reviewService.getReviewsForBook(bookId, jwt);
         List<ReviewResponseDTO> response = reviews.stream().map(this::mapToReviewResponseDTO).collect(Collectors.toList());
         LOGGER.debugf("Found %d reviews for book ID: %s", response.size(), bookId);
         return Response.ok(response).build();
