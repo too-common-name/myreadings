@@ -5,6 +5,7 @@ import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserServiceImpl;
 import modules.user.core.usecases.repositories.UserRepository;
 import modules.user.utils.UserTestUtils;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +13,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.ForbiddenException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,6 +28,9 @@ class UserServiceImplTest {
 
     @Mock
     UserRepository userRepositoryMock;
+
+    @Mock
+    JsonWebToken jwt;
 
     @InjectMocks
     UserServiceImpl userService;
@@ -43,7 +50,7 @@ class UserServiceImplTest {
 
     @Test
     void testCreateUserProfileSuccessful() {
-        when(userRepositoryMock.save(any(User.class))).thenReturn(testUser); 
+        when(userRepositoryMock.save(any(User.class))).thenReturn(testUser);
 
         User createdUser = userService.createUserProfile(UserTestUtils.builderFrom(testUser).build());
 
@@ -53,11 +60,13 @@ class UserServiceImplTest {
     }
 
     @Test
-    void testFindUserProfileByIdSuccessful() {
+    void testFindOwnUserProfileSuccessful() {
         UUID userId = testUser.getKeycloakUserId();
+        when(jwt.getSubject()).thenReturn(userId.toString());
+        when(jwt.getClaim("realm_access")).thenReturn(null);
         when(userRepositoryMock.findById(userId)).thenReturn(Optional.of(testUser));
 
-        Optional<User> foundUserOptional = userService.findUserProfileById(userId);
+        Optional<User> foundUserOptional = userService.findUserProfileById(userId, jwt);
 
         assertTrue(foundUserOptional.isPresent());
         assertEquals(testUser, foundUserOptional.get());
@@ -65,11 +74,47 @@ class UserServiceImplTest {
     }
 
     @Test
-    void testFindUserProfileByIdFails() {
+    void testFindOtherUserProfileAsAdminSuccessful() {
+        UUID adminId = UUID.randomUUID();
+        UUID targetUserId = testUser.getKeycloakUserId();
+        
+        JsonObject realmAccess = Json.createObjectBuilder()
+            .add("roles", Json.createArrayBuilder().add("admin").add("user").build())
+            .build();
+
+        when(jwt.getSubject()).thenReturn(adminId.toString());
+        when(jwt.getClaim("realm_access")).thenReturn(realmAccess);
+        when(userRepositoryMock.findById(targetUserId)).thenReturn(Optional.of(testUser));
+
+        Optional<User> foundUserOptional = userService.findUserProfileById(targetUserId, jwt);
+
+        assertTrue(foundUserOptional.isPresent());
+        assertEquals(testUser, foundUserOptional.get());
+        verify(userRepositoryMock, times(1)).findById(targetUserId);
+    }
+
+    @Test
+    void testFindOtherUserProfileAsUserThrowsForbiddenException() {
+        UUID requesterId = UUID.randomUUID();
+        UUID targetUserId = testUser.getKeycloakUserId();
+        when(jwt.getSubject()).thenReturn(requesterId.toString());
+        when(jwt.getClaim("realm_access")).thenReturn(null);
+
+        assertThrows(ForbiddenException.class, () -> {
+            userService.findUserProfileById(targetUserId, jwt);
+        });
+
+        verify(userRepositoryMock, never()).findById(any(UUID.class));
+    }
+
+    @Test
+    void testFindUserProfileByIdReturnsEmptyWhenUserNotFound() {
         UUID nonExistentUserId = UUID.randomUUID();
+        when(jwt.getSubject()).thenReturn(nonExistentUserId.toString());
+        when(jwt.getClaim("realm_access")).thenReturn(null);
         when(userRepositoryMock.findById(nonExistentUserId)).thenReturn(Optional.empty());
 
-        Optional<User> foundUserOptional = userService.findUserProfileById(nonExistentUserId);
+        Optional<User> foundUserOptional = userService.findUserProfileById(nonExistentUserId, jwt);
 
         assertFalse(foundUserOptional.isPresent());
         verify(userRepositoryMock, times(1)).findById(nonExistentUserId);

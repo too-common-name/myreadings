@@ -3,75 +3,62 @@ package modules.review.infrastructure.persistence.in_memory;
 import jakarta.enterprise.context.ApplicationScoped;
 import modules.review.core.domain.Review;
 import modules.review.core.usecases.repositories.ReviewRepository;
-
-import java.util.UUID;
-import java.util.stream.Collectors;
-
 import io.quarkus.arc.properties.IfBuildProperty;
+import org.jboss.logging.Logger;
 
-import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 @IfBuildProperty(name = "app.repository.type", stringValue = "in-memory", enableIfMissing = true)
 public class InMemoryReviewRepository implements ReviewRepository {
 
+    private static final Logger LOGGER = Logger.getLogger(InMemoryReviewRepository.class);
     private final Map<UUID, Review> reviews = new HashMap<>();
 
     @Override
     public Review create(Review review) {
+        LOGGER.debugf("In-memory: Creating review with ID: %s", review.getReviewId());
         reviews.put(review.getReviewId(), review);
         return review;
     }
 
     @Override
     public Review update(Review review) {
-        Review existingReview = reviews.get(review.getReviewId());
-
-        Review updatedReview = Review.builder()
-                .reviewId(existingReview.getReviewId())
-                .book(existingReview.getBook())
-                .user(existingReview.getUser())
-                .publicationDate(existingReview.getPublicationDate())
-                .rating(review.getRating())
-                .reviewText(review.getReviewText())
-                .build();
-
-        reviews.put(updatedReview.getReviewId(), updatedReview);
-
-        return updatedReview;
+        LOGGER.debugf("In-memory: Updating review with ID: %s", review.getReviewId());
+        reviews.put(review.getReviewId(), review);
+        return review;
     }
 
     @Override
     public List<Review> saveAll(Iterable<Review> reviewsToSave) {
+        LOGGER.debug("In-memory: Saving a batch of reviews");
         List<Review> savedReviews = new ArrayList<>();
-        for (Review review : reviewsToSave) {
-            savedReviews.add(create(review));
-        }
+        reviewsToSave.forEach(review -> savedReviews.add(create(review)));
         return savedReviews;
     }
 
     @Override
     public Optional<Review> findById(UUID reviewId) {
+        LOGGER.debugf("In-memory: Finding review by ID: %s", reviewId);
         return Optional.ofNullable(reviews.get(reviewId));
     }
 
     @Override
     public List<Review> findAll() {
+        LOGGER.debug("In-memory: Finding all reviews");
         return new ArrayList<>(reviews.values());
     }
 
     @Override
     public void deleteById(UUID reviewId) {
+        LOGGER.debugf("In-memory: Deleting review with ID: %s", reviewId);
         reviews.remove(reviewId);
     }
 
     @Override
     public List<Review> getBookReviews(UUID bookId) {
+        LOGGER.debugf("In-memory: Getting reviews for book ID: %s", bookId);
         return reviews.values().stream()
                 .filter(review -> review.getBook().getBookId().equals(bookId))
                 .collect(Collectors.toList());
@@ -79,6 +66,7 @@ public class InMemoryReviewRepository implements ReviewRepository {
 
     @Override
     public List<Review> getUserReviews(UUID userId) {
+        LOGGER.debugf("In-memory: Getting reviews for user ID: %s", userId);
         return reviews.values().stream()
                 .filter(review -> review.getUser().getKeycloakUserId().equals(userId))
                 .collect(Collectors.toList());
@@ -86,6 +74,7 @@ public class InMemoryReviewRepository implements ReviewRepository {
 
     @Override
     public Optional<Review> findByUserIdAndBookId(UUID userId, UUID bookId) {
+        LOGGER.debugf("In-memory: Finding review by user ID %s and book ID %s", userId, bookId);
         return reviews.values().stream()
                 .filter(review -> review.getUser().getKeycloakUserId().equals(userId)
                         && review.getBook().getBookId().equals(bookId))
@@ -94,6 +83,7 @@ public class InMemoryReviewRepository implements ReviewRepository {
 
     @Override
     public Long countReviewsByBookId(UUID bookId) {
+        LOGGER.debugf("In-memory: Counting reviews for book ID: %s", bookId);
         return reviews.values().stream()
                 .filter(review -> review.getBook().getBookId().equals(bookId))
                 .count();
@@ -101,6 +91,7 @@ public class InMemoryReviewRepository implements ReviewRepository {
 
     @Override
     public Double findAverageRatingByBookId(UUID bookId) {
+        LOGGER.debugf("In-memory: Finding average rating for book ID: %s", bookId);
         OptionalDouble average = reviews.values().stream()
                 .filter(review -> review.getBook().getBookId().equals(bookId))
                 .mapToDouble(Review::getRating)

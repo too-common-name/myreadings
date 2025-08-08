@@ -1,45 +1,81 @@
 package modules.review.core.usecases;
 
 import java.util.UUID;
-
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
-
 import java.util.Optional;
 import java.util.List;
-
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.BookService;
 import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewImpl;
 import modules.review.core.domain.ReviewStats;
 import modules.review.core.usecases.repositories.ReviewRepository;
+import modules.user.core.domain.User;
 import modules.user.core.usecases.UserService;
+import modules.review.web.dto.ReviewRequestDTO;
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
+import java.time.LocalDateTime;
 
 @ApplicationScoped
 public class ReviewServiceImpl implements ReviewService {
+
+    private static final Logger LOGGER = Logger.getLogger(ReviewServiceImpl.class);
 
     private final ReviewRepository reviewRepository;
     private final BookService bookService;
     private final UserService userService;
 
-    public ReviewServiceImpl(ReviewRepository reviewRepository, BookService bookService,
-            UserService userService) {
+    @Inject
+    public ReviewServiceImpl(ReviewRepository reviewRepository, BookService bookService, UserService userService) {
         this.reviewRepository = reviewRepository;
         this.bookService = bookService;
         this.userService = userService;
     }
+    
+    @Override
+    public Review findReviewAndCheckOwnership(UUID reviewId, JsonWebToken principal) {
+        LOGGER.debugf("Finding review %s and checking ownership for user %s", reviewId, principal.getSubject());
+        Review review = findReviewById(reviewId)
+                .orElseThrow(() -> new NotFoundException("Review not found with ID: " + reviewId));
+        
+        UUID callerId = UUID.fromString(principal.getSubject());
+        boolean isAdmin = principal.getGroups().contains("admin");
+
+        if (!review.getUser().getKeycloakUserId().equals(callerId) && !isAdmin) {
+            throw new ForbiddenException("You are not authorized to access this review.");
+        }
+        return review;
+    }
 
     @Override
-    public Review createReview(Review review) {
-        if (!bookService.getBookById(review.getBook().getBookId()).isPresent()) {
-            throw new IllegalArgumentException("Book not found: " + review.getBook().getBookId());
-        }
-        if (!userService.findUserProfileById(review.getUser().getKeycloakUserId()).isPresent()) {
-            throw new IllegalArgumentException("User not found: " + review.getUser().getKeycloakUserId());
-        }
+    public Review createReview(ReviewRequestDTO reviewRequest, JsonWebToken principal) {
+        UUID userId = UUID.fromString(principal.getSubject());
+        UUID bookId = reviewRequest.getBookId();
+        LOGGER.infof("Attempting to create review for book %s by user %s", bookId, userId);
 
-        return persistNewReview(review);
+        Book book = bookService.getBookById(bookId)
+            .orElseThrow(() -> new IllegalArgumentException("Book not found: " + bookId));
+        
+        User user = userService.findUserProfileById(userId, principal)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        Review reviewToCreate = ReviewImpl.builder()
+                .reviewId(UUID.randomUUID())
+                .book(book)
+                .user(user)
+                .reviewText(reviewRequest.getReviewText())
+                .rating(reviewRequest.getRating())
+                .publicationDate(LocalDateTime.now())
+                .build();
+        
+        Review createdReview = persistNewReview(reviewToCreate);
+        LOGGER.infof("Successfully created review with ID %s", createdReview.getReviewId());
+        return createdReview;
     }
 
     @Transactional
@@ -49,77 +85,77 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     public Optional<Review> findReviewById(UUID reviewId) {
+        LOGGER.debugf("Searching for review by ID: %s", reviewId);
         return reviewRepository.findById(reviewId);
     }
 
     @Override
     public List<Review> getReviewsForBook(UUID bookId) {
-        if (!bookService.getBookById(bookId).isPresent()) {
-            throw new IllegalArgumentException(
-                    "Book not found: " + bookId + ". Cannot retrieve reviews.");
+        LOGGER.debugf("Getting reviews for book ID: %s", bookId);
+        if (bookService.getBookById(bookId).isEmpty()) {
+            throw new IllegalArgumentException("Book not found: " + bookId + ". Cannot retrieve reviews.");
         }
         return reviewRepository.getBookReviews(bookId);
     }
 
     @Override
-    public List<Review> getReviewsForUser(UUID userId) {
-        if (!userService.findUserProfileById(userId).isPresent()) {
-            throw new IllegalArgumentException(
-                    "User not found: " + userId + ". Cannot retrieve reviews.");
+    public List<Review> getReviewsForUser(UUID userId, JsonWebToken principal) {
+        LOGGER.debugf("Getting reviews for user ID: %s", userId);
+        if (userService.findUserProfileById(userId, principal).isEmpty()) {
+            throw new IllegalArgumentException("User not found: " + userId + ". Cannot retrieve reviews.");
         }
         return reviewRepository.getUserReviews(userId);
     }
 
     @Override
     @Transactional
-    public Review updateReview(Review review) {
-        if (reviewRepository.findById(review.getReviewId()).isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Review not found for update: " + review.getReviewId());
-        }
-        return reviewRepository.update(review);
+    public Review updateReview(UUID reviewId, ReviewRequestDTO reviewRequest, JsonWebToken principal) {
+        LOGGER.infof("Attempting to update review with ID: %s", reviewId);
+        Review existingReview = findReviewAndCheckOwnership(reviewId, principal);
+        
+        Review updatedReview = ReviewImpl.builder()
+                .reviewId(existingReview.getReviewId())
+                .book(existingReview.getBook())
+                .user(existingReview.getUser())
+                .publicationDate(existingReview.getPublicationDate())
+                .reviewText(reviewRequest.getReviewText())
+                .rating(reviewRequest.getRating())
+                .build();
+
+        return reviewRepository.update(updatedReview);
     }
 
     @Override
     @Transactional
-    public void deleteReviewById(UUID reviewId) {
-        if (reviewRepository.findById(reviewId).isEmpty()) {
-            throw new IllegalArgumentException("Review not found for deletion: " + reviewId);
-        }
+    public void deleteReviewById(UUID reviewId, JsonWebToken principal) {
+        LOGGER.infof("Attempting to delete review with ID: %s", reviewId);
+        findReviewAndCheckOwnership(reviewId, principal);
         reviewRepository.deleteById(reviewId);
     }
 
     @Override
-    public Optional<Review> findReviewByUserAndBook(UUID userId, UUID bookId) {
-        if (!bookService.getBookById(bookId).isPresent()) {
-            throw new IllegalArgumentException(
-                    "Book not found: " + bookId + ". Cannot check user review.");
+    public Optional<Review> findReviewByUserAndBook(UUID userId, UUID bookId, JsonWebToken principal) {
+        LOGGER.debugf("Searching for review by user ID %s and book ID %s", userId, bookId);
+        if (bookService.getBookById(bookId).isEmpty()) {
+            throw new IllegalArgumentException("Book not found: " + bookId + ". Cannot check user review.");
         }
-        if (!userService.findUserProfileById(userId).isPresent()) {
-            throw new IllegalArgumentException(
-                    "User not found: " + userId + ". Cannot check user review.");
+        if (userService.findUserProfileById(userId, principal).isEmpty()) {
+            throw new IllegalArgumentException("User not found: " + userId + ". Cannot check user review.");
         }
-
         return reviewRepository.findByUserIdAndBookId(userId, bookId);
     }
 
     @Override
     public ReviewStats getReviewStatsForBook(UUID bookId) {
-       Optional<Book> book = bookService.getBookById(bookId);
-        if (book.isEmpty()) {
+        LOGGER.debugf("Getting review stats for book ID: %s", bookId);
+        if (bookService.getBookById(bookId).isEmpty()) {
             throw new NotFoundException("Book not found with ID: " + bookId);
         }
-
         Long totalReviews = reviewRepository.countReviewsByBookId(bookId);
         Double averageRating = reviewRepository.findAverageRatingByBookId(bookId);
-        
         if (averageRating == null) {
             averageRating = 0.0;
         }
-
-        return ReviewStats.builder()
-                .totalReviews(totalReviews)
-                .averageRating(averageRating)
-                .build();
+        return ReviewStats.builder().totalReviews(totalReviews).averageRating(averageRating).build();
     }
 }

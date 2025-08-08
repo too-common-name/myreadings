@@ -17,6 +17,4 @@ public interface User {
 
     UiTheme getThemePreference();
 
-    void setThemePreference(UiTheme newTheme);
-
 }

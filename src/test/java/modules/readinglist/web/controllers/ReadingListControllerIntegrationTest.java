@@ -19,7 +19,6 @@ import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserService;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,288 +33,289 @@ import static org.hamcrest.Matchers.notNullValue;
 @TestHTTPEndpoint(ReadingListController.class)
 public class ReadingListControllerIntegrationTest {
 
-        @Inject
-        ReadingListService readingListService;
+    @Inject
+    ReadingListService readingListService;
 
-        @Inject
-        UserService userService;
+    @Inject
+    UserService userService;
 
-        @Inject
-        BookService bookService;
+    @Inject
+    BookService bookService;
 
-        @Inject
-        @PersistenceUnit("books-db")
-        EntityManager booksEntityManager;
+    @Inject
+    @PersistenceUnit("books-db")
+    EntityManager booksEntityManager;
 
-        @Inject
-        @PersistenceUnit("users-db")
-        EntityManager usersEntityManager;
+    @Inject
+    @PersistenceUnit("users-db")
+    EntityManager usersEntityManager;
 
-        KeycloakTestClient keycloakClient = new KeycloakTestClient();
+    @Inject
+    @PersistenceUnit("readinglist-db")
+    EntityManager readingListEntityManager;
 
-        private final User alice = UserImpl.builder()
-                        .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
-                        .firstName("Alice")
-                        .lastName("Silverstone")
-                        .username("alice")
-                        .email("asilverstone@test.com")
-                        .build();
+    KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
-        private final User admin = UserImpl.builder()
-                        .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
-                        .firstName("Bruce")
-                        .lastName("Wayne")
-                        .username("admin")
-                        .email("bwayne@test.com")
-                        .build();
+    private final User alice = UserImpl.builder()
+            .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
+            .firstName("Alice")
+            .lastName("Silverstone")
+            .username("alice")
+            .email("asilverstone@test.com")
+            .build();
 
-        private final BookRequestDTO testBookDTO = CatalogTestUtils.createValidBookRequestDTO();
+    private final User admin = UserImpl.builder()
+            .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
+            .firstName("Bruce")
+            .lastName("Wayne")
+            .username("admin")
+            .email("bwayne@test.com")
+            .build();
 
-        private UUID aliceListId;
-        private UUID adminListId;
-        private Book createdBook;
+    private final BookRequestDTO testBookDTO = CatalogTestUtils.createValidBookRequestDTO();
 
-        @BeforeEach
-        void setUp() {
-                setUpUsers();
-                setUpBooks();
+    private UUID aliceListId;
+    private UUID adminListId;
+    private Book createdBook;
 
-                ReadingList aliceReadingList = ReadingListImpl.builder()
-                                .readingListId(UUID.randomUUID())
-                                .userId(alice.getKeycloakUserId())
-                                .name("Alice's List")
-                                .description("Alice's personal list")
-                                .creationDate(java.time.LocalDateTime.now())
-                                .books(new ArrayList<>())
-                                .build();
-                aliceListId = readingListService.createReadingList(aliceReadingList).getReadingListId();
+    @BeforeEach
+    void setUp() {
+        cleanUpDatabase();
+        setUpUsers();
+        setUpBooks();
 
-                ReadingList adminReadingList = ReadingListImpl.builder()
-                                .readingListId(UUID.randomUUID())
-                                .userId(admin.getKeycloakUserId())
-                                .name("Admin's List")
-                                .description("Admin's personal list")
-                                .creationDate(java.time.LocalDateTime.now())
-                                .books(new ArrayList<>())
-                                .build();
-                adminListId = readingListService.createReadingList(adminReadingList).getReadingListId();
-        }
+        ReadingList aliceReadingList = ReadingListImpl.builder()
+                .readingListId(UUID.randomUUID())
+                .userId(alice.getKeycloakUserId())
+                .name("Alice's List")
+                .description("Alice's personal list")
+                .creationDate(java.time.LocalDateTime.now())
+                .books(new ArrayList<>())
+                .build();
+        aliceListId = readingListService.createReadingList(aliceReadingList).getReadingListId();
 
-        @AfterEach
-        void cleanUp() {
-                cleanUpReadingLists();
-                cleanUpBooks();
-                cleanUpUsers();
-        }
+        ReadingList adminReadingList = ReadingListImpl.builder()
+                .readingListId(UUID.randomUUID())
+                .userId(admin.getKeycloakUserId())
+                .name("Admin's List")
+                .description("Admin's personal list")
+                .creationDate(java.time.LocalDateTime.now())
+                .books(new ArrayList<>())
+                .build();
+        adminListId = readingListService.createReadingList(adminReadingList).getReadingListId();
+    }
 
-        @Transactional
-        void cleanUpReadingLists() {
-                try {
-                        readingListService.deleteReadingListById(aliceListId);
-                        readingListService.deleteReadingListById(adminListId);
-                } catch (Exception ex) {
-                }
-        }
+    void cleanUpDatabase() {
+        cleanUpReadingLists();
+        cleanUpBooks();
+        cleanUpUsers();
+    }
 
-        @Transactional
-        void cleanUpBooks() {
-                booksEntityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
-        }
+    @Transactional
+    void cleanUpReadingLists() {
+        readingListEntityManager.createNativeQuery("DELETE FROM reading_list_items").executeUpdate();
+        readingListEntityManager.createQuery("DELETE FROM ReadingListEntity").executeUpdate();
+    }
 
-        @Transactional
-        void cleanUpUsers() {
-                usersEntityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
-        }
+    @Transactional
+    void cleanUpBooks() {
+        booksEntityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
+    }
 
-        @Transactional
-        void setUpUsers() {
-                userService.createUserProfile(alice);
-                userService.createUserProfile(admin);
-        }
+    @Transactional
+    void cleanUpUsers() {
+        usersEntityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
+    }
 
-        @Transactional
-        void setUpBooks() {
-                createdBook = bookService.createBook(testBookDTO);
-        }
+    @Transactional
+    void setUpUsers() {
+        userService.createUserProfile(alice);
+        userService.createUserProfile(admin);
+    }
 
-        protected String getAccessToken(String userName) {
-                return keycloakClient.getAccessToken(userName);
-        }
+    @Transactional
+    void setUpBooks() {
+        createdBook = bookService.createBook(testBookDTO);
+    }
 
-        @Test
-        void testUserCanCreateReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"name\": \"New List\", \"description\": \"A new list\"}")
-                                .when().post()
-                                .then()
-                                .statusCode(201)
-                                .body("readingListId", notNullValue())
-                                .body("name", is("New List"))
-                                .body("description", is("A new list"));
-        }
+    protected String getAccessToken(String userName) {
+        return keycloakClient.getAccessToken(userName);
+    }
 
-        @Test
-        void testUserCanGetOwnReadingListById() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", aliceListId)
-                                .when().get("/{readingListId}")
-                                .then()
-                                .statusCode(200)
-                                .body("readingListId", is(aliceListId.toString()))
-                                .body("name", is("Alice's List"));
-        }
+    @Test
+    void testUserCanCreateReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"name\": \"New List\", \"description\": \"A new list\"}")
+                .when().post()
+                .then()
+                .statusCode(201)
+                .body("readingListId", notNullValue())
+                .body("name", is("New List"))
+                .body("description", is("A new list"));
+    }
 
-        @Test
-        void testUserCannotGetOthersReadingListById() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", adminListId)
-                                .when().get("/{readingListId}")
-                                .then()
-                                .statusCode(403);
-        }
+    @Test
+    void testUserCanGetOwnReadingListById() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", aliceListId)
+                .when().get("/{readingListId}")
+                .then()
+                .statusCode(200)
+                .body("readingListId", is(aliceListId.toString()))
+                .body("name", is("Alice's List"));
+    }
 
-        @Test
-        void testUserCanGetAllOwnReadingLists() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .when().get()
-                                .then()
-                                .statusCode(200)
-                                .body("any { it.readingListId == '" + aliceListId.toString() + "' }", is(true));
-        }
+    @Test
+    void testUserCannotGetOthersReadingListById() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", adminListId)
+                .when().get("/{readingListId}")
+                .then()
+                .statusCode(403);
+    }
 
-        @Test
-        void testUserCanUpdateOwnReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", aliceListId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"name\": \"Updated List\", \"description\": \"Updated description\"}")
-                                .when().put("/{readingListId}")
-                                .then()
-                                .statusCode(200)
-                                .body("readingListId", is(aliceListId.toString()))
-                                .body("name", is("Updated List"))
-                                .body("description", is("Updated description"));
-        }
+    @Test
+    void testUserCanGetAllOwnReadingLists() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .when().get()
+                .then()
+                .statusCode(200)
+                .body("any { it.readingListId == '" + aliceListId.toString() + "' }", is(true));
+    }
 
-        @Test
-        void testUserCannotUpdateOthersReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", adminListId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"name\": \"Attempted Update\", \"description\": \"Attempted\"}")
-                                .when().put("/{readingListId}")
-                                .then()
-                                .statusCode(403);
-        }
+    @Test
+    void testUserCanUpdateOwnReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", aliceListId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"name\": \"Updated List\", \"description\": \"Updated description\"}")
+                .when().put("/{readingListId}")
+                .then()
+                .statusCode(200)
+                .body("readingListId", is(aliceListId.toString()))
+                .body("name", is("Updated List"))
+                .body("description", is("Updated description"));
+    }
 
-        @Test
-        void testUserCanDeleteOwnReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", aliceListId)
-                                .when().delete("/{readingListId}")
-                                .then()
-                                .statusCode(204);
-        }
+    @Test
+    void testUserCannotUpdateOthersReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", adminListId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"name\": \"Attempted Update\", \"description\": \"Attempted\"}")
+                .when().put("/{readingListId}")
+                .then()
+                .statusCode(403);
+    }
 
-        @Test
-        void testUserCannotDeleteOthersReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", adminListId)
-                                .when().delete("/{readingListId}")
-                                .then()
-                                .statusCode(403);
-        }
+    @Test
+    void testUserCanDeleteOwnReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", aliceListId)
+                .when().delete("/{readingListId}")
+                .then()
+                .statusCode(204);
+    }
 
-        @Test
-        void testUserCanAddBookToOwnReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", aliceListId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
-                                .when().post("/{readingListId}/books")
-                                .then()
-                                .statusCode(200)
-                                .body(is("Book added to reading list."));
-        }
+    @Test
+    void testUserCannotDeleteOthersReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", adminListId)
+                .when().delete("/{readingListId}")
+                .then()
+                .statusCode(403);
+    }
 
-        @Test
-        void testUserCannotAddBookToOthersReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", adminListId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
-                                .when().post("/{readingListId}/books")
-                                .then()
-                                .statusCode(403);
-        }
+    @Test
+    void testUserCanAddBookToOwnReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", aliceListId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
+                .when().post("/{readingListId}/books")
+                .then()
+                .statusCode(200)
+                .body(is("Book added to reading list."));
+    }
 
-        @Test
-        void testUserCanRemoveBookFromOwnReadingList() {
-                String token = getAccessToken(alice.getUsername());
-                given()
-                                .auth().oauth2(token)
-                                .pathParam("readingListId", aliceListId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
-                                .when().post("/{readingListId}/books");
+    @Test
+    void testUserCannotAddBookToOthersReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", adminListId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
+                .when().post("/{readingListId}/books")
+                .then()
+                .statusCode(403);
+    }
 
-                given()
-                                .auth().oauth2(token)
-                                .pathParam("readingListId", aliceListId)
-                                .pathParam("bookId", createdBook.getBookId())
-                                .when().delete("/{readingListId}/books/{bookId}")
-                                .then()
-                                .statusCode(204);
-        }
+    @Test
+    void testUserCanRemoveBookFromOwnReadingList() {
+        String token = getAccessToken(alice.getUsername());
+        given()
+                .auth().oauth2(token)
+                .pathParam("readingListId", aliceListId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
+                .when().post("/{readingListId}/books");
 
-        @Test
-        void testUserCannotRemoveBookFromOthersReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", adminListId)
-                                .pathParam("bookId", createdBook.getBookId())
-                                .when().delete("/{readingListId}/books/{bookId}")
-                                .then()
-                                .statusCode(403);
-        }
+        given()
+                .auth().oauth2(token)
+                .pathParam("readingListId", aliceListId)
+                .pathParam("bookId", createdBook.getBookId())
+                .when().delete("/{readingListId}/books/{bookId}")
+                .then()
+                .statusCode(204);
+    }
 
-        @Test
-        void testUserCanGetBooksInOwnReadingList() {
-                String token = getAccessToken(alice.getUsername());
-                given()
-                                .auth().oauth2(token)
-                                .pathParam("readingListId", aliceListId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
-                                .when().post("/{readingListId}/books");
+    @Test
+    void testUserCannotRemoveBookFromOthersReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", adminListId)
+                .pathParam("bookId", createdBook.getBookId())
+                .when().delete("/{readingListId}/books/{bookId}")
+                .then()
+                .statusCode(403);
+    }
 
-                given()
-                                .auth().oauth2(token)
-                                .pathParam("readingListId", aliceListId)
-                                .when().get("/{readingListId}/books")
-                                .then()
-                                .statusCode(200)
-                                .body("any { it.bookId == '" + createdBook.getBookId().toString() + "' }", is(true));
-        }
+    @Test
+    void testUserCanGetBooksInOwnReadingList() {
+        String token = getAccessToken(alice.getUsername());
+        given()
+                .auth().oauth2(token)
+                .pathParam("readingListId", aliceListId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"bookId\": \"" + createdBook.getBookId() + "\"}")
+                .when().post("/{readingListId}/books");
 
-        @Test
-        void testUserCannotGetBooksInOthersReadingList() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("readingListId", adminListId)
-                                .when().get("/{readingListId}/books")
-                                .then()
-                                .statusCode(403);
-        }
+        given()
+                .auth().oauth2(token)
+                .pathParam("readingListId", aliceListId)
+                .when().get("/{readingListId}/books")
+                .then()
+                .statusCode(200)
+                .body("any { it.bookId == '" + createdBook.getBookId().toString() + "' }", is(true));
+    }
+
+    @Test
+    void testUserCannotGetBooksInOthersReadingList() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("readingListId", adminListId)
+                .when().get("/{readingListId}/books")
+                .then()
+                .statusCode(403);
+    }
 }

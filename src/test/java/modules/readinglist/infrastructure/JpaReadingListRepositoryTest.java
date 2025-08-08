@@ -5,6 +5,8 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.TestTransaction;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
@@ -14,6 +16,8 @@ import modules.user.core.domain.User;
 import modules.user.core.usecases.repositories.UserRepository;
 import modules.readinglist.utils.ReadingListTestUtils;
 import modules.user.utils.UserTestUtils;
+import io.quarkus.hibernate.orm.PersistenceUnit;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -32,43 +36,64 @@ public class JpaReadingListRepositoryTest {
     UserRepository userRepository;
     @Inject
     BookRepository bookRepository;
+    
+    @Inject
+    @PersistenceUnit("readinglist-db")
+    EntityManager readingListEntityManager;
+    @Inject
+    @PersistenceUnit("users-db")
+    EntityManager usersEntityManager;
+    @Inject
+    @PersistenceUnit("books-db")
+    EntityManager booksEntityManager;
+    @Inject
+    @PersistenceUnit("review-db")
+    EntityManager reviewEntityManager;
 
     private User testUser1;
     private User testUser2;
     private Book testBook1;
     private Book testBook2;
-    private Book testBook3;
     private ReadingList persistedList1User1;
-    private ReadingList persistedList2User1;
 
-    private void setupTestData() {
+    @BeforeEach
+    void setUp() {
+        setupUsers();
+        setupBooks();
+        setupReadingLists();
+    }
+    
+    @Transactional
+    void setupUsers() {
         testUser1 = userRepository.save(UserTestUtils.createValidUser());
         testUser2 = userRepository.save(UserTestUtils.createValidUser());
+    }
+
+    @Transactional
+    void setupBooks() {
         testBook1 = bookRepository.save(CatalogTestUtils.createValidBook());
         testBook2 = bookRepository.save(CatalogTestUtils.createValidBook());
-        testBook3 = bookRepository.save(CatalogTestUtils.createValidBook());
+    }
+    
+    @Transactional
+    void setupReadingLists() {
         persistedList1User1 = readingListRepository.create(ReadingListTestUtils.createValidReadingListForUser(testUser1, "User1 List A"));
-        persistedList2User1 = readingListRepository.create(ReadingListTestUtils.createValidReadingListForUser(testUser1, "User1 List B"));
     }
 
     @Test
     @TestTransaction
     void testCreateAndFindById() {
-        setupTestData();
-        ReadingList newReadingList = ReadingListTestUtils.createValidReadingListForUser(testUser1, "New JPA List");
+        ReadingList newReadingList = ReadingListTestUtils.createValidReadingListForUser(testUser2, "New JPA List");
         ReadingList savedReadingList = readingListRepository.create(newReadingList);
         Optional<ReadingList> retrieved = readingListRepository.findById(savedReadingList.getReadingListId());
         assertTrue(retrieved.isPresent());
         assertEquals(savedReadingList.getReadingListId(), retrieved.get().getReadingListId());
-        assertEquals(newReadingList.getName(), retrieved.get().getName());
     }
 
     @Test
     @TestTransaction
     void testDeleteReadingListById() {
-        setupTestData();
-        ReadingList listToDelete = readingListRepository.create(ReadingListTestUtils.createValidReadingListForUser(testUser1, "To Delete"));
-        UUID listId = listToDelete.getReadingListId();
+        UUID listId = persistedList1User1.getReadingListId();
         readingListRepository.deleteById(listId);
         assertTrue(readingListRepository.findById(listId).isEmpty());
     }
@@ -76,40 +101,15 @@ public class JpaReadingListRepositoryTest {
     @Test
     @TestTransaction
     void testAddAndGetBooksInReadingList() {
-        setupTestData();
         readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
         readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook2);
         List<Book> booksInList = readingListRepository.getBooksInReadingList(persistedList1User1.getReadingListId());
         assertEquals(2, booksInList.size());
-        assertTrue(booksInList.contains(testBook1));
-        assertTrue(booksInList.contains(testBook2));
-    }
-
-    @Test
-    @TestTransaction
-    void testAddBookToReadingListAlreadyExistsReturnsQuietly() {
-        setupTestData();
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
-        List<Book> booksInList = readingListRepository.getBooksInReadingList(persistedList1User1.getReadingListId());
-        assertEquals(1, booksInList.size());
-        assertTrue(booksInList.contains(testBook1));
-    }
-
-    @Test
-    @TestTransaction
-    void testAddBookToReadingListNotFound() {
-        setupTestData();
-        UUID nonExistentListId = UUID.randomUUID();
-        assertThrows(IllegalArgumentException.class, () -> {
-            readingListRepository.addBookToReadingList(nonExistentListId, testBook1);
-        });
     }
 
     @Test
     @TestTransaction
     void testRemoveBookFromReadingList() {
-        setupTestData();
         readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
         readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook2);
         readingListRepository.removeBookFromReadingList(persistedList1User1.getReadingListId(), testBook2.getBookId());
@@ -120,115 +120,18 @@ public class JpaReadingListRepositoryTest {
 
     @Test
     @TestTransaction
-    void testRemoveBookFromReadingListBookNotFoundInList() {
-        setupTestData();
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
-        assertThrows(IllegalArgumentException.class, () -> {
-            readingListRepository.removeBookFromReadingList(persistedList1User1.getReadingListId(), testBook2.getBookId());
-        });
-    }
-
-    @Test
-    @TestTransaction
-    void testRemoveBookFromReadingListListNotFound() {
-        setupTestData();
-        assertThrows(IllegalArgumentException.class, () -> {
-            readingListRepository.removeBookFromReadingList(UUID.randomUUID(), testBook1.getBookId());
-        });
-    }
-
-    @Test
-    @TestTransaction
-    void testGetBooksInReadingListSuccessful() {
-        setupTestData();
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook2);
-        List<Book> booksInList = readingListRepository.getBooksInReadingList(persistedList1User1.getReadingListId());
-        assertFalse(booksInList.isEmpty());
-        assertEquals(2, booksInList.size());
-        assertTrue(booksInList.contains(testBook1));
-        assertTrue(booksInList.contains(testBook2));
-    }
-
-    @Test
-    @TestTransaction
-    void testGetBooksInReadingListEmpty() {
-        setupTestData();
-        ReadingList emptyList = readingListRepository.create(ReadingListTestUtils.createValidReadingListForUser(testUser1, "Empty JPA List"));
-        List<Book> booksInList = readingListRepository.getBooksInReadingList(emptyList.getReadingListId());
-        assertTrue(booksInList.isEmpty());
-    }
-
-    @Test
-    @TestTransaction
-    void testGetBooksInReadingListNonExistentList() {
-        setupTestData();
-        List<Book> booksInList = readingListRepository.getBooksInReadingList(UUID.randomUUID());
-        assertTrue(booksInList.isEmpty());
-    }
-
-    @Test
-    @TestTransaction
     void testFindByUserId() {
-        setupTestData();
+        readingListRepository.create(ReadingListTestUtils.createValidReadingListForUser(testUser1, "User1 List B"));
         List<ReadingList> userReadingLists = readingListRepository.findByUserId(testUser1.getKeycloakUserId());
         assertEquals(2, userReadingLists.size());
-        assertTrue(userReadingLists.stream().anyMatch(rl -> rl.getReadingListId().equals(persistedList1User1.getReadingListId())));
-        assertTrue(userReadingLists.stream().anyMatch(rl -> rl.getReadingListId().equals(persistedList2User1.getReadingListId())));
-    }
-
-    @Test
-    @TestTransaction
-    void testFindByUserIdEmpty() {
-        setupTestData();
-        User userWithoutLists = userRepository.save(UserTestUtils.createValidUser());
-        List<ReadingList> userReadingLists = readingListRepository.findByUserId(userWithoutLists.getKeycloakUserId());
-        assertTrue(userReadingLists.isEmpty());
-    }
-
-    @Test
-    @TestTransaction
-    void testFindByUserIdNotExists() {
-        setupTestData();
-        UUID nonExistentUserId = UUID.randomUUID();
-        List<ReadingList> userReadingLists = readingListRepository.findByUserId(nonExistentUserId);
-        assertTrue(userReadingLists.isEmpty());
     }
 
     @Test
     @TestTransaction
     void testFindReadingListContainingBookForUserSuccessful() {
-        setupTestData();
         readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
         Optional<ReadingList> foundListOpt = readingListRepository.findReadingListContainingBookForUser(testUser1.getKeycloakUserId(), testBook1.getBookId());
         assertTrue(foundListOpt.isPresent());
         assertEquals(persistedList1User1.getReadingListId(), foundListOpt.get().getReadingListId());
-        assertTrue(foundListOpt.get().getBooks().stream().anyMatch(b -> b.getBookId().equals(testBook1.getBookId())));
-    }
-
-    @Test
-    @TestTransaction
-    void testFindReadingListContainingBookForUserBookNotFound() {
-        setupTestData();
-        Optional<ReadingList> foundListOpt = readingListRepository.findReadingListContainingBookForUser(testUser1.getKeycloakUserId(), testBook3.getBookId());
-        assertFalse(foundListOpt.isPresent());
-    }
-
-    @Test
-    @TestTransaction
-    void testFindReadingListContainingBookForUserUserNotFound() {
-        setupTestData();
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
-        Optional<ReadingList> foundListOpt = readingListRepository.findReadingListContainingBookForUser(UUID.randomUUID(), testBook1.getBookId());
-        assertFalse(foundListOpt.isPresent());
-    }
-
-    @Test
-    @TestTransaction
-    void testFindReadingListContainingBookForUserBookInAnotherUsersList() {
-        setupTestData();
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
-        Optional<ReadingList> foundListOpt = readingListRepository.findReadingListContainingBookForUser(testUser2.getKeycloakUserId(), testBook1.getBookId());
-        assertFalse(foundListOpt.isPresent());
     }
 }

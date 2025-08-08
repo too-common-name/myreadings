@@ -2,65 +2,63 @@ package modules.user.infrastructure.messaging;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.json.JsonObject;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
-import modules.user.core.domain.UserRegistrationEvent;
 import modules.user.core.usecases.UserService;
 
 import org.eclipse.microprofile.reactive.messaging.Incoming;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
+import org.jboss.logging.MDC;
+
+import common.filters.TraceIdFilter;
+
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @ApplicationScoped
 public class KeycloakUserEventListener {
 
-    private static final Logger log = LoggerFactory.getLogger(KeycloakUserEventListener.class);
+    private static final Logger LOGGER = Logger.getLogger(KeycloakUserEventListener.class);
 
     @Inject
     UserService userService;
 
     @Incoming("registrations")
     public void processUserEvent(byte[] event) {
+        MDC.put(TraceIdFilter.TRACE_ID_KEY, "event-" + UUID.randomUUID().toString());
+
         String message = new String(event, StandardCharsets.UTF_8);
-        log.info("Received Keycloak user event (byte): {}", message);
+        LOGGER.infof("Received Keycloak user event: %s", message);
+
         try (Jsonb jsonb = JsonbBuilder.create()) {
-            JsonObject root = jsonb.fromJson(message, JsonObject.class);
-            JsonObject details = root.getJsonObject("details");
-            if (details != null) {
-                UserRegistrationEvent registrationEvent = new UserRegistrationEvent();
-                registrationEvent.setUsername(details.getString("username"));
-                registrationEvent.setEmail(details.getString("email"));
-                registrationEvent.setFirstName(details.getString("first_name"));
-                registrationEvent.setLastName(details.getString("last_name"));
+            KeycloakEventDTO registrationEvent = jsonb.fromJson(message, KeycloakEventDTO.class);
 
-                log.info("Parsed User Registration Event: {}", registrationEvent);
+            if (registrationEvent != null && registrationEvent.getDetails() != null) {
+                LOGGER.debugf("Successfully parsed user registration event for username: %s",
+                        registrationEvent.getDetails().getUsername());
 
-                
-                UUID keycloakUserId = UUID.fromString(root.getString("userId"));
+                UUID keycloakUserId = UUID.fromString(registrationEvent.getUserId());
+                KeycloakEventDTO.Details details = registrationEvent.getDetails();
 
                 User user = UserImpl.builder()
                         .keycloakUserId(keycloakUserId)
-                        .firstName(registrationEvent.getFirstName())
-                        .lastName(registrationEvent.getLastName())
-                        .username(registrationEvent.getUsername())
-                        .email(registrationEvent.getEmail())
+                        .firstName(details.getFirstName())
+                        .lastName(details.getLastName())
+                        .username(details.getUsername())
+                        .email(details.getEmail())
                         .build();
 
-                
                 userService.createUserProfile(user);
 
-                log.info("User registered: {}", user.getUsername());
-
             } else {
-                log.warn("Details not found in the event: {}", message);
+                LOGGER.warnf("Keycloak event details not found or failed to parse. Message: %s", message);
             }
         } catch (Exception e) {
-            log.error("Error parsing JSON or creating user: {}", e.getMessage(), e);
+            LOGGER.errorf(e, "Error processing Keycloak event. Message: %s", message);
+        } finally {
+            MDC.remove(TraceIdFilter.TRACE_ID_KEY);
         }
     }
 }
