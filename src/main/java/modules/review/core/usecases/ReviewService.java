@@ -10,10 +10,10 @@ import modules.review.web.dto.ReviewRequestDTO;
 
 public interface ReviewService {
     Review createReview(ReviewRequestDTO reviewRequest, JsonWebToken principal);
-    Optional<Review> findReviewById(UUID reviewId);
+    Optional<Review> findReviewById(UUID reviewId, JsonWebToken principal);
     Review findReviewAndCheckOwnership(UUID reviewId, JsonWebToken principal);
     Optional<Review> findReviewByUserAndBook(UUID userId, UUID bookId, JsonWebToken principal);
-    List<Review> getReviewsForBook(UUID bookId);
+    List<Review> getReviewsForBook(UUID bookId, JsonWebToken principal);
     List<Review> getReviewsForUser(UUID userId, JsonWebToken principal);
     Review updateReview(UUID reviewId, ReviewRequestDTO reviewRequest, JsonWebToken principal); 
     void deleteReviewById(UUID reviewId, JsonWebToken principal);

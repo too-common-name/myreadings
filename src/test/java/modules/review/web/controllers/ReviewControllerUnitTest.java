@@ -152,13 +152,13 @@ public class ReviewControllerUnitTest {
     void testGetReviewsByBookIdShouldReturnOkAndListOfDTOs() {
         List<Review> reviews = Collections.singletonList(mockReview);
         List<ReviewResponseDTO> expectedList = Collections.singletonList(expectedResponseDTO);
-        when(reviewService.getReviewsForBook(testBookId)).thenReturn(reviews);
+        when(reviewService.getReviewsForBook(testBookId, jwt)).thenReturn(reviews);
 
         Response response = reviewController.getReviewsByBookId(testBookId);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedList, response.getEntity());
-        verify(reviewService, times(1)).getReviewsForBook(testBookId);
+        verify(reviewService, times(1)).getReviewsForBook(testBookId, jwt);
     }
 
     @Test

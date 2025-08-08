@@ -7,7 +7,9 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 import java.util.Optional;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.BookService;
 import modules.review.core.domain.Review;
@@ -26,30 +28,49 @@ public class ReviewServiceImpl implements ReviewService {
 
     private static final Logger LOGGER = Logger.getLogger(ReviewServiceImpl.class);
 
-    private final ReviewRepository reviewRepository;
-    private final BookService bookService;
-    private final UserService userService;
-
     @Inject
-    public ReviewServiceImpl(ReviewRepository reviewRepository, BookService bookService, UserService userService) {
-        this.reviewRepository = reviewRepository;
-        this.bookService = bookService;
-        this.userService = userService;
+    ReviewRepository reviewRepository;
+    @Inject
+    BookService bookService;
+    @Inject
+    UserService userService;
+
+    private Review enrichReview(Review review, JsonWebToken principal) {
+        if (review == null) return null;
+        User fullUser = (principal != null) 
+            ? userService.findUserProfileById(review.getUser().getKeycloakUserId(), principal).orElse(review.getUser()) 
+            : review.getUser();
+        Book fullBook = bookService.getBookById(review.getBook().getBookId())
+            .orElse(review.getBook());
+        return ReviewImpl.builder()
+            .reviewId(review.getReviewId())
+            .book(fullBook)
+            .user(fullUser)
+            .reviewText(review.getReviewText())
+            .rating(review.getRating())
+            .publicationDate(review.getPublicationDate())
+            .build();
     }
     
     @Override
     public Review findReviewAndCheckOwnership(UUID reviewId, JsonWebToken principal) {
         LOGGER.debugf("Finding review %s and checking ownership for user %s", reviewId, principal.getSubject());
-        Review review = findReviewById(reviewId)
+        Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review not found with ID: " + reviewId));
         
         UUID callerId = UUID.fromString(principal.getSubject());
-        boolean isAdmin = principal.getGroups().contains("admin");
-
+        boolean isAdmin = false;
+        if (principal.getClaim("realm_access") instanceof jakarta.json.JsonObject) {
+            jakarta.json.JsonObject realmAccess = principal.getClaim("realm_access");
+            jakarta.json.JsonArray roles = realmAccess.getJsonArray("roles");
+            if (roles != null) {
+                isAdmin = roles.stream().anyMatch(role -> "admin".equals(((jakarta.json.JsonString) role).getString()));
+            }
+        }
         if (!review.getUser().getKeycloakUserId().equals(callerId) && !isAdmin) {
             throw new ForbiddenException("You are not authorized to access this review.");
         }
-        return review;
+        return enrichReview(review, principal);
     }
 
     @Override
@@ -60,7 +81,6 @@ public class ReviewServiceImpl implements ReviewService {
 
         Book book = bookService.getBookById(bookId)
             .orElseThrow(() -> new IllegalArgumentException("Book not found: " + bookId));
-        
         User user = userService.findUserProfileById(userId, principal)
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
@@ -84,18 +104,20 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public Optional<Review> findReviewById(UUID reviewId) {
+    public Optional<Review> findReviewById(UUID reviewId, JsonWebToken principal) {
         LOGGER.debugf("Searching for review by ID: %s", reviewId);
-        return reviewRepository.findById(reviewId);
+        return reviewRepository.findById(reviewId).map(review -> enrichReview(review, principal));
     }
 
     @Override
-    public List<Review> getReviewsForBook(UUID bookId) {
+    public List<Review> getReviewsForBook(UUID bookId, JsonWebToken principal) {
         LOGGER.debugf("Getting reviews for book ID: %s", bookId);
         if (bookService.getBookById(bookId).isEmpty()) {
             throw new IllegalArgumentException("Book not found: " + bookId + ". Cannot retrieve reviews.");
         }
-        return reviewRepository.getBookReviews(bookId);
+        return reviewRepository.getBookReviews(bookId).stream()
+            .map(review -> enrichReview(review, principal))
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -104,7 +126,9 @@ public class ReviewServiceImpl implements ReviewService {
         if (userService.findUserProfileById(userId, principal).isEmpty()) {
             throw new IllegalArgumentException("User not found: " + userId + ". Cannot retrieve reviews.");
         }
-        return reviewRepository.getUserReviews(userId);
+        return reviewRepository.getUserReviews(userId).stream()
+            .map(review -> enrichReview(review, principal))
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -129,8 +153,8 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional
     public void deleteReviewById(UUID reviewId, JsonWebToken principal) {
         LOGGER.infof("Attempting to delete review with ID: %s", reviewId);
-        findReviewAndCheckOwnership(reviewId, principal);
-        reviewRepository.deleteById(reviewId);
+        Review reviewToDelete = findReviewAndCheckOwnership(reviewId, principal);
+        reviewRepository.deleteById(reviewToDelete.getReviewId());
     }
 
     @Override
@@ -142,7 +166,7 @@ public class ReviewServiceImpl implements ReviewService {
         if (userService.findUserProfileById(userId, principal).isEmpty()) {
             throw new IllegalArgumentException("User not found: " + userId + ". Cannot check user review.");
         }
-        return reviewRepository.findByUserIdAndBookId(userId, bookId);
+        return reviewRepository.findByUserIdAndBookId(userId, bookId).map(r -> enrichReview(r, principal));
     }
 
     @Override

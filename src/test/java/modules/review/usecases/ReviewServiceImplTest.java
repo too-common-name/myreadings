@@ -12,7 +12,6 @@ import jakarta.ws.rs.ForbiddenException;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.Collections;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -98,7 +97,7 @@ public class ReviewServiceImplTest {
         ReviewRequestDTO request = ReviewRequestDTO.builder().rating(5).reviewText("Updated!").build();
 
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
-        when(jwt.getGroups()).thenReturn(Collections.singleton("user"));
+        when(jwt.getClaim("realm_access")).thenReturn(null);
         when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
         when(reviewRepository.update(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -116,7 +115,7 @@ public class ReviewServiceImplTest {
         UUID otherUserId = UUID.randomUUID();
 
         when(jwt.getSubject()).thenReturn(otherUserId.toString());
-        when(jwt.getGroups()).thenReturn(Collections.singleton("user"));
+        when(jwt.getClaim("realm_access")).thenReturn(null);
         when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
 
         assertThrows(ForbiddenException.class, () -> {
@@ -128,7 +127,7 @@ public class ReviewServiceImplTest {
     @Test
     void testDeleteReviewByIdSuccessful() {
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
-        when(jwt.getGroups()).thenReturn(Collections.singleton("user"));
+        when(jwt.getClaim("realm_access")).thenReturn(null);
         when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
         doNothing().when(reviewRepository).deleteById(testReview.getReviewId());
 

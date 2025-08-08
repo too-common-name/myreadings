@@ -31,23 +31,9 @@ public class InMemoryReviewRepository implements ReviewRepository {
     }
 
     @Override
-    public List<Review> saveAll(Iterable<Review> reviewsToSave) {
-        LOGGER.debug("In-memory: Saving a batch of reviews");
-        List<Review> savedReviews = new ArrayList<>();
-        reviewsToSave.forEach(review -> savedReviews.add(create(review)));
-        return savedReviews;
-    }
-
-    @Override
     public Optional<Review> findById(UUID reviewId) {
         LOGGER.debugf("In-memory: Finding review by ID: %s", reviewId);
         return Optional.ofNullable(reviews.get(reviewId));
-    }
-
-    @Override
-    public List<Review> findAll() {
-        LOGGER.debug("In-memory: Finding all reviews");
-        return new ArrayList<>(reviews.values());
     }
 
     @Override
@@ -96,7 +82,12 @@ public class InMemoryReviewRepository implements ReviewRepository {
                 .filter(review -> review.getBook().getBookId().equals(bookId))
                 .mapToDouble(Review::getRating)
                 .average();
-
         return average.isPresent() ? average.getAsDouble() : null;
+    }
+    
+    @Override
+    public void deleteAll() {
+        LOGGER.debug("In-memory: Deleting all reviews");
+        reviews.clear();
     }
 }
