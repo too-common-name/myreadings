@@ -101,21 +101,21 @@ public class JpaReadingListRepositoryTest {
     @Test
     @TestTransaction
     void testAddAndGetBooksInReadingList() {
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook2);
-        List<Book> booksInList = readingListRepository.getBooksInReadingList(persistedList1User1.getReadingListId());
+        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1.getBookId());
+        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook2.getBookId());
+        List<UUID> booksInList = readingListRepository.getBookIdsInReadingList(persistedList1User1.getReadingListId());
         assertEquals(2, booksInList.size());
     }
 
     @Test
     @TestTransaction
     void testRemoveBookFromReadingList() {
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook2);
+        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1.getBookId());
+        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook2.getBookId());
         readingListRepository.removeBookFromReadingList(persistedList1User1.getReadingListId(), testBook2.getBookId());
-        List<Book> booksInList = readingListRepository.getBooksInReadingList(persistedList1User1.getReadingListId());
+        List<UUID> booksInList = readingListRepository.getBookIdsInReadingList(persistedList1User1.getReadingListId());
         assertEquals(1, booksInList.size());
-        assertEquals(testBook1.getBookId(), booksInList.get(0).getBookId());
+        assertEquals(testBook1.getBookId(), booksInList.get(0));
     }
 
     @Test
@@ -129,7 +129,7 @@ public class JpaReadingListRepositoryTest {
     @Test
     @TestTransaction
     void testFindReadingListContainingBookForUserSuccessful() {
-        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1);
+        readingListRepository.addBookToReadingList(persistedList1User1.getReadingListId(), testBook1.getBookId());
         Optional<ReadingList> foundListOpt = readingListRepository.findReadingListContainingBookForUser(testUser1.getKeycloakUserId(), testBook1.getBookId());
         assertTrue(foundListOpt.isPresent());
         assertEquals(persistedList1User1.getReadingListId(), foundListOpt.get().getReadingListId());

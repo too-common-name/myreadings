@@ -1,174 +1,130 @@
 package modules.readinglist.infrastructure.persistence.in_memory;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
-
+import io.quarkus.arc.properties.IfBuildProperty;
+import org.jboss.logging.Logger;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import io.quarkus.arc.properties.IfBuildProperty;
-import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 @IfBuildProperty(name = "app.repository.type", stringValue = "in-memory", enableIfMissing = true)
 public class InMemoryReadingListRepository implements ReadingListRepository {
 
-    private Map<UUID, ReadingList> readingLists = new HashMap<>();
+    private static final Logger LOGGER = Logger.getLogger(InMemoryReadingListRepository.class);
+    private final Map<UUID, ReadingList> readingLists = new HashMap<>();
 
     @Override
-    public ReadingList create(ReadingList readingList) {
-        
-        ReadingListImpl newReadingList = ReadingListImpl.builder()
-                .readingListId(readingList.getReadingListId())
-                .userId(readingList.getUserId())
-                .name(readingList.getName())
-                .description(readingList.getDescription())
-                .creationDate(readingList.getCreationDate())
-                .books(new ArrayList<>(readingList.getBooks())) 
-                .build();
-        readingLists.put(newReadingList.getReadingListId(), newReadingList);
-        return newReadingList;
+    public ReadingList create(ReadingList list) {
+        LOGGER.debugf("In-memory: Creating reading list with ID: %s", list.getReadingListId());
+        readingLists.put(list.getReadingListId(), list);
+        return list;
     }
 
     @Override
     public ReadingList update(ReadingList list) {
-        
-        ReadingList existingList = readingLists.get(list.getReadingListId());
-
-        if (existingList == null) {
+        LOGGER.debugf("In-memory: Updating reading list with ID: %s", list.getReadingListId());
+        if (!readingLists.containsKey(list.getReadingListId())) {
             throw new IllegalArgumentException("ReadingList with ID " + list.getReadingListId() + " not found for update.");
         }
-
-        
-        
-        ReadingListImpl updatedList = ReadingListImpl.builder()
-                .readingListId(list.getReadingListId()) 
-                .userId(list.getUserId()) 
-                .name(list.getName())
-                .description(list.getDescription())
-                .creationDate(list.getCreationDate()) 
-                .books(new ArrayList<>(list.getBooks())) 
-                .build();
-
-        readingLists.put(updatedList.getReadingListId(), updatedList); 
-        return updatedList;
+        readingLists.put(list.getReadingListId(), list);
+        return list;
     }
 
     @Override
     public Optional<ReadingList> findById(UUID readingListId) {
-        return Optional.ofNullable(readingLists.get(readingListId))
-                .map(list -> (ReadingList) ReadingListImpl.builder()
-                        .readingListId(list.getReadingListId())
-                        .userId(list.getUserId())
-                        .name(list.getName())
-                        .description(list.getDescription())
-                        .creationDate(list.getCreationDate())
-                        .books(new ArrayList<>(list.getBooks()))
-                        .build());
+        LOGGER.debugf("In-memory: Finding reading list by ID: %s", readingListId);
+        return Optional.ofNullable(readingLists.get(readingListId));
     }
 
     @Override
     public List<ReadingList> findByUserId(UUID userId) {
+        LOGGER.debugf("In-memory: Finding reading lists for user ID: %s", userId);
         return readingLists.values().stream()
-                .filter(readingList -> readingList.getUserId().equals(userId))
-                .map(list -> (ReadingList) ReadingListImpl.builder()
-                        .readingListId(list.getReadingListId())
-                        .userId(list.getUserId())
-                        .name(list.getName())
-                        .description(list.getName()) 
-                        .creationDate(list.getCreationDate())
-                        .books(new ArrayList<>(list.getBooks()))
-                        .build())
+                .filter(list -> list.getUser().getKeycloakUserId().equals(userId))
                 .collect(Collectors.toList());
     }
 
     @Override
     public void deleteById(UUID readingListId) {
+        LOGGER.debugf("In-memory: Deleting reading list with ID: %s", readingListId);
         readingLists.remove(readingListId);
     }
 
     @Override
-    public void addBookToReadingList(UUID readingListId, Book book) {
-        ReadingList readingList = readingLists.get(readingListId);
-        if (readingList == null) {
-            throw new IllegalArgumentException("ReadingList with ID " + readingListId + " not found."); 
+    public void addBookToReadingList(UUID readingListId, UUID bookId) {
+        LOGGER.debugf("In-memory: Adding book %s to list %s", bookId, readingListId);
+        ReadingList currentList = readingLists.get(readingListId);
+        if (currentList == null) {
+            throw new IllegalArgumentException("ReadingList with ID " + readingListId + " not found.");
         }
-
         
-        boolean bookExists = readingList.getBooks().stream().anyMatch(b -> b.getBookId().equals(book.getBookId()));
+        boolean bookExists = currentList.getBooks().stream().anyMatch(b -> b.getBookId().equals(bookId));
         if (bookExists) {
-            
-            return;
+            return; 
         }
 
-        
-        List<Book> updatedBooks = new ArrayList<>(readingList.getBooks());
-        updatedBooks.add(book);
+        List<Book> newBooks = new ArrayList<>(currentList.getBooks());
+        newBooks.add(BookImpl.builder().bookId(bookId).build());
 
-        ReadingListImpl updatedReadingList = ReadingListImpl.builder()
-                .readingListId(readingList.getReadingListId())
-                .userId(readingList.getUserId())
-                .name(readingList.getName())
-                .description(readingList.getDescription())
-                .creationDate(readingList.getCreationDate())
-                .books(updatedBooks)
+        ReadingList updatedList = ReadingListImpl.builder()
+                .readingListId(currentList.getReadingListId())
+                .user(currentList.getUser())
+                .name(currentList.getName())
+                .description(currentList.getDescription())
+                .creationDate(currentList.getCreationDate())
+                .books(newBooks)
                 .build();
         
-        readingLists.put(updatedReadingList.getReadingListId(), updatedReadingList); 
+        readingLists.put(readingListId, updatedList);
     }
 
     @Override
     public void removeBookFromReadingList(UUID readingListId, UUID bookId) {
-        ReadingList readingList = readingLists.get(readingListId);
-        if (readingList == null) {
-            throw new IllegalArgumentException("ReadingList with ID " + readingListId + " not found."); 
+        LOGGER.debugf("In-memory: Removing book %s from list %s", bookId, readingListId);
+        ReadingList currentList = readingLists.get(readingListId);
+        if (currentList == null) {
+            throw new IllegalArgumentException("ReadingList with ID " + readingListId + " not found.");
         }
 
-        List<Book> currentBooks = new ArrayList<>(readingList.getBooks()); 
+        List<Book> currentBooks = new ArrayList<>(currentList.getBooks());
         boolean removed = currentBooks.removeIf(book -> book.getBookId().equals(bookId));
         if (!removed) {
-            throw new IllegalArgumentException("Book with ID " + bookId + " not found in reading list " + readingListId + "."); 
+            throw new IllegalArgumentException("Book with ID " + bookId + " not found in reading list " + readingListId + ".");
         }
 
-        
-        ReadingListImpl updatedReadingList = ReadingListImpl.builder()
-                .readingListId(readingList.getReadingListId())
-                .userId(readingList.getUserId())
-                .name(readingList.getName())
-                .description(readingList.getDescription())
-                .creationDate(readingList.getCreationDate())
+        ReadingList updatedList = ReadingListImpl.builder()
+                .readingListId(currentList.getReadingListId())
+                .user(currentList.getUser())
+                .name(currentList.getName())
+                .description(currentList.getDescription())
+                .creationDate(currentList.getCreationDate())
                 .books(currentBooks)
                 .build();
-            
-        readingLists.put(updatedReadingList.getReadingListId(), updatedReadingList); 
+
+        readingLists.put(readingListId, updatedList);
     }
 
     @Override
-    public List<Book> getBooksInReadingList(UUID readingListId) {
-        ReadingList readingList = readingLists.get(readingListId);
-        if (readingList != null) {
-            return new ArrayList<>(readingList.getBooks()); 
+    public List<UUID> getBookIdsInReadingList(UUID readingListId) {
+        LOGGER.debugf("In-memory: Getting book IDs for list %s", readingListId);
+        ReadingList list = readingLists.get(readingListId);
+        if (list == null) {
+            return Collections.emptyList();
         }
-        return new ArrayList<>(); 
+        return list.getBooks().stream().map(Book::getBookId).collect(Collectors.toList());
     }
 
-    
     @Override
     public Optional<ReadingList> findReadingListContainingBookForUser(UUID userId, UUID bookId) {
+        LOGGER.debugf("In-memory: Finding if user %s has book %s in a list", userId, bookId);
         return readingLists.values().stream()
-                .filter(readingList -> readingList.getUserId().equals(userId))
-                .filter(readingList -> readingList.getBooks().stream()
-                                                    .anyMatch(bookInList -> bookInList.getBookId().equals(bookId)))
-                .map(list -> (ReadingList) ReadingListImpl.builder()
-                        .readingListId(list.getReadingListId())
-                        .userId(list.getUserId())
-                        .name(list.getName())
-                        .description(list.getDescription())
-                        .creationDate(list.getCreationDate())
-                        .books(new ArrayList<>(list.getBooks()))
-                        .build())
+                .filter(list -> list.getUser().getKeycloakUserId().equals(userId))
+                .filter(list -> list.getBooks().stream().anyMatch(b -> b.getBookId().equals(bookId)))
                 .findFirst();
     }
 }

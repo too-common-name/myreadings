@@ -7,6 +7,8 @@ import modules.readinglist.core.usecases.ReadingListService;
 import modules.readinglist.web.dto.AddBookRequestDTO;
 import modules.readinglist.web.dto.MoveBookRequestDTO;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,18 +34,28 @@ public class ReadingListControllerUnitTest {
     @Mock
     private JsonWebToken jwt;
 
-    private UUID testUserId;
     private UUID testReadingListId;
+    private User mockUser;
     private ReadingList mockReadingList;
     private ReadingListRequestDTO mockReadingListRequestDTO;
 
     @BeforeEach
     void setUp() {
         readingListController.jwt = jwt;
-        testUserId = UUID.randomUUID();
         testReadingListId = UUID.randomUUID();
+        
+        mockUser = UserImpl.builder()
+            .keycloakUserId(UUID.randomUUID())
+            .username("testuser")
+            .build();
+
         mockReadingListRequestDTO = ReadingListRequestDTO.builder().name("Test List").build();
-        mockReadingList = ReadingListImpl.builder().readingListId(testReadingListId).userId(testUserId).name("Test List").build();
+
+        mockReadingList = ReadingListImpl.builder()
+                .readingListId(testReadingListId)
+                .user(mockUser)
+                .name("Test List")
+                .build();
     }
 
     @Test
@@ -71,11 +83,11 @@ public class ReadingListControllerUnitTest {
 
     @Test
     void testGetAllReadingListsForUser() {
-        when(jwt.getSubject()).thenReturn(testUserId.toString());
-        when(readingListService.getReadingListsForUser(testUserId)).thenReturn(Collections.singletonList(mockReadingList));
+        when(jwt.getSubject()).thenReturn(mockUser.getKeycloakUserId().toString());
+        when(readingListService.getReadingListsForUser(mockUser.getKeycloakUserId())).thenReturn(Collections.singletonList(mockReadingList));
         Response response = readingListController.getAllReadingListsForUser();
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        verify(readingListService, times(1)).getReadingListsForUser(testUserId);
+        verify(readingListService, times(1)).getReadingListsForUser(mockUser.getKeycloakUserId());
     }
 
     @Test
@@ -124,21 +136,21 @@ public class ReadingListControllerUnitTest {
     @Test
     void testGetReadingListForBookAndUser() {
         UUID bookId = UUID.randomUUID();
-        when(jwt.getSubject()).thenReturn(testUserId.toString());
-        when(readingListService.findReadingListForBookAndUser(testUserId, bookId)).thenReturn(Optional.of(mockReadingList));
+        when(jwt.getSubject()).thenReturn(mockUser.getKeycloakUserId().toString());
+        when(readingListService.findReadingListForBookAndUser(mockUser.getKeycloakUserId(), bookId)).thenReturn(Optional.of(mockReadingList));
         Response response = readingListController.getReadingListForBookAndUser(bookId);
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        verify(readingListService, times(1)).findReadingListForBookAndUser(testUserId, bookId);
+        verify(readingListService, times(1)).findReadingListForBookAndUser(mockUser.getKeycloakUserId(), bookId);
     }
 
     @Test
     void testMoveBookBetweenReadingLists() {
         UUID bookId = UUID.randomUUID();
         MoveBookRequestDTO request = new MoveBookRequestDTO(UUID.randomUUID(), UUID.randomUUID());
-        when(jwt.getSubject()).thenReturn(testUserId.toString());
-        doNothing().when(readingListService).moveBookBetweenReadingLists(testUserId, bookId, request.getSourceListId(), request.getTargetListId(), jwt);
+        when(jwt.getSubject()).thenReturn(mockUser.getKeycloakUserId().toString());
+        doNothing().when(readingListService).moveBookBetweenReadingLists(mockUser.getKeycloakUserId(), bookId, request.getSourceListId(), request.getTargetListId(), jwt);
         Response response = readingListController.moveBookBetweenReadingLists(bookId, request);
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        verify(readingListService).moveBookBetweenReadingLists(testUserId, bookId, request.getSourceListId(), request.getTargetListId(), jwt);
+        verify(readingListService).moveBookBetweenReadingLists(mockUser.getKeycloakUserId(), bookId, request.getSourceListId(), request.getTargetListId(), jwt);
     }
 }

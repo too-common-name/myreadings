@@ -12,6 +12,7 @@ public interface BookRepository {
 
     Book save(Book book);
     Optional<Book> findById(UUID bookId);
+    List<Book> findByIds(List<UUID> bookIds);
     List<Book> findAll(String sort, String order, Integer limit);
     void deleteById(UUID bookId);
     DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder);

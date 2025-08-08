@@ -94,7 +94,7 @@ public class InMemoryReadingListRepositoryTest {
     void testUpdateReadingListMetadata() {
         ReadingList updatedMetadataList = ReadingListImpl.builder()
                 .readingListId(testList1User1.getReadingListId())
-                .userId(testList1User1.getUserId())
+                .user(testList1User1.getUser())
                 .name("Updated Name")
                 .description("Updated Description")
                 .creationDate(testList1User1.getCreationDate())
@@ -111,8 +111,8 @@ public class InMemoryReadingListRepositoryTest {
 
     @Test
     void testAddBookToReadingListSuccessful() {
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1);
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook2);
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId());
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook2.getBookId());
 
         Optional<ReadingList> updatedListOpt = repository.findById(testList1User1.getReadingListId());
         assertTrue(updatedListOpt.isPresent());
@@ -124,10 +124,10 @@ public class InMemoryReadingListRepositoryTest {
 
     @Test
     void testAddBookToReadingListAlreadyExistsReturnsQuietly() {
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1);
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId());
         
         
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1); 
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId()); 
 
         Optional<ReadingList> updatedListOpt = repository.findById(testList1User1.getReadingListId());
         assertTrue(updatedListOpt.isPresent());
@@ -138,14 +138,14 @@ public class InMemoryReadingListRepositoryTest {
     @Test
     void testAddBookToReadingListNotFound() {
         assertThrows(IllegalArgumentException.class, () -> {
-            repository.addBookToReadingList(UUID.randomUUID(), testBook1);
+            repository.addBookToReadingList(UUID.randomUUID(), testBook1.getBookId());
         }, "Should throw IllegalArgumentException when list not found");
     }
 
     @Test
     void testRemoveBookFromReadingListSuccessful() {
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1);
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook2);
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId());
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook2.getBookId());
 
         repository.removeBookFromReadingList(testList1User1.getReadingListId(), testBook1.getBookId());
 
@@ -159,7 +159,7 @@ public class InMemoryReadingListRepositoryTest {
 
     @Test
     void testRemoveBookFromReadingListBookNotFoundInList() {
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1);
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId());
 
         assertThrows(IllegalArgumentException.class, () -> {
             repository.removeBookFromReadingList(testList1User1.getReadingListId(), testBook2.getBookId());
@@ -175,28 +175,28 @@ public class InMemoryReadingListRepositoryTest {
 
     @Test
     void testGetBooksInReadingListSuccessful() {
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1);
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook2);
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId());
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook2.getBookId());
 
-        List<Book> booksInList =
-                repository.getBooksInReadingList(testList1User1.getReadingListId());
+        List<UUID> booksInList =
+                repository.getBookIdsInReadingList(testList1User1.getReadingListId());
 
         assertFalse(booksInList.isEmpty());
         assertEquals(2, booksInList.size());
-        assertTrue(booksInList.contains(testBook1));
-        assertTrue(booksInList.contains(testBook2));
+        assertTrue(booksInList.contains(testBook1.getBookId()));
+        assertTrue(booksInList.contains(testBook2.getBookId()));
     }
 
     @Test
     void testGetBooksInReadingListEmpty() {
         
-        List<Book> booksInList = repository.getBooksInReadingList(testList1User1.getReadingListId());
+        List<UUID> booksInList = repository.getBookIdsInReadingList(testList1User1.getReadingListId());
         assertTrue(booksInList.isEmpty());
     }
 
     @Test
     void testGetBooksInReadingListNonExistentList() {
-        List<Book> booksInList = repository.getBooksInReadingList(UUID.randomUUID());
+        List<UUID> booksInList = repository.getBookIdsInReadingList(UUID.randomUUID());
         assertTrue(booksInList.isEmpty());
     }
 
@@ -227,7 +227,7 @@ public class InMemoryReadingListRepositoryTest {
 
     @Test
     void testFindReadingListContainingBookForUserSuccessful() {
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1);
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId());
         
         Optional<ReadingList> foundListOpt = repository.findReadingListContainingBookForUser(testUser1.getKeycloakUserId(), testBook1.getBookId());
 
@@ -246,7 +246,7 @@ public class InMemoryReadingListRepositoryTest {
 
     @Test
     void testFindReadingListContainingBookForUserUserNotFound() {
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1);
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId());
         
         Optional<ReadingList> foundListOpt = repository.findReadingListContainingBookForUser(UUID.randomUUID(), testBook1.getBookId());
 
@@ -256,7 +256,7 @@ public class InMemoryReadingListRepositoryTest {
     @Test
     void testFindReadingListContainingBookForUserBookInAnotherUsersList() {
         
-        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1); 
+        repository.addBookToReadingList(testList1User1.getReadingListId(), testBook1.getBookId()); 
         
         
         Optional<ReadingList> foundListOpt = repository.findReadingListContainingBookForUser(testUser2.getKeycloakUserId(), testBook1.getBookId());

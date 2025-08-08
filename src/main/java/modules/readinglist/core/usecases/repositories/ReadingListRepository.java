@@ -1,8 +1,6 @@
 package modules.readinglist.core.usecases.repositories;
 
-import modules.catalog.core.domain.Book;
 import modules.readinglist.core.domain.ReadingList;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,9 +11,8 @@ public interface ReadingListRepository {
     Optional<ReadingList> findById(UUID readingListId);
     List<ReadingList> findByUserId(UUID userId);
     void deleteById(UUID readingListId);
-
-    void addBookToReadingList(UUID readingListId, Book book);
+    void addBookToReadingList(UUID readingListId, UUID bookId);
     void removeBookFromReadingList(UUID readingListId, UUID bookId);
-    List<Book> getBooksInReadingList(UUID readingListId);
+    List<UUID> getBookIdsInReadingList(UUID readingListId);
     Optional<ReadingList> findReadingListContainingBookForUser(UUID userId, UUID bookId);
 }

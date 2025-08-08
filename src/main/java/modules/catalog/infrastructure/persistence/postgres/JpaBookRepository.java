@@ -11,6 +11,7 @@ import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.hibernate.orm.PersistenceUnit;
 import org.jboss.logging.Logger;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,19 +41,28 @@ public class JpaBookRepository implements BookRepository {
     public Book save(Book book) {
         LOGGER.debugf("JPA: Saving or updating book entity with ID: %s", book.getBookId());
         BookEntity entity = mapper.toEntity(book);
-        if (entity.getBookId() == null) {
-            entityManager.persist(entity);
-        } else {
-            entityManager.merge(entity);
-        }
-        return mapper.toDomain(entity);
+        BookEntity managedEntity = entityManager.merge(entity);
+        return mapper.toDomain(managedEntity);
     }
-
+    
     @Override
     public Optional<Book> findById(UUID bookId) {
         LOGGER.debugf("JPA: Finding book entity by ID: %s", bookId);
         return Optional.ofNullable(entityManager.find(BookEntity.class, bookId))
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Book> findByIds(List<UUID> bookIds) {
+        LOGGER.debugf("JPA: Finding %d books by IDs", bookIds.size());
+        if (bookIds == null || bookIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        TypedQuery<BookEntity> query = entityManager.createQuery("SELECT b FROM BookEntity b WHERE b.bookId IN :ids", BookEntity.class);
+        query.setParameter("ids", bookIds);
+        return query.getResultList().stream()
+            .map(mapper::toDomain)
+            .collect(Collectors.toList());
     }
 
     @Override

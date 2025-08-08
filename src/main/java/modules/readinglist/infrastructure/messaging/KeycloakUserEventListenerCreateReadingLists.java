@@ -2,69 +2,79 @@ package modules.readinglist.infrastructure.messaging;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-
+import java.util.UUID;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import org.jboss.logging.Logger;
+import org.jboss.logging.MDC;
+import common.filters.TraceIdFilter;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.ReadingListService;
-import modules.user.infrastructure.messaging.KeycloakUserEventListener;
-import jakarta.json.JsonObject;
-import java.util.UUID;
+import modules.user.core.domain.User;
+import modules.user.core.usecases.UserService;
+import modules.user.infrastructure.messaging.KeycloakEventDTO;
 
+@ApplicationScoped
 public class KeycloakUserEventListenerCreateReadingLists {
 
-    private static final Logger log = LoggerFactory.getLogger(KeycloakUserEventListener.class);
+    private static final Logger LOGGER = Logger.getLogger(KeycloakUserEventListenerCreateReadingLists.class);
 
     @Inject
     ReadingListService readingListService;
 
+    @Inject
+    UserService userService;
+
     @Incoming("registrations")
     public void processUserEvent(byte[] event) {
+        MDC.put(TraceIdFilter.TRACE_ID_KEY, "event-" + UUID.randomUUID().toString());
         String message = new String(event, StandardCharsets.UTF_8);
-        log.info("Received raw user registration event: %s", message);
+        LOGGER.infof("Received user registration event to create default reading lists");
+        LOGGER.debugf("Event payload: %s", message);
 
         try (Jsonb jsonb = JsonbBuilder.create()) {
-            JsonObject root = jsonb.fromJson(message, JsonObject.class);
-            String userIdString = root.getString("userId", null);
+            KeycloakEventDTO keycloakEvent = jsonb.fromJson(message, KeycloakEventDTO.class);
+            String userIdString = keycloakEvent.getUserId();
 
             if (userIdString != null) {
                 UUID userId = UUID.fromString(userIdString);
-                createDefaultReadingListsForUser(userId);
+                userService.findUserProfileById(userId, null)
+                    .ifPresentOrElse(
+                        this::createDefaultReadingListsForUser,
+                        () -> LOGGER.warnf("User with ID %s not found, cannot create default lists.", userId)
+                    );
             } else {
-                log.warn("Could not find 'userId' in the event payload.");
+                LOGGER.warn("Could not find 'userId' in the event payload.");
             }
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid UUID format for userId in event: %s", message, e);
         } catch (Exception e) {
-            log.error("Failed to process user registration event.", e);
+            LOGGER.errorf(e, "Failed to process user registration event. Payload: %s", message);
+        } finally {
+            MDC.remove(TraceIdFilter.TRACE_ID_KEY);
         }
     }
 
-    private void createDefaultReadingListsForUser(UUID userId) {
+    private void createDefaultReadingListsForUser(User user) {
         ReadingList toReadList = ReadingListImpl.builder()
-                .userId(userId)
+                .readingListId(UUID.randomUUID())
+                .user(user)
                 .name("To Read")
                 .creationDate(LocalDateTime.now())
                 .description("Books I plan to read.")
                 .build();
 
         ReadingList alreadyReadList = ReadingListImpl.builder()
-                .userId(userId)
+                .readingListId(UUID.randomUUID())
+                .user(user)
                 .name("Read")
                 .creationDate(LocalDateTime.now())
                 .description("Books I have already completed.")
                 .build();
 
         readingListService.createReadingList(toReadList);
-        log.info("Created '%s' list for user %s", toReadList.getName(), userId);
-
         readingListService.createReadingList(alreadyReadList);
-        log.info("Created '%s' list for user %s", alreadyReadList.getName(), userId);
     }
 }

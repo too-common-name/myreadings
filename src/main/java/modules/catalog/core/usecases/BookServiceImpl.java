@@ -83,4 +83,10 @@ public class BookServiceImpl implements BookService {
         LOGGER.debugf("Passing search to repository with query: '%s'", query);
         return bookRepository.searchBooks(query, page, size, sortBy, sortOrder);
     }
+
+    @Override
+    public List<Book> getBooksByIds(List<UUID> bookIds) {
+        LOGGER.debugf("Searching for %d books by IDs", bookIds.size());
+        return bookRepository.findByIds(bookIds);
+    }
 }

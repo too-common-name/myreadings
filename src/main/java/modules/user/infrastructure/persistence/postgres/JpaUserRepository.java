@@ -31,12 +31,8 @@ public class JpaUserRepository implements UserRepository {
     public User save(User user) {
         LOGGER.debugf("JPA: Saving or updating user entity with keycloak ID: %s", user.getKeycloakUserId());
         UserEntity userEntity = mapper.toEntity(user);
-        if (entityManager.find(UserEntity.class, userEntity.getKeycloakUserId()) != null) {
-            entityManager.merge(userEntity);
-        } else {
-            entityManager.persist(userEntity);
-        }
-        return mapper.toDomain(userEntity);
+        UserEntity managedEntity = entityManager.merge(userEntity);
+        return mapper.toDomain(managedEntity);
     }
 
     @Override

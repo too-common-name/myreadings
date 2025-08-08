@@ -49,6 +49,18 @@ public class InMemoryBookRepository implements BookRepository {
     }
 
     @Override
+    public List<Book> findByIds(List<UUID> bookIds) {
+        LOGGER.debugf("In-memory: Finding %d books by IDs", bookIds.size());
+        if (bookIds == null || bookIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return bookIds.stream()
+            .map(books::get)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+    }
+
+    @Override
     public List<Book> findAll(String sort, String order, Integer limit) {
         LOGGER.debugf("In-memory: Finding all books with params [sort: %s, order: %s, limit: %d]", sort, order, limit);
         Stream<Book> bookStream = books.values().stream();

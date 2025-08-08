@@ -58,7 +58,7 @@ public class ReadingListServiceImplTest {
 
         testUser = UserImpl.builder().keycloakUserId(userId).username("testuser").build();
         testBook = BookImpl.builder().bookId(bookId).title("Test Book").build();
-        testReadingList = ReadingListImpl.builder().readingListId(readingListId).userId(userId).name("My List").build();
+        testReadingList = ReadingListImpl.builder().readingListId(readingListId).user(testUser).name("My List").build();
     }
 
     @Test
@@ -72,7 +72,7 @@ public class ReadingListServiceImplTest {
 
         assertNotNull(result);
         assertEquals("New List", result.getName());
-        assertEquals(testUser.getKeycloakUserId(), result.getUserId());
+        assertEquals(testUser.getKeycloakUserId(), result.getUser().getKeycloakUserId());
         verify(readingListRepository, times(1)).create(any(ReadingList.class));
     }
 
@@ -120,11 +120,11 @@ public class ReadingListServiceImplTest {
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
         when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
         when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.of(testBook));
-        doNothing().when(readingListRepository).addBookToReadingList(any(UUID.class), any(Book.class));
+        doNothing().when(readingListRepository).addBookToReadingList(any(UUID.class), any(UUID.class));
         
         readingListService.addBookToReadingList(testReadingList.getReadingListId(), testBook.getBookId(), jwt);
         
-        verify(readingListRepository, times(1)).addBookToReadingList(testReadingList.getReadingListId(), testBook);
+        verify(readingListRepository, times(1)).addBookToReadingList(testReadingList.getReadingListId(), testBook.getBookId());
     }
     
     @Test

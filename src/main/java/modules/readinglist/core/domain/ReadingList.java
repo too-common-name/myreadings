@@ -3,22 +3,14 @@ package modules.readinglist.core.domain;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-
 import modules.catalog.core.domain.Book;
-
+import modules.user.core.domain.User;
 
 public interface ReadingList {
-
     UUID getReadingListId();
-
-    UUID getUserId();
-
+    User getUser();
     String getName();
-
     String getDescription();
-
     LocalDateTime getCreationDate();
-
     List<Book> getBooks();
-
 }

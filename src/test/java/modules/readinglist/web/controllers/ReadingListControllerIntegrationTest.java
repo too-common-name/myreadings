@@ -86,7 +86,7 @@ public class ReadingListControllerIntegrationTest {
 
         ReadingList aliceReadingList = ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
-                .userId(alice.getKeycloakUserId())
+                .user(alice)
                 .name("Alice's List")
                 .description("Alice's personal list")
                 .creationDate(java.time.LocalDateTime.now())
@@ -96,7 +96,7 @@ public class ReadingListControllerIntegrationTest {
 
         ReadingList adminReadingList = ReadingListImpl.builder()
                 .readingListId(UUID.randomUUID())
-                .userId(admin.getKeycloakUserId())
+                .user(admin)
                 .name("Admin's List")
                 .description("Admin's personal list")
                 .creationDate(java.time.LocalDateTime.now())

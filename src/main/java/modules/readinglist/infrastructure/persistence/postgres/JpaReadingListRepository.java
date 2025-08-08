@@ -6,18 +6,19 @@ import jakarta.persistence.EntityManager;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.hibernate.orm.PersistenceUnit;
 import jakarta.persistence.TypedQuery;
-import modules.catalog.core.domain.Book;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
-@IfBuildProperty(name = "app.book.repository.type", stringValue = "jpa", enableIfMissing = true)
+@IfBuildProperty(name = "app.repository.type", stringValue = "jpa", enableIfMissing = true)
 public class JpaReadingListRepository implements ReadingListRepository {
+    
+    private static final Logger LOGGER = Logger.getLogger(JpaReadingListRepository.class);
 
     @Inject
     @PersistenceUnit("readinglist-db")
@@ -28,13 +29,15 @@ public class JpaReadingListRepository implements ReadingListRepository {
 
     @Override
     public ReadingList create(ReadingList list) {
+        LOGGER.debugf("JPA: Creating reading list entity with ID: %s", list.getReadingListId());
         ReadingListEntity newEntity = mapper.toEntity(list);
-        entityManager.persist(newEntity);
-        return mapper.toDomain(newEntity);
+        ReadingListEntity managedEntity = entityManager.merge(newEntity);
+        return mapper.toDomain(managedEntity);
     }
 
     @Override
     public ReadingList update(ReadingList list) {
+        LOGGER.debugf("JPA: Merging reading list entity with ID: %s", list.getReadingListId());
         ReadingListEntity managedEntity = entityManager.find(ReadingListEntity.class, list.getReadingListId());
 
         if (managedEntity != null) {
@@ -48,96 +51,66 @@ public class JpaReadingListRepository implements ReadingListRepository {
 
     @Override
     public Optional<ReadingList> findById(UUID readingListId) {
-        String jpql = "SELECT DISTINCT rl FROM ReadingListEntity rl LEFT JOIN FETCH rl.items i WHERE rl.id = :readingListId";
-        TypedQuery<ReadingListEntity> query = entityManager.createQuery(jpql, ReadingListEntity.class);
-        query.setParameter("readingListId", readingListId);
-        return query.getResultList().stream().findFirst().map(mapper::toDomain);
+        LOGGER.debugf("JPA: Finding reading list entity by ID: %s", readingListId);
+        return Optional.ofNullable(entityManager.find(ReadingListEntity.class, readingListId)).map(mapper::toDomain);
     }
 
     @Override
     public List<ReadingList> findByUserId(UUID userId) {
-        String jpql = "SELECT DISTINCT rl FROM ReadingListEntity rl LEFT JOIN FETCH rl.items i WHERE rl.userId = :userId";
-        TypedQuery<ReadingListEntity> query = entityManager.createQuery(jpql, ReadingListEntity.class);
+        LOGGER.debugf("JPA: Finding reading list entities for user ID: %s", userId);
+        TypedQuery<ReadingListEntity> query = entityManager.createQuery("SELECT rl FROM ReadingListEntity rl WHERE rl.userId = :userId", ReadingListEntity.class);
         query.setParameter("userId", userId);
         return query.getResultList().stream().map(mapper::toDomain).collect(Collectors.toList());
     }
 
     @Override
     public void deleteById(UUID readingListId) {
-        entityManager.createQuery("DELETE FROM ReadingListItemEntity i WHERE i.id.readingListId = :listId")
-                .setParameter("listId", readingListId)
-                .executeUpdate();
-
-        Optional.ofNullable(entityManager.find(ReadingListEntity.class, readingListId))
-                .ifPresent(entityManager::remove);
+        LOGGER.debugf("JPA: Deleting reading list entity with ID: %s", readingListId);
+        ReadingListEntity entity = entityManager.find(ReadingListEntity.class, readingListId);
+        if (entity != null) {
+            entityManager.remove(entity);
+        }
     }
 
     @Override
-    public void addBookToReadingList(UUID readingListId, Book book) {
+    public void addBookToReadingList(UUID readingListId, UUID bookId) {
+        LOGGER.debugf("JPA: Adding book %s to list %s", bookId, readingListId);
         ReadingListEntity listEntity = entityManager.find(ReadingListEntity.class, readingListId);
-        if (listEntity == null) {
-            throw new IllegalArgumentException("ReadingList with ID " + readingListId + " not found.");
+        if (listEntity != null) {
+            ReadingListItemEntity newItem = new ReadingListItemEntity();
+            newItem.setId(new ReadingListItemId(readingListId, bookId));
+            newItem.setReadingList(listEntity);
+            if (!listEntity.getItems().contains(newItem)) {
+                entityManager.persist(newItem);
+            }
         }
-
-        String jpqlCheck = "SELECT COUNT(i) FROM ReadingListItemEntity i WHERE i.id.readingListId = :listId AND i.id.bookId = :bookId";
-        Long count = entityManager.createQuery(jpqlCheck, Long.class)
-                .setParameter("listId", readingListId)
-                .setParameter("bookId", book.getBookId())
-                .getSingleResult();
-
-        if (count > 0) {
-            return;
-        }
-
-        ReadingListItemEntity newItem = new ReadingListItemEntity();
-        newItem.setId(new ReadingListItemId(readingListId, book.getBookId()));
-        newItem.setReadingList(listEntity);
-
-        listEntity.getItems().add(newItem);
-        entityManager.merge(listEntity);
     }
 
     @Override
     public void removeBookFromReadingList(UUID readingListId, UUID bookId) {
-        int deletedCount = entityManager.createQuery(
-                "DELETE FROM ReadingListItemEntity i WHERE i.id.readingListId = :listId AND i.id.bookId = :bookId")
-                .setParameter("listId", readingListId)
-                .setParameter("bookId", bookId)
-                .executeUpdate();
-
-        if (deletedCount == 0) {
-            throw new IllegalArgumentException(
-                    "Book with ID " + bookId + " not found in reading list " + readingListId + ".");
+        LOGGER.debugf("JPA: Removing book %s from list %s", bookId, readingListId);
+        ReadingListItemId id = new ReadingListItemId(readingListId, bookId);
+        ReadingListItemEntity item = entityManager.find(ReadingListItemEntity.class, id);
+        if (item != null) {
+            entityManager.remove(item);
         }
     }
 
     @Override
-    public List<Book> getBooksInReadingList(UUID readingListId) {
-        String jpql = "SELECT i.id.bookId FROM ReadingListItemEntity i WHERE i.readingList.id = :readingListId";
-        TypedQuery<UUID> query = entityManager.createQuery(jpql, UUID.class);
-        query.setParameter("readingListId", readingListId);
-        List<Book> all = query.getResultList().stream()
-                .map(bookId -> modules.catalog.core.domain.BookImpl.builder().bookId(bookId).build())
-                .collect(Collectors.toList());
-        return all;
+    public List<UUID> getBookIdsInReadingList(UUID readingListId) {
+        LOGGER.debugf("JPA: Getting book IDs for list %s", readingListId);
+        TypedQuery<UUID> query = entityManager.createQuery("SELECT i.id.bookId FROM ReadingListItemEntity i WHERE i.id.readingListId = :listId", UUID.class);
+        query.setParameter("listId", readingListId);
+        return query.getResultList();
     }
 
     @Override
     public Optional<ReadingList> findReadingListContainingBookForUser(UUID userId, UUID bookId) {
-        String jpql = "SELECT DISTINCT rl FROM ReadingListEntity rl " +
-                "JOIN FETCH rl.items i " +
-                "WHERE rl.userId = :userId AND i.id.bookId = :bookId";
-        TypedQuery<ReadingListEntity> query = entityManager.createQuery(jpql, ReadingListEntity.class);
+        LOGGER.debugf("JPA: Finding if user %s has book %s in a list", userId, bookId);
+        TypedQuery<ReadingListEntity> query = entityManager.createQuery(
+            "SELECT rl FROM ReadingListEntity rl JOIN rl.items i WHERE rl.userId = :userId AND i.id.bookId = :bookId", ReadingListEntity.class);
         query.setParameter("userId", userId);
         query.setParameter("bookId", bookId);
-
-        return query.getResultList().stream().findFirst().map(mapper::toDomain);
-    }
-
-    public List<ReadingList> findAll() {
-        // Query era già giusta
-        String jpql = "SELECT DISTINCT rl FROM ReadingListEntity rl LEFT JOIN FETCH rl.items i";
-        TypedQuery<ReadingListEntity> query = entityManager.createQuery(jpql, ReadingListEntity.class);
-        return query.getResultList().stream().map(mapper::toDomain).collect(Collectors.toList());
+        return query.getResultStream().findFirst().map(mapper::toDomain);
     }
 }
