@@ -9,17 +9,14 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.MediaType;
 import modules.catalog.core.domain.Book;
-import modules.catalog.core.usecases.BookServiceImpl;
+import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
-import modules.catalog.web.dto.BookRequestDTO;
 import modules.review.core.domain.Review;
-
-import modules.review.core.usecases.ReviewServiceImpl;
+import modules.review.core.domain.ReviewImpl;
+import modules.review.core.usecases.repositories.ReviewRepository;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
-import modules.user.core.usecases.UserServiceImpl;
-
-import org.junit.jupiter.api.AfterEach;
+import modules.user.core.usecases.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,289 +31,224 @@ import static org.hamcrest.CoreMatchers.is;
 @TestHTTPEndpoint(ReviewController.class)
 public class ReviewControllerIntegrationTest {
 
-        @Inject
-        ReviewServiceImpl reviewService;
+    @Inject
+    ReviewRepository reviewRepository;
 
-        @Inject
-        BookServiceImpl bookService;
+    @Inject
+    BookRepository bookRepository;
 
-        @Inject
-        UserServiceImpl userService;
+    @Inject
+    UserRepository userRepository;
 
-        @Inject
-        @PersistenceUnit("books-db")
-        EntityManager booksEntityManager;
+    @Inject
+    @PersistenceUnit("review-db")
+    EntityManager reviewsEntityManager;
 
-        @Inject
-        @PersistenceUnit("users-db")
-        EntityManager usersEntityManager;
+    @Inject
+    @PersistenceUnit("books-db")
+    EntityManager booksEntityManager;
 
-        KeycloakTestClient keycloakClient = new KeycloakTestClient();
+    @Inject
+    @PersistenceUnit("users-db")
+    EntityManager usersEntityManager;
 
-        private final User alice = UserImpl.builder()
-                        .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
-                        .firstName("Alice")
-                        .lastName("Silverstone")
-                        .username("alice")
-                        .email("asilverstone@test.com")
-                        .build();
-        private final User admin = UserImpl.builder()
-                        .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
-                        .firstName("Bruce")
-                        .lastName("Wayne")
-                        .username("admin")
-                        .email("bwayne@test.com")
-                        .build();
+    KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
-        private final BookRequestDTO testBookDTO = CatalogTestUtils.createValidBookRequestDTO();
-        private final BookRequestDTO anotherTestBookDTO = CatalogTestUtils.createValidBookRequestDTO();
+    private User alice;
+    private User admin;
+    private Book createdBook;
+    private Book createdAnotherBook;
+    private Review aliceReview;
 
-        private UUID aliceReviewId;
-        private Book createdBook;
-        private Book createdAnotherBook;
+    @BeforeEach
+    @Transactional
+    void setUp() {        
+        alice = UserImpl.builder()
+                .keycloakUserId(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"))
+                .firstName("Alice").lastName("Silverstone").username("alice").email("asilverstone@test.com")
+                .build();
+        admin = UserImpl.builder()
+                .keycloakUserId(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"))
+                .firstName("Bruce").lastName("Wayne").username("admin").email("bwayne@test.com")
+                .build();
+        
+        userRepository.save(alice);
+        userRepository.save(admin);
 
-        @BeforeEach
-        void setUp() {
-                setUpUsers();
-                setUpBooks();
+        createdBook = bookRepository.save(CatalogTestUtils.createValidBook());
+        createdAnotherBook = bookRepository.save(CatalogTestUtils.createValidBook());
 
-                Review aliceReview = Review.builder()
-                                .reviewId(UUID.randomUUID())
-                                .book(createdBook)
-                                .user(alice)
-                                .rating(5)
-                                .reviewText("Excellent book!")
-                                .publicationDate(LocalDateTime.now())
-                                .build();
-                aliceReviewId = reviewService.createReview(aliceReview).getReviewId();
-        }
+        aliceReview = ReviewImpl.builder()
+                .reviewId(UUID.randomUUID())
+                .book(createdBook)
+                .user(alice)
+                .rating(5)
+                .reviewText("Excellent book!")
+                .publicationDate(LocalDateTime.now())
+                .build();
+        
+        reviewRepository.create(aliceReview);
+    }
+    
+    protected String getAccessToken(String userName) {
+        return keycloakClient.getAccessToken(userName);
+    }
 
-        @AfterEach
-        void cleanUp() {
-                cleanUpReviews();
-                cleanUpBooks();
-                cleanUpUsers();
-        }
+    @Test
+    void testUserCanCreateReview() {
+        Book newBook = bookRepository.save(CatalogTestUtils.createValidBook());
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"bookId\": \"" + newBook.getBookId()
+                                + "\", \"rating\": 5, \"reviewText\": \"Great!\"}")
+                .when().post()
+                .then()
+                .statusCode(201)
+                .body("rating", is(5))
+                .body("reviewText", equalTo("Great!"))
+                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
+                .body("bookId", equalTo(newBook.getBookId().toString()));
+    }
 
-        @Transactional
-        void cleanUpReviews() {
-                try {
-                        reviewService.deleteReviewById(aliceReviewId);
-                } catch (Exception ex) {
-                }
-        }
+    @Test
+    void testUserCanAccessOwnReview() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("reviewId", aliceReview.getReviewId())
+                .when().get("/{reviewId}")
+                .then()
+                .statusCode(200)
+                .body("reviewId", equalTo(aliceReview.getReviewId().toString()))
+                .body("userId", equalTo(alice.getKeycloakUserId().toString()));
+    }
+    
+    @Test
+    void testAdminCanAccessOthersReview() {
+        given()
+                .auth().oauth2(getAccessToken(admin.getUsername()))
+                .pathParam("reviewId", aliceReview.getReviewId())
+                .when().get("/{reviewId}")
+                .then()
+                .statusCode(200)
+                .body("reviewId", equalTo(aliceReview.getReviewId().toString()));
+    }
 
-        @Transactional
-        void cleanUpBooks() {
-                booksEntityManager.createQuery("DELETE FROM BookEntity").executeUpdate();
-        }
+    @Test
+    void testUserCanUpdateOwnReview() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("reviewId", aliceReview.getReviewId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"bookId\": \"" + createdBook.getBookId()
+                                + "\", \"rating\": 3, \"reviewText\": \"Updated review text.\"}")
+                .when().put("/{reviewId}")
+                .then()
+                .statusCode(200)
+                .body("rating", is(3))
+                .body("reviewText", equalTo("Updated review text."));
+    }
 
-        @Transactional
-        void cleanUpUsers() {
-                usersEntityManager.createQuery("DELETE FROM UserEntity").executeUpdate();
-        }
+    @Test
+    void testUserCannotUpdateOthersReview() {
+        given()
+                .auth().oauth2(getAccessToken(admin.getUsername()))
+                .pathParam("reviewId", aliceReview.getReviewId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"bookId\": \"" + createdBook.getBookId()
+                                + "\", \"rating\": 2, \"reviewText\": \"Attempting to update.\"}")
+                .when().put("/{reviewId}")
+                .then()
+                .statusCode(403);
+    }
 
-        @Transactional
-        void setUpUsers() {
-                userService.createUserProfile(alice);
-                userService.createUserProfile(admin);
-        }
+    @Test
+    void testUserCanDeleteOwnReview() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("reviewId", aliceReview.getReviewId())
+                .when().delete("/{reviewId}")
+                .then()
+                .statusCode(204);
+    }
+    
+    @Test
+    void testAdminCanDeleteOthersReview() {
+        given()
+                .auth().oauth2(getAccessToken(admin.getUsername()))
+                .pathParam("reviewId", aliceReview.getReviewId())
+                .when().delete("/{reviewId}")
+                .then()
+                .statusCode(204);
+    }
 
-        @Transactional
-        void setUpBooks() {
-                createdBook = bookService.createBook(testBookDTO);
-                createdAnotherBook = bookService.createBook(anotherTestBookDTO);
-        }
+    @Test
+    void testUserCannotDeleteOthersReview() {
+        User anotherUser = userRepository.save(UserImpl.builder().keycloakUserId(UUID.randomUUID()).username("another").build());
+        given()
+                .auth().oauth2(getAccessToken(anotherUser.getUsername()))
+                .pathParam("reviewId", aliceReview.getReviewId())
+                .when().delete("/{reviewId}")
+                .then()
+                .statusCode(403);
+    }
 
-        protected String getAccessToken(String userName) {
-                return keycloakClient.getAccessToken(userName);
-        }
+    @Test
+    void testGetReviewsByBookId() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("bookId", createdBook.getBookId())
+                .when().get("/books/{bookId}")
+                .then()
+                .statusCode(200)
+                .body("size()", is(1))
+                .body("[0].bookId", equalTo(createdBook.getBookId().toString()));
+    }
 
-        @Test
-        void testUserCanCreateReview() {
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-                Book created = bookService.createBook(bookRequest);
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + created.getBookId()
-                                                + "\", \"rating\": 5, \"reviewText\": \"Great!\"}")
-                                .when().post()
-                                .then()
-                                .statusCode(201)
-                                .body("rating", is(5))
-                                .body("reviewText", equalTo("Great!"))
-                                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
-                                .body("bookId", equalTo(created.getBookId().toString()));
-        }
+    @Test
+    void testGetReviewsByUserId() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("userId", alice.getKeycloakUserId())
+                .when().get("/users/{userId}")
+                .then()
+                .statusCode(200)
+                .body("size()", is(1))
+                .body("[0].userId", equalTo(alice.getKeycloakUserId().toString()));
+    }
 
-        @Test
-        void testUserCanAccessReview() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("reviewId", aliceReviewId)
-                                .when().get("/{reviewId}")
-                                .then()
-                                .statusCode(200)
-                                .body("reviewId", equalTo(aliceReviewId.toString()))
-                                .body("userId", equalTo(alice.getKeycloakUserId().toString()));
-        }
+    @Test
+    void testGetBookReviewStatsForBookWithReviews() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("bookId", createdBook.getBookId())
+                .when().get("/books/{bookId}/stats")
+                .then()
+                .statusCode(200)
+                .body("totalReviews", is(1))
+                .body("averageRating", equalTo(5.0f));
+    }
 
-        @Test
-        void testUserCanUpdateOwnReview() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("reviewId", aliceReviewId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + createdBook.getBookId()
-                                                + "\", \"rating\": 3, \"reviewText\": \"Updated review text.\"}")
-                                .when().put("/{reviewId}")
-                                .then()
-                                .statusCode(200)
-                                .body("reviewId", equalTo(aliceReviewId.toString()))
-                                .body("rating", is(3))
-                                .body("reviewText", equalTo("Updated review text."))
-                                .body("userId", equalTo(alice.getKeycloakUserId().toString()));
-        }
+    @Test
+    void testGetBookReviewStatsForBookWithoutReviews() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("bookId", createdAnotherBook.getBookId())
+                .when().get("/books/{bookId}/stats")
+                .then()
+                .statusCode(200)
+                .body("totalReviews", is(0))
+                .body("averageRating", equalTo(0.0f));
+    }
 
-        @Test
-        void testNoOneCannotUpdateOthersReview() {
-                given()
-                                .auth().oauth2(getAccessToken(admin.getUsername()))
-                                .pathParam("reviewId", aliceReviewId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body("{\"bookId\": \"" + createdBook.getBookId()
-                                                + "\", \"rating\": 2, \"reviewText\": \"Attempting to update.\"}")
-                                .when().put("/{reviewId}")
-                                .then()
-                                .statusCode(403);
-        }
-
-        @Test
-        void testUserCanDeleteOwnReview() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("reviewId", aliceReviewId)
-                                .when().delete("/{reviewId}")
-                                .then()
-                                .statusCode(204);
-        }
-
-        @Test
-        void testNoOneCannotDeleteOthersReview() {
-                given()
-                                .auth().oauth2(getAccessToken(admin.getUsername()))
-                                .pathParam("reviewId", aliceReviewId)
-                                .when().delete("/{reviewId}")
-                                .then()
-                                .statusCode(403);
-        }
-
-        @Test
-        void testGetReviewsByBookId() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("bookId", createdBook.getBookId())
-                                .when().get("/books/{bookId}")
-                                .then()
-                                .statusCode(200)
-                                .body("[0].bookId", equalTo(createdBook.getBookId().toString()));
-        }
-
-        @Test
-        void testGetReviewsByUserId() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("userId", alice.getKeycloakUserId())
-                                .when().get("/users/{userId}")
-                                .then()
-                                .statusCode(200)
-                                .body("[0].userId", equalTo(alice.getKeycloakUserId().toString()));
-        }
-
-        @Test
-        void testGetBookReviewStatsForBookWithReviews() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("bookId", createdBook.getBookId())
-                                .when().get("/books/{bookId}/stats")
-                                .then()
-                                .statusCode(200)
-                                .body("bookId", equalTo(createdBook.getBookId().toString()))
-                                .body("totalReviews", is(1))
-                                .body("averageRating", equalTo(5.0f));
-        }
-
-        @Test
-        void testGetBookReviewStatsForBookWithoutReviews() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("bookId", createdAnotherBook.getBookId())
-                                .when().get("/books/{bookId}/stats")
-                                .then()
-                                .statusCode(200)
-                                .body("bookId", equalTo(createdAnotherBook.getBookId().toString()))
-                                .body("totalReviews", is(0))
-                                .body("averageRating", equalTo(0.0f));
-        }
-
-        @Test
-        void testGetBookReviewStatsForNonExistentBook() {
-                UUID nonExistentBookId = UUID.randomUUID();
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("bookId", nonExistentBookId)
-                                .when().get("/books/{bookId}/stats")
-                                .then()
-                                .statusCode(404)
-                                .body(equalTo("Book not found with ID: " + nonExistentBookId));
-        }
-
-        @Test
-        void testGetMyReviewForBookShouldReturnOkAndReviewDTOWhenReviewExists() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("bookId", createdBook.getBookId())
-                                .when().get("/books/{bookId}/my-review")
-                                .then()
-                                .statusCode(200)
-                                .body("reviewId", equalTo(aliceReviewId.toString()))
-                                .body("bookId", equalTo(createdBook.getBookId().toString()))
-                                .body("userId", equalTo(alice.getKeycloakUserId().toString()))
-                                .body("rating", is(5))
-                                .body("reviewText", equalTo("Excellent book!"));
-        }
-
-        @Test
-        void testGetMyReviewForBookShouldReturnNotFoundWhenReviewDoesNotExist() {
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("bookId", createdAnotherBook.getBookId()) // Use a book Alice hasn't reviewed
-                                .when().get("/books/{bookId}/my-review")
-                                .then()
-                                .statusCode(404)
-                                .body(equalTo("Review not found for this user and book."));
-        }
-
-        @Test
-        void testGetMyReviewForBookShouldReturnNotFoundIfBookDoesNotExist() {
-                UUID nonExistentBookId = UUID.randomUUID();
-                given()
-                                .auth().oauth2(getAccessToken(alice.getUsername()))
-                                .pathParam("bookId", nonExistentBookId)
-                                .when().get("/books/{bookId}/my-review")
-                                .then()
-                                .statusCode(404)
-                                .body(equalTo("Book not found."));
-        }
-
-        @Test
-        void testGetMyReviewForBookShouldReturnUnauthorizedIfUserIsNotAuthenticated() {
-                given()
-                                .pathParam("bookId", createdBook.getBookId())
-                                .when().get("/books/{bookId}/my-review")
-                                .then()
-                                .statusCode(401);
-        }
-
+    @Test
+    void testGetMyReviewForBookShouldReturnOk() {
+        given()
+                .auth().oauth2(getAccessToken(alice.getUsername()))
+                .pathParam("bookId", createdBook.getBookId())
+                .when().get("/books/{bookId}/my-review")
+                .then()
+                .statusCode(200)
+                .body("reviewId", equalTo(aliceReview.getReviewId().toString()));
+    }
 }

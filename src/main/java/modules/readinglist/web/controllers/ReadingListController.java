@@ -8,18 +8,14 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import modules.catalog.core.domain.Book;
 import modules.readinglist.core.domain.ReadingList;
-import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.ReadingListService;
 import modules.readinglist.web.dto.AddBookRequestDTO;
 import modules.readinglist.web.dto.MoveBookRequestDTO;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
 import modules.readinglist.web.dto.ReadingListResponseDTO;
-import modules.user.core.domain.User;
-import modules.user.core.usecases.UserService;
-
 import org.eclipse.microprofile.jwt.JsonWebToken;
-
-import java.time.LocalDateTime;
+import org.jboss.logging.Logger;
+import io.quarkus.security.Authenticated;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,269 +24,124 @@ import java.util.stream.Collectors;
 @Path("/api/v1/readinglists")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Authenticated
 public class ReadingListController {
+
+    private static final Logger LOGGER = Logger.getLogger(ReadingListController.class);
 
     @Inject
     ReadingListService readingListService;
 
     @Inject
-    UserService userService;
-
-    @Inject
     JsonWebToken jwt;
 
-    private UUID getCurrentUserIdFromJwt() {
-        String userIdClaim = jwt.getClaim("sub");
-        if (userIdClaim == null) {
-            throw new NotAuthorizedException("User ID not found in JWT.");
-        }
-        return UUID.fromString(userIdClaim);
-    }
-
     private ReadingListResponseDTO mapToReadingListResponseDTO(ReadingList readingList) {
+        List<UUID> bookIds = readingList.getBooks() != null 
+            ? readingList.getBooks().stream().map(Book::getBookId).collect(Collectors.toList()) 
+            : List.of();
+            
         return ReadingListResponseDTO.builder()
                 .readingListId(readingList.getReadingListId())
                 .name(readingList.getName())
                 .description(readingList.getDescription())
-                .books(readingList.getBooks().stream().map(Book::getBookId).collect(Collectors.toList()))
+                .books(bookIds)
                 .build();
-    }
-
-    private ReadingList findReadingListAndCheckOwnership(UUID readingListId, UUID currentUserId) {
-        Optional<ReadingList> readingListOptional = readingListService.findReadingListById(readingListId);
-        if (readingListOptional.isEmpty()) {
-            throw new NotFoundException("Reading list not found with ID: " + readingListId);
-        }
-        ReadingList readingList = readingListOptional.get();
-        if (!readingList.getUserId().equals(currentUserId)) {
-            throw new ForbiddenException("Reading list does not belong to the current user.");
-        }
-        return readingList;
     }
 
     @POST
     @RolesAllowed({ "user", "admin" })
     public Response createReadingList(@Valid ReadingListRequestDTO readingListRequestDTO) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            Optional<User> user = userService.findUserProfileById(currentUserId);
-
-            if (user.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("User not found.").build();
-            }
-
-            ReadingList newReadingList = ReadingListImpl.builder()
-                    .readingListId(UUID.randomUUID())
-                    .userId(user.get().getKeycloakUserId())
-                    .name(readingListRequestDTO.getName())
-                    .description(readingListRequestDTO.getDescription())
-                    .creationDate(LocalDateTime.now())
-                    .books(List.of())
-                    .build();
-
-            ReadingList createdReadingList = readingListService.createReadingList(newReadingList);
-            return Response.status(Response.Status.CREATED).entity(mapToReadingListResponseDTO(createdReadingList))
-                    .build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        }
+        LOGGER.infof("Received request to create reading list with name: %s", readingListRequestDTO.getName());
+        ReadingList createdReadingList = readingListService.createReadingList(readingListRequestDTO, jwt);
+        return Response.status(Response.Status.CREATED).entity(mapToReadingListResponseDTO(createdReadingList)).build();
     }
 
     @GET
     @Path("/{readingListId}")
     @RolesAllowed({ "user", "admin" })
     public Response getReadingListById(@PathParam("readingListId") UUID readingListId) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            ReadingList readingList = findReadingListAndCheckOwnership(readingListId, currentUserId);
-            return Response.ok(mapToReadingListResponseDTO(readingList)).build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        }
+        LOGGER.infof("Received request to get reading list by ID: %s", readingListId);
+        Optional<ReadingList> readingList = readingListService.findReadingListById(readingListId, jwt);
+        return readingList.map(rl -> Response.ok(mapToReadingListResponseDTO(rl)).build())
+                .orElse(Response.status(Response.Status.NOT_FOUND).build());
     }
 
     @GET
     @RolesAllowed({ "user", "admin" })
     public Response getAllReadingListsForUser() {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            List<ReadingList> readingLists = readingListService.getReadingListsForUser(currentUserId);
-            return Response.ok(readingLists.stream()
-                    .map(this::mapToReadingListResponseDTO)
-                    .collect(Collectors.toList())).build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        }
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        LOGGER.infof("Received request to get all reading lists for user: %s", currentUserId);
+        List<ReadingList> readingLists = readingListService.getReadingListsForUser(currentUserId);
+        return Response.ok(readingLists.stream()
+                .map(this::mapToReadingListResponseDTO)
+                .collect(Collectors.toList())).build();
     }
 
     @PUT
     @Path("/{readingListId}")
     @RolesAllowed({ "user", "admin" })
-    public Response updateReadingList(@PathParam("readingListId") UUID readingListId,
-            @Valid ReadingListRequestDTO readingListRequestDTO) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            ReadingList existingReadingList = findReadingListAndCheckOwnership(readingListId, currentUserId);
-
-            ReadingList updatedReadingList = ReadingListImpl.builder()
-                    .readingListId(readingListId)
-                    .userId(existingReadingList.getUserId())
-                    .name(readingListRequestDTO.getName())
-                    .description(readingListRequestDTO.getDescription())
-                    .books(existingReadingList.getBooks())
-                    .creationDate(existingReadingList.getCreationDate())
-                    .build();
-
-            ReadingList result = readingListService.updateReadingList(updatedReadingList);
-            return Response.ok(mapToReadingListResponseDTO(result)).build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        }
+    public Response updateReadingList(@PathParam("readingListId") UUID readingListId, @Valid ReadingListRequestDTO readingListRequestDTO) {
+        LOGGER.infof("Received request to update reading list ID: %s", readingListId);
+        ReadingList updatedList = readingListService.updateReadingList(readingListId, readingListRequestDTO, jwt);
+        return Response.ok(mapToReadingListResponseDTO(updatedList)).build();
     }
 
     @DELETE
     @Path("/{readingListId}")
     @RolesAllowed({ "user", "admin" })
     public Response deleteReadingList(@PathParam("readingListId") UUID readingListId) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            findReadingListAndCheckOwnership(readingListId, currentUserId);
-            readingListService.deleteReadingListById(readingListId);
-            return Response.noContent().build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        }
+        LOGGER.infof("Received request to delete reading list ID: %s", readingListId);
+        readingListService.deleteReadingListById(readingListId, jwt);
+        return Response.noContent().build();
     }
 
     @POST
     @Path("/{readingListId}/books")
     @RolesAllowed({ "user", "admin" })
-    public Response addBookToReadingList(@PathParam("readingListId") UUID readingListId,
-            @Valid AddBookRequestDTO addBookRequestDTO) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            findReadingListAndCheckOwnership(readingListId, currentUserId);
-            readingListService.addBookToReadingList(readingListId, addBookRequestDTO.getBookId());
-            return Response.ok().entity("Book added to reading list.").build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
+    public Response addBookToReadingList(@PathParam("readingListId") UUID readingListId, @Valid AddBookRequestDTO addBookRequestDTO) {
+        LOGGER.infof("Received request to add book %s to list %s", addBookRequestDTO.getBookId(), readingListId);
+        readingListService.addBookToReadingList(readingListId, addBookRequestDTO.getBookId(), jwt);
+        return Response.ok().entity("Book added to reading list.").build();
     }
 
     @DELETE
     @Path("/{readingListId}/books/{bookId}")
     @RolesAllowed({ "user", "admin" })
-    public Response removeBookFromReadingList(@PathParam("readingListId") UUID readingListId,
-            @PathParam("bookId") UUID bookId) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            findReadingListAndCheckOwnership(readingListId, currentUserId);
-            readingListService.removeBookFromReadingList(readingListId, bookId);
-            return Response.noContent().build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        }
+    public Response removeBookFromReadingList(@PathParam("readingListId") UUID readingListId, @PathParam("bookId") UUID bookId) {
+        LOGGER.infof("Received request to remove book %s from list %s", bookId, readingListId);
+        readingListService.removeBookFromReadingList(readingListId, bookId, jwt);
+        return Response.noContent().build();
     }
 
     @GET
     @Path("/{readingListId}/books")
     @RolesAllowed({ "user", "admin" })
     public Response getBooksInReadingList(@PathParam("readingListId") UUID readingListId) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            findReadingListAndCheckOwnership(readingListId, currentUserId);
-            List<Book> books = readingListService.getBooksInReadingList(readingListId);
-            return Response.ok(books).build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        }
+        LOGGER.infof("Received request to get books in list %s", readingListId);
+        List<Book> books = readingListService.getBooksInReadingList(readingListId, jwt);
+        return Response.ok(books).build();
     }
-
+    
     @GET
     @Path("/books/{bookId}/in-my-list")
     @RolesAllowed({ "user", "admin" })
     public Response getReadingListForBookAndUser(@PathParam("bookId") UUID bookId) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-            Optional<ReadingList> readingListOptional = readingListService.findReadingListForBookAndUser(currentUserId,
-                    bookId);
-
-            if (readingListOptional.isPresent()) {
-
-                return Response.ok(mapToReadingListResponseDTO(readingListOptional.get())).build();
-            } else {
-
-                return Response.status(Response.Status.NOT_FOUND).entity("Book not found in any of your reading lists.")
-                        .build();
-            }
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("An unexpected error occurred: " + e.getMessage()).build();
-        }
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        LOGGER.infof("Received request to check if user %s has book %s in a list", currentUserId, bookId);
+        Optional<ReadingList> readingListOptional = readingListService.findReadingListForBookAndUser(currentUserId, bookId);
+        return readingListOptional.map(rl -> Response.ok(mapToReadingListResponseDTO(rl)).build())
+                .orElse(Response.status(Response.Status.NOT_FOUND).build());
     }
-
+    
     @PUT
     @Path("/books/{bookId}/move")
     @Consumes(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "user", "admin" })
-    public Response moveBookBetweenReadingLists(
-            @PathParam("bookId") UUID bookId,
-            @Valid MoveBookRequestDTO moveRequestDTO) {
-        try {
-            UUID currentUserId = getCurrentUserIdFromJwt();
-
-            readingListService.moveBookBetweenReadingLists(
-                    currentUserId,
-                    bookId,
-                    moveRequestDTO.getSourceListId(),
-                    moveRequestDTO.getTargetListId());
-
-            return Response.ok().entity("Book moved successfully.").build();
-        } catch (NotAuthorizedException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
-        } catch (ForbiddenException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("An unexpected error occurred: " + e.getMessage()).build();
-        }
+    public Response moveBookBetweenReadingLists(@PathParam("bookId") UUID bookId, @Valid MoveBookRequestDTO moveRequestDTO) {
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        LOGGER.infof("Received request to move book %s from list %s to %s", bookId, moveRequestDTO.getSourceListId(), moveRequestDTO.getTargetListId());
+        readingListService.moveBookBetweenReadingLists(
+            currentUserId, bookId, moveRequestDTO.getSourceListId(), moveRequestDTO.getTargetListId(), jwt);
+        return Response.ok().entity("Book moved successfully.").build();
     }
 }

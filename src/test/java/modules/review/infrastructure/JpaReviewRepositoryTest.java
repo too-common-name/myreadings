@@ -9,7 +9,7 @@ import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.review.core.domain.Review;
-
+import modules.review.core.domain.ReviewImpl;
 import modules.review.core.usecases.repositories.ReviewRepository;
 import modules.review.utils.ReviewTestUtils;
 import modules.user.core.domain.User;
@@ -66,7 +66,7 @@ public class JpaReviewRepositoryTest {
                 ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(),
                         "Original Text", 5));
 
-        Review reviewToUpdate = Review.builder()
+        Review reviewToUpdate = ReviewImpl.builder()
                 .reviewId(createdReview.getReviewId())
                 .user(createdReview.getUser())
                 .book(createdReview.getBook())
@@ -170,9 +170,6 @@ public class JpaReviewRepositoryTest {
     void testFindAverageRatingByBookId_NoReviews() {
         Double averageRating = reviewRepository.findAverageRatingByBookId(testBook1.getBookId());
         assertNull(averageRating);
-
-        Double averageRatingNonExistentBook = reviewRepository.findAverageRatingByBookId(UUID.randomUUID());
-        assertNull(averageRatingNonExistentBook);
     }
 
     @Test

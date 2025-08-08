@@ -1,27 +1,31 @@
 package modules.readinglist.usecases;
 
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.BookService;
 import modules.readinglist.core.domain.ReadingList;
+import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.ReadingListServiceImpl;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
-import modules.catalog.utils.CatalogTestUtils;
-import modules.readinglist.utils.ReadingListTestUtils;
+import modules.readinglist.web.dto.ReadingListRequestDTO;
 import modules.user.core.domain.User;
-import modules.user.utils.UserTestUtils;
-
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserService;
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import java.util.List;
+
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotFoundException;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,122 +37,106 @@ public class ReadingListServiceImplTest {
     @Mock
     private BookService bookService;
 
+    @Mock
+    private UserService userService;
+    
+    @Mock
+    private JsonWebToken jwt;
+
     @InjectMocks
     private ReadingListServiceImpl readingListService;
 
-    @Test
-    void findReadingListById_shouldReturnEnrichedList_whenBooksExist() {
-        UUID readingListId = UUID.randomUUID();
-        Book book1 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
-        Book book2 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
-        ReadingList partialList = ReadingListTestUtils.createValidReadingListWithIdAndBookStubs(readingListId, List.of(book1, book2));
-
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(partialList));
-        when(bookService.getBookById(book1.getBookId())).thenReturn(Optional.of(book1));
-        when(bookService.getBookById(book2.getBookId())).thenReturn(Optional.of(book2));
-
-        Optional<ReadingList> result = readingListService.findReadingListById(readingListId);
-
-        assertTrue(result.isPresent());
-        assertEquals(2, result.get().getBooks().size());
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(bookService, times(2)).getBookById(any(UUID.class));
-    }
-
-    @Test
-    void getReadingListsForUserSuccessful() {
-        User user = UserTestUtils.createValidUser();
-        Book book1 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
-        ReadingList list1 = ReadingListTestUtils.createValidReadingListForUserWithBooks(user, "List 1", List.of(book1));
-
-        when(readingListRepository.findByUserId(user.getKeycloakUserId())).thenReturn(List.of(list1));
-        when(bookService.getBookById(book1.getBookId())).thenReturn(Optional.of(book1));
-
-        List<ReadingList> result = readingListService.getReadingListsForUser(user.getKeycloakUserId());
-
-        assertEquals(1, result.size());
-        assertEquals(1, result.get(0).getBooks().size());
-        verify(readingListRepository, times(1)).findByUserId(user.getKeycloakUserId());
-        verify(bookService, times(1)).getBookById(book1.getBookId());
-    }
-
-    @Test
-    void getBooksInReadingListSuccessful() {
-        UUID readingListId = UUID.randomUUID();
-        Book book1 = CatalogTestUtils.createValidBookWithId(UUID.randomUUID());
-        ReadingList partialList = ReadingListTestUtils.createValidReadingListWithIdAndBookStubs(readingListId, List.of(book1));
-
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(partialList));
-        when(bookService.getBookById(book1.getBookId())).thenReturn(Optional.of(book1));
-
-        List<Book> result = readingListService.getBooksInReadingList(readingListId);
-
-        assertEquals(1, result.size());
-        assertEquals(book1, result.get(0));
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(bookService, times(1)).getBookById(book1.getBookId());
-    }
-
-    @Test
-    void addBookToReadingListSuccessful() {
-        UUID readingListId = UUID.randomUUID();
+    private User testUser;
+    private Book testBook;
+    private ReadingList testReadingList;
+    
+    @BeforeEach
+    void setUp() {
+        UUID userId = UUID.randomUUID();
         UUID bookId = UUID.randomUUID();
-        ReadingList readingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        Book book = CatalogTestUtils.createValidBookWithId(bookId);
+        UUID readingListId = UUID.randomUUID();
 
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(readingList));
-        when(bookService.getBookById(bookId)).thenReturn(Optional.of(book));
+        testUser = UserImpl.builder().keycloakUserId(userId).username("testuser").build();
+        testBook = BookImpl.builder().bookId(bookId).title("Test Book").build();
+        testReadingList = ReadingListImpl.builder().readingListId(readingListId).userId(userId).name("My List").build();
+    }
 
-        readingListService.addBookToReadingList(readingListId, bookId);
+    @Test
+    void testCreateReadingListSuccessful() {
+        ReadingListRequestDTO request = ReadingListRequestDTO.builder().name("New List").build();
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(userService.findUserProfileById(testUser.getKeycloakUserId(), jwt)).thenReturn(Optional.of(testUser));
+        when(readingListRepository.create(any(ReadingList.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        verify(readingListRepository, times(1)).findById(readingListId);
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(readingListRepository, times(1)).addBookToReadingList(eq(readingListId), eq(book));
+        ReadingList result = readingListService.createReadingList(request, jwt);
+
+        assertNotNull(result);
+        assertEquals("New List", result.getName());
+        assertEquals(testUser.getKeycloakUserId(), result.getUserId());
+        verify(readingListRepository, times(1)).create(any(ReadingList.class));
+    }
+
+    @Test
+    void testUpdateReadingListSuccessful() {
+        ReadingListRequestDTO request = ReadingListRequestDTO.builder().name("Updated Name").build();
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        when(readingListRepository.update(any(ReadingList.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReadingList result = readingListService.updateReadingList(testReadingList.getReadingListId(), request, jwt);
+
+        assertNotNull(result);
+        assertEquals("Updated Name", result.getName());
+        verify(readingListRepository, times(1)).update(any(ReadingList.class));
     }
     
     @Test
-    void createReadingListSuccessful() {
-        ReadingList readingListToCreate = ReadingListTestUtils.createValidReadingList();
-        when(readingListRepository.create(any(ReadingList.class))).thenReturn(readingListToCreate);
-        
-        ReadingList result = readingListService.createReadingList(readingListToCreate);
-        
-        assertEquals(readingListToCreate, result);
-        verify(readingListRepository).create(readingListToCreate);
-    }
-    
-    @Test
-    void updateReadingListFails() {
-        UUID readingListId = UUID.randomUUID();
-        ReadingList updatedReadingList = ReadingListTestUtils.createValidReadingListWithId(readingListId);
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.empty());
+    void testUpdateReadingListThrowsForbiddenForNonOwner() {
+        ReadingListRequestDTO request = ReadingListRequestDTO.builder().name("Updated Name").build();
+        UUID otherUserId = UUID.randomUUID();
+        when(jwt.getSubject()).thenReturn(otherUserId.toString());
+        when(jwt.getClaim("realm_access")).thenReturn(null);
+        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
 
-        assertThrows(IllegalArgumentException.class, () -> readingListService.updateReadingList(updatedReadingList));
-        
-        verify(readingListRepository).findById(readingListId);
-        verify(readingListRepository, never()).update(any());
+        assertThrows(ForbiddenException.class, () -> {
+            readingListService.updateReadingList(testReadingList.getReadingListId(), request, jwt);
+        });
+        verify(readingListRepository, never()).update(any(ReadingList.class));
     }
 
     @Test
-    void deleteReadingListByIdSuccessful() {
-        UUID readingListId = UUID.randomUUID();
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(ReadingListTestUtils.createValidReadingListWithId(readingListId)));
+    void testDeleteReadingListByIdSuccessful() {
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        doNothing().when(readingListRepository).deleteById(testReadingList.getReadingListId());
+
+        readingListService.deleteReadingListById(testReadingList.getReadingListId(), jwt);
+
+        verify(readingListRepository, times(1)).deleteById(testReadingList.getReadingListId());
+    }
+
+    @Test
+    void testAddBookToReadingListSuccessful() {
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.of(testBook));
+        doNothing().when(readingListRepository).addBookToReadingList(any(UUID.class), any(Book.class));
         
-        readingListService.deleteReadingListById(readingListId);
+        readingListService.addBookToReadingList(testReadingList.getReadingListId(), testBook.getBookId(), jwt);
         
-        verify(readingListRepository).findById(readingListId);
-        verify(readingListRepository).deleteById(readingListId);
+        verify(readingListRepository, times(1)).addBookToReadingList(testReadingList.getReadingListId(), testBook);
     }
     
     @Test
-    void removeBookFromReadingListSuccessful() {
-        UUID readingListId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
-        when(readingListRepository.findById(readingListId)).thenReturn(Optional.of(ReadingListTestUtils.createValidReadingListWithId(readingListId)));
-        
-        readingListService.removeBookFromReadingList(readingListId, bookId);
-        
-        verify(readingListRepository).findById(readingListId);
-        verify(readingListRepository).removeBookFromReadingList(readingListId, bookId);
+    void testAddBookToReadingListFailsForNonExistentBook() {
+        UUID nonExistentBookId = UUID.randomUUID();
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        when(bookService.getBookById(nonExistentBookId)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> {
+            readingListService.addBookToReadingList(testReadingList.getReadingListId(), nonExistentBookId, jwt);
+        });
+        verify(readingListRepository, never()).addBookToReadingList(any(), any());
     }
 }

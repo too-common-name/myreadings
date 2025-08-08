@@ -19,7 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
-@IfBuildProperty(name = "app.book.repository.type", stringValue = "jpa", enableIfMissing = true)
+@IfBuildProperty(name = "app.repository.type", stringValue = "jpa", enableIfMissing = true)
 public class JpaBookRepository implements BookRepository {
 
     private static final Logger LOGGER = Logger.getLogger(JpaBookRepository.class);
@@ -38,7 +38,7 @@ public class JpaBookRepository implements BookRepository {
 
     @Override
     public Book save(Book book) {
-        LOGGER.debugf("JPA: Persisting entity for book ID: %s", book.getBookId());
+        LOGGER.debugf("JPA: Saving or updating book entity with ID: %s", book.getBookId());
         BookEntity entity = mapper.toEntity(book);
         if (entity.getBookId() == null) {
             entityManager.persist(entity);
@@ -50,12 +50,14 @@ public class JpaBookRepository implements BookRepository {
 
     @Override
     public Optional<Book> findById(UUID bookId) {
+        LOGGER.debugf("JPA: Finding book entity by ID: %s", bookId);
         return Optional.ofNullable(entityManager.find(BookEntity.class, bookId))
                 .map(mapper::toDomain);
     }
 
     @Override
     public List<Book> findAll(String sort, String order, Integer limit) {
+        LOGGER.debugf("JPA: Finding all book entities with params [sort: %s, order: %s, limit: %d]", sort, order, limit);
         StringBuilder jpql = new StringBuilder("SELECT b FROM BookEntity b");
 
         if (sort != null && !sort.trim().isEmpty()) {
@@ -82,13 +84,16 @@ public class JpaBookRepository implements BookRepository {
 
     @Override
     public void deleteById(UUID bookId) {
-        LOGGER.debugf("JPA: Deleting entity for book ID: %s", bookId);
-        Optional.ofNullable(entityManager.find(BookEntity.class, bookId))
-                .ifPresent(entityManager::remove);
+        LOGGER.debugf("JPA: Deleting book entity with ID: %s", bookId);
+        BookEntity entity = entityManager.find(BookEntity.class, bookId);
+        if (entity != null) {
+            entityManager.remove(entity);
+        }
     }
 
     @Override
     public DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder) {
+        LOGGER.debugf("JPA: Searching book entities with query: '%s', page: %d, size: %d", query, page, size);
         String lowerCaseQuery = "%" + query.toLowerCase() + "%";
         String countJpqlString = "SELECT COUNT(b) FROM BookEntity b WHERE LOWER(b.title) LIKE :query OR LOWER(b.description) LIKE :query";
         StringBuilder contentJpql = new StringBuilder("SELECT b FROM BookEntity b WHERE LOWER(b.title) LIKE :query OR LOWER(b.description) LIKE :query");

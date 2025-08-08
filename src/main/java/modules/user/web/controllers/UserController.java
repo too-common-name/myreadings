@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 import io.quarkus.security.Authenticated;
 import jakarta.ws.rs.core.SecurityContext;
@@ -24,6 +25,8 @@ import jakarta.ws.rs.core.SecurityContext;
 @Produces(MediaType.APPLICATION_JSON)
 @Authenticated
 public class UserController {
+
+    private static final Logger LOGGER = Logger.getLogger(UserController.class);
 
     @Inject
     UserService userService;
@@ -36,20 +39,19 @@ public class UserController {
 
     @GET
     @Path("/{userId}")
-    @RolesAllowed({"user", "admin"})
+    @RolesAllowed({ "user", "admin" })
     public Response getUserById(@PathParam("userId") UUID userId) {
-        UUID authenticatedUserId = UUID.fromString(jwt.getClaim("sub"));
+        LOGGER.infof("Received request to get user profile by ID: %s", userId);
 
-        if ((authenticatedUserId != null && (authenticatedUserId.equals(userId)) || ctx.isUserInRole("admin"))) {
-            Optional<User> userOptional = userService.findUserProfileById(userId);
-            if (userOptional.isPresent()) {
-                UserResponseDTO responseDTO = mapToUserResponseDTO(userOptional.get());
-                return Response.ok(responseDTO).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).build();
-            }
+        Optional<User> userOptional = userService.findUserProfileById(userId, jwt);
+
+        if (userOptional.isPresent()) {
+            LOGGER.debugf("User profile found for ID: %s", userId);
+            UserResponseDTO responseDTO = mapToUserResponseDTO(userOptional.get());
+            return Response.ok(responseDTO).build();
         } else {
-            return Response.status(Response.Status.FORBIDDEN).entity("Access denied.").build();
+            LOGGER.warnf("User profile not found for ID: %s", userId);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
     }
 

@@ -21,6 +21,7 @@ public class InMemoryBookRepository implements BookRepository {
 
     @Override
     public Book save(Book book) {
+        LOGGER.debugf("In-memory: Saving or updating book with ID: %s", book.getBookId());
         UUID bookId = book.getBookId() != null ? book.getBookId() : UUID.randomUUID();
         
         Book bookToSave = BookImpl.builder()
@@ -38,12 +39,12 @@ public class InMemoryBookRepository implements BookRepository {
                 .build();
 
         books.put(bookToSave.getBookId(), bookToSave);
-        LOGGER.debugf("In-memory: Saved or updated book with ID: %s", bookToSave.getBookId());
         return bookToSave;
     }
 
     @Override
     public Optional<Book> findById(UUID bookId) {
+        LOGGER.debugf("In-memory: Finding book by ID: %s", bookId);
         return Optional.ofNullable(books.get(bookId));
     }
 

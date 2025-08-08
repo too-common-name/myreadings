@@ -3,6 +3,7 @@ package modules.review.infrastructure;
 import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewImpl;
 import modules.review.infrastructure.persistence.in_memory.InMemoryReviewRepository;
 import modules.review.utils.ReviewTestUtils;
 import modules.user.core.domain.User;
@@ -29,12 +30,11 @@ public class InMemoryReviewRepositoryTest {
     @BeforeEach
     void setUp() {
         reviewRepository = new InMemoryReviewRepository();
-        
         testUser1 = UserTestUtils.createValidUser();
         testBook1 = CatalogTestUtils.createValidBook();
     }
 
-     @Test
+    @Test
     void testCreateAndFindById() {
         Review reviewToCreate = ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(),
                 testBook1.getBookId(), "Great book!", 5);
@@ -55,7 +55,7 @@ public class InMemoryReviewRepositoryTest {
                 ReviewTestUtils.createValidReviewForUserAndBook(testUser1.getKeycloakUserId(), testBook1.getBookId(),
                         "Original Text", 5));
 
-        Review reviewToUpdate = Review.builder()
+        Review reviewToUpdate = ReviewImpl.builder()
                 .reviewId(createdReview.getReviewId())
                 .user(createdReview.getUser())
                 .book(createdReview.getBook())

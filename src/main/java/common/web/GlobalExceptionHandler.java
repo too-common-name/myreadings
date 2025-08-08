@@ -1,6 +1,7 @@
 package common.web;
 
 import org.jboss.logging.Logger;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.ext.ExceptionMapper;
@@ -13,6 +14,10 @@ public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
 
     @Override
     public Response toResponse(Exception exception) {
+        if (exception instanceof WebApplicationException) {
+            return ((WebApplicationException) exception).getResponse();
+        }
+        
         LOGGER.error("Unhandled exception caught by global handler", exception);
 
         String jsonError = "{\"error\":\"An internal server error occurred. Please reference the traceId in the logs.\"}";

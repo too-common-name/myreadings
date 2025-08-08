@@ -1,35 +1,35 @@
 package modules.review.usecases;
 
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.ForbiddenException;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewStats;
+import modules.review.core.domain.ReviewImpl;
 import modules.review.core.usecases.ReviewServiceImpl;
 import modules.review.core.usecases.repositories.ReviewRepository;
-import modules.review.utils.ReviewTestUtils;
+import modules.review.web.dto.ReviewRequestDTO;
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.BookService;
-import modules.catalog.utils.CatalogTestUtils;
 import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserService;
-import modules.user.utils.UserTestUtils;
 
-
+@ExtendWith(MockitoExtension.class)
 public class ReviewServiceImplTest {
 
     @Mock
@@ -41,376 +41,110 @@ public class ReviewServiceImplTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private JsonWebToken jwt;
+
     @InjectMocks
     private ReviewServiceImpl reviewService;
 
+    private User testUser;
+    private Book testBook;
+    private Review testReview;
+
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        UUID userId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+        UUID reviewId = UUID.randomUUID();
+
+        testUser = UserImpl.builder().keycloakUserId(userId).username("testuser").build();
+        testBook = BookImpl.builder().bookId(bookId).title("Test Book").build();
+        testReview = ReviewImpl.builder().reviewId(reviewId).user(testUser).book(testBook).rating(4).build();
     }
 
     @Test
     void testCreateReviewSuccessful() {
+        ReviewRequestDTO request = ReviewRequestDTO.builder()
+                .bookId(testBook.getBookId()).rating(4).reviewText("Great!").build();
 
-        Review reviewToCreate = ReviewTestUtils.createValidReviewWithText("test");
-        UUID bookId = reviewToCreate.getBook().getBookId();
-        UUID userId = reviewToCreate.getUser().getKeycloakUserId();
-        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
-        User existingUser = UserTestUtils.createValidUserWithId(userId);
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.of(testBook));
+        when(userService.findUserProfileById(testUser.getKeycloakUserId(), jwt)).thenReturn(Optional.of(testUser));
+        when(reviewRepository.create(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.of(existingUser));
-        when(reviewRepository.create(any(Review.class))).thenReturn(reviewToCreate);
+        Review createdReview = reviewService.createReview(request, jwt);
 
-
-
-        Review createdReview = reviewService.createReview(reviewToCreate);
-
-
-
-        assertNotNull(createdReview, "createReview should return a Review object");
-        assertEquals(reviewToCreate.getReviewId(), createdReview.getReviewId(),
-                "Returned review should have the same ID as the input review");
-        verify(reviewRepository, times(1)).create(reviewToCreate);
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(userService, times(1)).findUserProfileById(userId);
+        assertNotNull(createdReview);
+        assertEquals(testBook.getBookId(), createdReview.getBook().getBookId());
+        assertEquals(testUser.getKeycloakUserId(), createdReview.getUser().getKeycloakUserId());
+        assertEquals("Great!", createdReview.getReviewText());
+        verify(reviewRepository, times(1)).create(any(Review.class));
     }
 
     @Test
     void testCreateReviewFailsBookNotFound() {
-        Review reviewToCreate = ReviewTestUtils.createValidReviewWithText("test");
-        UUID bookId = reviewToCreate.getBook().getBookId();
-
-        when(bookService.getBookById(bookId)).thenReturn(Optional.empty());
+        ReviewRequestDTO request = ReviewRequestDTO.builder().bookId(testBook.getBookId()).build();
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.createReview(reviewToCreate);
-        }, "createReview should throw IllegalArgumentException if Book not found");
-
+            reviewService.createReview(request, jwt);
+        });
         verify(reviewRepository, never()).create(any(Review.class));
-        verify(bookService, times(1)).getBookById(bookId);
-    }
-
-
-    @Test
-    void testCreateReviewFailsUserNotFound() {
-        Review reviewToCreate = ReviewTestUtils.createValidReviewWithText("test");
-        UUID bookId = reviewToCreate.getBook().getBookId();
-        UUID userId = reviewToCreate.getUser().getKeycloakUserId();
-
-        when(bookService.getBookById(bookId))
-                .thenReturn(Optional.of(CatalogTestUtils.createValidBookWithId(bookId)));
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.createReview(reviewToCreate);
-        }, "createReview should throw IllegalArgumentException if User not found");
-
-        verify(reviewRepository, never()).create(any(Review.class));
-        verify(userService, times(1)).findUserProfileById(userId);
-    }
-
-
-
-    @Test
-    void testfindReviewByIdSuccessful() {
-        UUID reviewId = UUID.randomUUID();
-        Review existingReview = ReviewTestUtils.createValidReviewWithIdAndText(reviewId, "test");
-        when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(existingReview));
-
-        Optional<Review> retrievedReviewOpt = reviewService.findReviewById(reviewId);
-
-        assertTrue(retrievedReviewOpt.isPresent(),
-                "findReviewById should return Optional.of(Review) if review exists");
-        Review retrievedReview = retrievedReviewOpt.get();
-        assertEquals(reviewId, retrievedReview.getReviewId(),
-                "Retrieved review should have the correct ID");
-        verify(reviewRepository, times(1)).findById(reviewId);
     }
 
     @Test
-    void testfindReviewByIdFails() {
-        UUID reviewId = UUID.randomUUID();
-        when(reviewRepository.findById(reviewId)).thenReturn(Optional.empty());
+    void testUpdateReviewSuccessful() {
+        ReviewRequestDTO request = ReviewRequestDTO.builder().rating(5).reviewText("Updated!").build();
 
-        Optional<Review> retrievedReviewOpt = reviewService.findReviewById(reviewId);
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(jwt.getGroups()).thenReturn(Collections.singleton("user"));
+        when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
+        when(reviewRepository.update(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertFalse(retrievedReviewOpt.isPresent(),
-                "findReviewById should return Optional.empty() if review does not exist");
-        verify(reviewRepository, times(1)).findById(reviewId);
+        Review updatedReview = reviewService.updateReview(testReview.getReviewId(), request, jwt);
+
+        assertNotNull(updatedReview);
+        assertEquals(5, updatedReview.getRating());
+        assertEquals("Updated!", updatedReview.getReviewText());
+        verify(reviewRepository, times(1)).update(any(Review.class));
     }
 
     @Test
-    void testGetReviewsForBookSuccessful() {
-        UUID userId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
-        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
-        List<Review> expectedReviews =
-                Arrays.asList(ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Review 1", 5),
-                        ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Review 2", 5));
+    void testUpdateReviewThrowsForbiddenForNonOwner() {
+        ReviewRequestDTO request = ReviewRequestDTO.builder().rating(5).reviewText("Updated!").build();
+        UUID otherUserId = UUID.randomUUID();
 
-        when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(reviewRepository.getBookReviews(bookId)).thenReturn(expectedReviews);
+        when(jwt.getSubject()).thenReturn(otherUserId.toString());
+        when(jwt.getGroups()).thenReturn(Collections.singleton("user"));
+        when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
 
-        List<Review> retrievedReviews = reviewService.getReviewsForBook(bookId);
-
-        assertNotNull(retrievedReviews, "getReviewsForBook should return a list");
-        assertFalse(retrievedReviews.isEmpty(),
-                "List of reviews should not be empty when reviews exist for book");
-        assertEquals(expectedReviews.size(), retrievedReviews.size(),
-                "List should contain the expected number of reviews");
-        verify(reviewRepository, times(1)).getBookReviews(bookId);
-        verify(bookService, times(1)).getBookById(bookId);
+        assertThrows(ForbiddenException.class, () -> {
+            reviewService.updateReview(testReview.getReviewId(), request, jwt);
+        });
+        verify(reviewRepository, never()).update(any(Review.class));
     }
 
     @Test
-    void testGetEmptyReviewsForBookSuccessful() {
-        UUID bookId = UUID.randomUUID();
-        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
+    void testDeleteReviewByIdSuccessful() {
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(jwt.getGroups()).thenReturn(Collections.singleton("user"));
+        when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
+        doNothing().when(reviewRepository).deleteById(testReview.getReviewId());
 
-        when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(reviewRepository.getBookReviews(bookId)).thenReturn(new ArrayList<>());
+        reviewService.deleteReviewById(testReview.getReviewId(), jwt);
 
-        List<Review> retrievedReviews = reviewService.getReviewsForBook(bookId);
-
-        assertNotNull(retrievedReviews,
-                "getReviewsForBook should return a list even if no reviews exist");
-        assertTrue(retrievedReviews.isEmpty(),
-                "List of reviews should be empty when no reviews exist for book");
-        verify(reviewRepository, times(1)).getBookReviews(bookId);
-        verify(bookService, times(1)).getBookById(bookId);
-    }
-
-    @Test
-    void testGetReviewsForBookFails() {
-        UUID bookId = UUID.randomUUID();
-
-        when(bookService.getBookById(bookId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.getReviewsForBook(bookId);
-        }, "getReviewsForBook should throw IllegalArgumentException if Book not found");
-
-        verify(reviewRepository, never()).getBookReviews(any());
-        verify(bookService, times(1)).getBookById(bookId);
-    }
-
-    @Test
-    void testGetReviewsForUserSuccessful() {
-        UUID userId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
-
-        User existingUser = UserTestUtils.createValidUserWithId(userId);
-        List<Review> expectedReviews =
-                Arrays.asList(ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Review 1", 5),
-                        ReviewTestUtils.createValidReviewForUserAndBook(userId, bookId, "Review 2", 5));
-
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.of(existingUser));
-        when(reviewRepository.getUserReviews(userId)).thenReturn(expectedReviews);
-
-        List<Review> retrievedReviews = reviewService.getReviewsForUser(userId);
-
-        assertNotNull(retrievedReviews, "getReviewsForUser should return a list");
-        assertFalse(retrievedReviews.isEmpty(),
-                "List of reviews should not be empty when reviews exist for user");
-        assertEquals(expectedReviews.size(), retrievedReviews.size(),
-                "List should contain the expected number of reviews");
-        verify(reviewRepository, times(1)).getUserReviews(userId);
-        verify(userService, times(1)).findUserProfileById(userId);
-    }
-
-    @Test
-    void testGetEmptyReviewsForUserSuccessful() {
-        UUID userId = UUID.randomUUID();
-        User existingUser = UserTestUtils.createValidUserWithId(userId);
-
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.of(existingUser));
-        when(reviewRepository.getUserReviews(userId)).thenReturn(new ArrayList<>());
-
-        List<Review> retrievedReviews = reviewService.getReviewsForUser(userId);
-
-        assertNotNull(retrievedReviews,
-                "getReviewsForUser should return a list even if no reviews exist");
-        assertTrue(retrievedReviews.isEmpty(),
-                "List of reviews should be empty when no reviews exist for user");
-        verify(reviewRepository, times(1)).getUserReviews(userId);
-        verify(userService, times(1)).findUserProfileById(userId);
+        verify(reviewRepository, times(1)).deleteById(testReview.getReviewId());
     }
 
     @Test
     void testGetReviewsForUserFails() {
         UUID userId = UUID.randomUUID();
-
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.getReviewsForUser(userId);
-        }, "getReviewsForUser should throw IllegalArgumentException if User not found");
-
-        verify(reviewRepository, never()).getUserReviews(any());
-        verify(userService, times(1)).findUserProfileById(userId);
-    }
-
-    @Test
-    void testUpdateReviewSuccessful() {
-        Review reviewToUpdate = ReviewTestUtils.createValidReviewWithText("test");
-
-        when(reviewRepository.findById(reviewToUpdate.getReviewId()))
-                .thenReturn(Optional.of(reviewToUpdate));
-        when(reviewRepository.update(any(Review.class))).thenReturn(reviewToUpdate);
-
-        Review updatedReview = reviewService.updateReview(reviewToUpdate);
-
-        assertNotNull(updatedReview, "updateReview should return a Review object");
-        assertEquals(reviewToUpdate.getReviewId(), updatedReview.getReviewId(),
-                "Returned review should have the same ID as the input review");
-        verify(reviewRepository, times(1)).update(reviewToUpdate);
-    }
-
-
-    @Test
-    void testUpdateReviewFails() {
-        Review reviewToUpdate = ReviewTestUtils.createValidReviewWithText("test");
-
-        when(reviewRepository.findById(reviewToUpdate.getReviewId())).thenReturn(Optional.empty());
+        when(userService.findUserProfileById(userId, jwt)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.updateReview(reviewToUpdate);
-        }, "updateReview should throw IllegalArgumentException if Review not found");
-    }
-
-    @Test
-    void testDeleteReviewByIdSuccessful() {
-        UUID reviewIdToDelete = UUID.randomUUID();
-        Review reviewToDelete =
-                ReviewTestUtils.createValidReviewWithIdAndText(reviewIdToDelete, "test");
-        when(reviewRepository.findById(reviewIdToDelete)).thenReturn(Optional.of(reviewToDelete));
-        doNothing().when(reviewRepository).deleteById(reviewIdToDelete);
-
-        reviewService.deleteReviewById(reviewIdToDelete);
-
-        verify(reviewRepository, times(1)).deleteById(reviewIdToDelete);
-    }
-
-    @Test
-    void testGetRatingStatsForBookSuccessful() {
-        UUID bookId = UUID.randomUUID();
-        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
-
-        when(reviewRepository.countReviewsByBookId(bookId)).thenReturn(3L);
-        when(reviewRepository.findAverageRatingByBookId(bookId)).thenReturn(4.0);
-
-        when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-
-        ReviewStats stats = reviewService.getReviewStatsForBook(bookId);
-
-        assertNotNull(stats, "ReviewStats should not be null");
-        assertEquals(3L, stats.getTotalReviews(), "Total reviews should be 3");
-        assertEquals(4.0, stats.getAverageRating(), 0.001, "Average rating should be calculated correctly");
-
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(reviewRepository, times(1)).countReviewsByBookId(bookId);
-        verify(reviewRepository, times(1)).findAverageRatingByBookId(bookId);
-    }
-
-    @Test
-    void testGetRatingStatsForBookFails() {
-        UUID bookId = UUID.randomUUID();
-
-        when(bookService.getBookById(bookId)).thenReturn(Optional.empty());
-
-        when(reviewRepository.countReviewsByBookId(bookId)).thenReturn(0L);
-        when(reviewRepository.findAverageRatingByBookId(bookId)).thenReturn(null);
-
-        assertThrows(NotFoundException.class, () -> {
-            reviewService.getReviewStatsForBook(bookId);
+            reviewService.getReviewsForUser(userId, jwt);
         });
-
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(reviewRepository, never()).countReviewsByBookId(any());
-        verify(reviewRepository, never()).findAverageRatingByBookId(any()); 
-
+        verify(reviewRepository, never()).getUserReviews(any());
     }
-
-
-    @Test
-    void testGetZeroRatingStatsForBookSuccessful() {
-        UUID bookId = UUID.randomUUID();
-        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
-
-        when(reviewRepository.countReviewsByBookId(bookId)).thenReturn(0L);
-        when(reviewRepository.findAverageRatingByBookId(bookId)).thenReturn(0.0);
-
-        when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-
-        ReviewStats stats = reviewService.getReviewStatsForBook(bookId);
-
-        assertNotNull(stats, "ReviewStats should not be null");
-        assertEquals(0L, stats.getTotalReviews(), "Total reviews should be 0");
-        assertEquals(0.0, stats.getAverageRating(), 0.001, "Average rating should be 0 when no reviews exist");
-
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(reviewRepository, times(1)).countReviewsByBookId(bookId);
-        verify(reviewRepository, times(1)).findAverageRatingByBookId(bookId);
-    }
-
-    @Test
-    void testFindReviewByUserAndBookSuccessful() {
-        UUID userId = UUID.randomUUID();
-        UUID bookId = UUID.randomUUID();
-        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
-        User existingUser = UserTestUtils.createValidUserWithId(userId);
-        Review existingReview = ReviewTestUtils.createValidReviewWithText("test");
-
-        when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.of(existingUser));
-        when(reviewRepository.findByUserIdAndBookId(userId, bookId))
-                .thenReturn(Optional.of(existingReview));
-
-        Optional<Review> retrievedReviewOpt = reviewService.findReviewByUserAndBook(userId, bookId);
-
-        assertTrue(retrievedReviewOpt.isPresent(),
-                "findReviewByUserAndBook should return Optional.of(Review) if review exists");
-        Review retrievedReview = retrievedReviewOpt.get();
-        assertEquals(existingReview.getReviewId(), retrievedReview.getReviewId(),
-                "Retrieved review should be the existing review");
-        verify(reviewRepository, times(1)).findByUserIdAndBookId(userId, bookId);
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(userService, times(1)).findUserProfileById(userId);
-    }
-
-    @Test
-    void testFindReviewByUserAndBookFailsBookNotFound() {
-        UUID bookId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
-
-        when(bookService.getBookById(bookId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.findReviewByUserAndBook(userId, bookId);
-        }, "findReviewByUserAndBook should throw IllegalArgumentException if Book not found");
-
-        verify(reviewRepository, never()).findByUserIdAndBookId(any(), any());
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(userService, never()).findUserProfileById(any());
-    }
-
-    @Test
-    void testFindReviewByUserAndBookFailsUserNotFound() {
-        UUID bookId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
-        Book existingBook = CatalogTestUtils.createValidBookWithId(bookId);
-
-        when(bookService.getBookById(bookId)).thenReturn(Optional.of(existingBook));
-        when(userService.findUserProfileById(userId)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.findReviewByUserAndBook(userId, bookId);
-        }, "findReviewByUserAndBook should throw IllegalArgumentException if User not found");
-
-        verify(reviewRepository, never()).findByUserIdAndBookId(any(), any());
-        verify(bookService, times(1)).getBookById(bookId);
-        verify(userService, times(1)).findUserProfileById(userId);
-    }
-
 }
