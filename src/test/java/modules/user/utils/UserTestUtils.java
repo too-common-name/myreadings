@@ -18,7 +18,7 @@ public class UserTestUtils {
                 .lastName(user.getLastName())
                 .email(user.getEmail());
     }
-    
+
     public static User createValidUser() {
         return createValidUserWithId(UUID.randomUUID());
     }
@@ -26,6 +26,12 @@ public class UserTestUtils {
     public static User createValidUserWithId(UUID userId) {
         return UserImpl.builder().keycloakUserId(userId).firstName("Test").lastName("User")
                 .username("tu" + userId).email("test.user" + userId + "@example.com")
+                .themePreference(UiTheme.LIGHT).build();
+    }
+
+    public static User createValidUserWithIdAndUsername(UUID userId, String username) {
+        return UserImpl.builder().keycloakUserId(userId).firstName("Test").lastName("User")
+                .username(username).email("test.user" + userId + "@example.com")
                 .themePreference(UiTheme.LIGHT).build();
     }
 }

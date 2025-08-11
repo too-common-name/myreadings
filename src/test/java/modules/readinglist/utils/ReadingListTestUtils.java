@@ -69,4 +69,14 @@ public class ReadingListTestUtils {
                 .books(books)
                 .build();
     }
+
+    public static ReadingListImpl.ReadingListImplBuilder from(ReadingList list) {
+        return ReadingListImpl.builder()
+                .readingListId(list.getReadingListId())
+                .user(list.getUser())
+                .name(list.getName())
+                .description(list.getDescription())
+                .creationDate(list.getCreationDate())
+                .books(list.getBooks());
+    }
 }
