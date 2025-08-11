@@ -132,7 +132,6 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    @Transactional
     public Review updateReview(UUID reviewId, ReviewRequestDTO reviewRequest, JsonWebToken principal) {
         LOGGER.infof("Attempting to update review with ID: %s", reviewId);
         Review existingReview = findReviewAndCheckOwnership(reviewId, principal);
@@ -146,7 +145,12 @@ public class ReviewServiceImpl implements ReviewService {
                 .rating(reviewRequest.getRating())
                 .build();
 
-        return reviewRepository.update(updatedReview);
+        return updateExistingReview(updatedReview);
+    }
+    
+    @Transactional
+    protected Review updateExistingReview(Review review) {
+        return reviewRepository.update(review);
     }
 
     @Override
