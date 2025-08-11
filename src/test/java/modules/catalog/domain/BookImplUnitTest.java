@@ -1,4 +1,3 @@
-// FILE AGGIORNATO: src/test/java/modules/catalog/domain/BookImplUnitTest.java
 package modules.catalog.domain;
 
 import jakarta.validation.ConstraintViolation;
@@ -32,15 +31,15 @@ public class BookImplUnitTest {
     }
 
     @Test
-    void createBookWithValidDataSuccessful() {
+    void shouldCreateBookSuccessfullyWhenDataIsValid() {
         Book book = createValidBookBuilder().build();
         Set<ConstraintViolation<Book>> violations = validator.validate(book);
-        assertTrue(violations.isEmpty(), "No validation errors expected for a valid Book");
+        assertTrue(violations.isEmpty());
     }
 
-    @ParameterizedTest(name = "Validation should fail for {0} with value ''{1}''")
+    @ParameterizedTest(name = "Validation for {0} should fail")
     @MethodSource("provideInvalidBookArguments")
-    void bookValidationFailsForInvalidFields(String fieldName, Object invalidValue) {
+    void shouldFailValidationWhenFieldIsInvalid(String fieldName, Object invalidValue) {
         BookImpl.BookImplBuilder builder = createValidBookBuilder();
 
         switch (fieldName) {
@@ -75,26 +74,21 @@ public class BookImplUnitTest {
         Book book = builder.build();
         Set<ConstraintViolation<Book>> violations = validator.validate(book);
 
-        assertFalse(violations.isEmpty(), "Validation should fail for " + fieldName);
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals(fieldName)),
-                "Validation error should be on field '" + fieldName + "'");
+        assertFalse(violations.isEmpty());
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals(fieldName)));
     }
 
     private static Stream<Arguments> provideInvalidBookArguments() {
-        String longString256 = ".".repeat(256);
-        String longString501 = ".".repeat(501);
-        String longString51 = ".".repeat(51);
-
         return Stream.of(
             Arguments.of("isbn", ""),
             Arguments.of("title", ""),
-            Arguments.of("title", longString256),
+            Arguments.of("title", ".".repeat(256)),
             Arguments.of("pageCount", -1),
             Arguments.of("publicationDate", LocalDate.now().plusDays(1)),
-            Arguments.of("description", longString501),
-            Arguments.of("publisher", longString256),
-            Arguments.of("coverImageId", longString256),
-            Arguments.of("originalLanguage", longString51)
+            Arguments.of("description", ".".repeat(501)),
+            Arguments.of("publisher", ".".repeat(256)),
+            Arguments.of("coverImageId", ".".repeat(256)),
+            Arguments.of("originalLanguage", ".".repeat(51))
         );
     }
 
