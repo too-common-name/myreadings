@@ -76,14 +76,26 @@ public class JpaReadingListRepository implements ReadingListRepository {
     public void addBookToReadingList(UUID readingListId, UUID bookId) {
         LOGGER.debugf("JPA: Adding book %s to list %s", bookId, readingListId);
         ReadingListEntity listEntity = entityManager.find(ReadingListEntity.class, readingListId);
-        if (listEntity != null) {
-            ReadingListItemEntity newItem = new ReadingListItemEntity();
-            newItem.setId(new ReadingListItemId(readingListId, bookId));
-            newItem.setReadingList(listEntity);
-            if (!listEntity.getItems().contains(newItem)) {
-                entityManager.persist(newItem);
-            }
+        if (listEntity == null) {
+            throw new IllegalArgumentException("ReadingList with ID " + readingListId + " not found.");
         }
+
+        String jpqlCheck = "SELECT COUNT(i) FROM ReadingListItemEntity i WHERE i.id.readingListId = :listId AND i.id.bookId = :bookId";
+        Long count = entityManager.createQuery(jpqlCheck, Long.class)
+                .setParameter("listId", readingListId)
+                .setParameter("bookId", bookId)
+                .getSingleResult();
+
+        if (count > 0) {
+            return;
+        }
+
+        ReadingListItemEntity newItem = new ReadingListItemEntity();
+        newItem.setId(new ReadingListItemId(readingListId, bookId));
+        newItem.setReadingList(listEntity);
+
+        listEntity.getItems().add(newItem);
+        entityManager.merge(listEntity);
     }
 
     @Override
