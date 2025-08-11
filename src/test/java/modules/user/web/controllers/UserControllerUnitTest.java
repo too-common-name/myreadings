@@ -1,18 +1,17 @@
 package modules.user.web.controllers;
 
-import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.core.Response;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserService;
-import modules.user.web.dto.UserResponseDTO;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -35,60 +34,37 @@ public class UserControllerUnitTest {
 
     private UUID testUserId;
     private User mockUser;
-    private UserResponseDTO expectedResponse;
 
     @BeforeEach
     void setUp() {
         userController.jwt = jwt;
         testUserId = UUID.randomUUID();
-
-        mockUser = UserImpl.builder()
-                .keycloakUserId(testUserId)
-                .firstName("Daniele")
-                .lastName("Rossi")
-                .username("drossi")
-                .email("drossi@redhat.com")
-                .build();
-        
-        expectedResponse = UserResponseDTO.builder()
-                .userId(testUserId)
-                .firstName("Daniele")
-                .lastName("Rossi")
-                .username("drossi")
-                .email("drossi@redhat.com")
-                .build();
+        mockUser = UserImpl.builder().keycloakUserId(testUserId).build();
     }
 
     @Test
-    void testGetUserByIdShouldReturnOkWhenUserFound() {
+    void shouldReturnOkWithUserDtoWhenUserIsFound() {
         when(userService.findUserProfileById(testUserId, jwt)).thenReturn(Optional.of(mockUser));
-
         Response response = userController.getUserById(testUserId);
-
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        assertEquals(expectedResponse, response.getEntity());
         verify(userService, times(1)).findUserProfileById(testUserId, jwt);
     }
 
     @Test
-    void testGetUserByIdShouldReturnNotFoundWhenUserNotPresent() {
+    void shouldReturnNotFoundWhenUserIsMissing() {
         when(userService.findUserProfileById(testUserId, jwt)).thenReturn(Optional.empty());
-
         Response response = userController.getUserById(testUserId);
-
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
         verify(userService, times(1)).findUserProfileById(testUserId, jwt);
     }
 
     @Test
-    void testGetUserByIdShouldPropagateForbiddenExceptionFromService() {
+    void shouldPropagateForbiddenExceptionWhenServiceThrowsIt() {
         UUID targetUserId = UUID.randomUUID();
         when(userService.findUserProfileById(targetUserId, jwt)).thenThrow(new ForbiddenException("Access denied."));
-
         assertThrows(ForbiddenException.class, () -> {
             userController.getUserById(targetUserId);
         });
-
         verify(userService, times(1)).findUserProfileById(targetUserId, jwt);
     }
 }

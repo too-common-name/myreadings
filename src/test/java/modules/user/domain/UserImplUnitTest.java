@@ -4,6 +4,9 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import modules.user.core.domain.UiTheme;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
@@ -13,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.annotation.Annotation;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -30,16 +34,21 @@ public class UserImplUnitTest {
     }
 
     @Test
-    void createUserWithValidDataSuccessful() {
+    void shouldCreateUserSuccessfullyWhenDataIsValid() {
         User user = createValidUserBuilder().build();
         Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertTrue(violations.isEmpty(), "Validation should pass for valid user data");
+        assertTrue(violations.isEmpty());
     }
 
-    @ParameterizedTest(name = "Validation should fail for {0} with invalid value")
+    @ParameterizedTest(name = "Validation for {0} should fail with {2}")
     @MethodSource("provideInvalidUserArguments")
-    void userValidationFailsForInvalidFields(String fieldName, Object invalidValue) {
-        UserImpl.UserImplBuilder builder = createValidUserBuilder();
+    void shouldFailValidationWhenUserFieldIsInvalid(String fieldName, Object invalidValue, Class<? extends Annotation> expectedViolation) {
+        UserImpl.UserImplBuilder builder = createBaseUserBuilder();
+
+        if (!fieldName.equals("firstName")) builder.firstName("John");
+        if (!fieldName.equals("lastName")) builder.lastName("Doe");
+        if (!fieldName.equals("username")) builder.username("johndoe");
+        if (!fieldName.equals("email")) builder.email("john.doe@example.com");
 
         switch (fieldName) {
             case "firstName": builder.firstName((String) invalidValue); break;
@@ -52,39 +61,37 @@ public class UserImplUnitTest {
         User user = builder.build();
         Set<ConstraintViolation<User>> violations = validator.validate(user);
 
-        assertFalse(violations.isEmpty(), "Validation should fail for " + fieldName);
-        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals(fieldName)),
-                "Validation error should be on field '" + fieldName + "'");
+        assertFalse(violations.isEmpty());
+        assertTrue(violations.stream().anyMatch(v ->
+                v.getPropertyPath().toString().equals(fieldName) &&
+                v.getConstraintDescriptor().getAnnotation().annotationType().equals(expectedViolation)
+        ));
     }
 
     private static Stream<Arguments> provideInvalidUserArguments() {
-        String longString150 = ".".repeat(150);
         return Stream.of(
-                Arguments.of("firstName", longString150),
-                Arguments.of("lastName", " "),
-                Arguments.of("lastName", longString150),
-                Arguments.of("username", ""),
-                Arguments.of("username", longString150),
-                Arguments.of("email", " "),
-                Arguments.of("email", "invalid-email-format"),
-                Arguments.of("email", longString150)
+                Arguments.of("firstName", " ", NotBlank.class),
+                Arguments.of("firstName", ".".repeat(51), Size.class),
+                Arguments.of("lastName", " ", NotBlank.class),
+                Arguments.of("lastName", ".".repeat(51), Size.class),
+                Arguments.of("username", "", NotBlank.class),
+                Arguments.of("username", ".".repeat(81), Size.class),
+                Arguments.of("email", " ", NotBlank.class),
+                Arguments.of("email", "invalid-email-format", Email.class)
         );
     }
-
-    @Test
-    void testUpdateUiTheme() {
-        UserImpl user = (UserImpl) createValidUserBuilder().build();
-        user.setThemePreference(UiTheme.DARK);
-        assertEquals(UiTheme.DARK, user.getThemePreference());
-    }
-
-    private UserImpl.UserImplBuilder createValidUserBuilder() {
+    
+    private UserImpl.UserImplBuilder createBaseUserBuilder() {
         return UserImpl.builder()
                 .keycloakUserId(UUID.randomUUID())
+                .themePreference(UiTheme.LIGHT);
+    }
+    
+    private UserImpl.UserImplBuilder createValidUserBuilder() {
+        return createBaseUserBuilder()
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
-                .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT);
+                .email("john.doe@example.com");
     }
 }

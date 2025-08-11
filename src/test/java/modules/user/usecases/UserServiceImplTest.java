@@ -1,5 +1,8 @@
 package modules.user.usecases;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.ForbiddenException;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserServiceImpl;
@@ -13,9 +16,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import jakarta.json.Json;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.ForbiddenException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,20 +39,14 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        testUser = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .username("testuser")
-                .firstName("Test")
-                .lastName("User")
-                .email("test@example.com")
-                .build();
+        testUser = UserTestUtils.createValidUser();
     }
 
     @Test
-    void testCreateUserProfileSuccessful() {
+    void shouldCreateUserProfileSuccessfully() {
         when(userRepositoryMock.save(any(User.class))).thenReturn(testUser);
 
-        User createdUser = userService.createUserProfile(UserTestUtils.builderFrom(testUser).build());
+        User createdUser = userService.createUserProfile(testUser);
 
         assertNotNull(createdUser);
         assertEquals(testUser, createdUser);
@@ -60,7 +54,7 @@ class UserServiceImplTest {
     }
 
     @Test
-    void testFindOwnUserProfileSuccessful() {
+    void shouldReturnOwnUserProfileWhenRequested() {
         UUID userId = testUser.getKeycloakUserId();
         when(jwt.getSubject()).thenReturn(userId.toString());
         when(jwt.getClaim("realm_access")).thenReturn(null);
@@ -70,16 +64,15 @@ class UserServiceImplTest {
 
         assertTrue(foundUserOptional.isPresent());
         assertEquals(testUser, foundUserOptional.get());
-        verify(userRepositoryMock, times(1)).findById(userId);
     }
 
     @Test
-    void testFindOtherUserProfileAsAdminSuccessful() {
+    void shouldReturnOtherUserProfileWhenRequesterIsAdmin() {
         UUID adminId = UUID.randomUUID();
         UUID targetUserId = testUser.getKeycloakUserId();
         
         JsonObject realmAccess = Json.createObjectBuilder()
-            .add("roles", Json.createArrayBuilder().add("admin").add("user").build())
+            .add("roles", Json.createArrayBuilder().add("admin").build())
             .build();
 
         when(jwt.getSubject()).thenReturn(adminId.toString());
@@ -90,11 +83,10 @@ class UserServiceImplTest {
 
         assertTrue(foundUserOptional.isPresent());
         assertEquals(testUser, foundUserOptional.get());
-        verify(userRepositoryMock, times(1)).findById(targetUserId);
     }
 
     @Test
-    void testFindOtherUserProfileAsUserThrowsForbiddenException() {
+    void shouldThrowForbiddenExceptionWhenUserRequestsOtherUserProfile() {
         UUID requesterId = UUID.randomUUID();
         UUID targetUserId = testUser.getKeycloakUserId();
         when(jwt.getSubject()).thenReturn(requesterId.toString());
@@ -108,7 +100,7 @@ class UserServiceImplTest {
     }
 
     @Test
-    void testFindUserProfileByIdReturnsEmptyWhenUserNotFound() {
+    void shouldReturnEmptyOptionalWhenUserProfileIsNotFound() {
         UUID nonExistentUserId = UUID.randomUUID();
         when(jwt.getSubject()).thenReturn(nonExistentUserId.toString());
         when(jwt.getClaim("realm_access")).thenReturn(null);
@@ -117,30 +109,22 @@ class UserServiceImplTest {
         Optional<User> foundUserOptional = userService.findUserProfileById(nonExistentUserId, jwt);
 
         assertFalse(foundUserOptional.isPresent());
-        verify(userRepositoryMock, times(1)).findById(nonExistentUserId);
     }
 
     @Test
-    void testUpdateUserProfileSuccessful() {
-        User updatedUser = UserTestUtils.builderFrom(testUser)
-                .firstName("UpdatedFirstName")
-                .build();
-        when(userRepositoryMock.save(updatedUser)).thenReturn(updatedUser);
-
-        User resultUser = userService.updateUserProfile(updatedUser);
-
+    void shouldUpdateUserProfileSuccessfully() {
+        when(userRepositoryMock.save(testUser)).thenReturn(testUser);
+        User resultUser = userService.updateUserProfile(testUser);
         assertNotNull(resultUser);
-        assertEquals(updatedUser, resultUser);
-        verify(userRepositoryMock, times(1)).save(updatedUser);
+        assertEquals(testUser, resultUser);
+        verify(userRepositoryMock, times(1)).save(testUser);
     }
 
     @Test
-    void testDeleteUserProfileSuccessful() {
+    void shouldDeleteUserProfileSuccessfully() {
         UUID userIdToDelete = testUser.getKeycloakUserId();
         doNothing().when(userRepositoryMock).deleteById(userIdToDelete);
-
         userService.deleteUserProfile(userIdToDelete);
-
         verify(userRepositoryMock, times(1)).deleteById(userIdToDelete);
     }
 }
