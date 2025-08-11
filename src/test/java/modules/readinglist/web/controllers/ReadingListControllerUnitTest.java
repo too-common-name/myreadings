@@ -45,9 +45,9 @@ public class ReadingListControllerUnitTest {
         testReadingListId = UUID.randomUUID();
         
         mockUser = UserImpl.builder()
-            .keycloakUserId(UUID.randomUUID())
-            .username("testuser")
-            .build();
+                .keycloakUserId(UUID.randomUUID())
+                .username("testuser")
+                .build();
 
         mockReadingListRequestDTO = ReadingListRequestDTO.builder().name("Test List").build();
 
@@ -59,7 +59,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testCreateReadingList() {
+    void shouldReturnCreatedWhenReadingListIsCreated() {
         when(readingListService.createReadingList(mockReadingListRequestDTO, jwt)).thenReturn(mockReadingList);
         Response response = readingListController.createReadingList(mockReadingListRequestDTO);
         assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
@@ -67,7 +67,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testGetReadingListById() {
+    void shouldReturnOkWhenReadingListIsFound() {
         when(readingListService.findReadingListById(testReadingListId, jwt)).thenReturn(Optional.of(mockReadingList));
         Response response = readingListController.getReadingListById(testReadingListId);
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -75,14 +75,14 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testGetReadingListByIdNotFound() {
+    void shouldReturnNotFoundWhenReadingListIsMissing() {
         when(readingListService.findReadingListById(testReadingListId, jwt)).thenReturn(Optional.empty());
         Response response = readingListController.getReadingListById(testReadingListId);
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     }
 
     @Test
-    void testGetAllReadingListsForUser() {
+    void shouldReturnOkWithReadingListsForUser() {
         when(jwt.getSubject()).thenReturn(mockUser.getKeycloakUserId().toString());
         when(readingListService.getReadingListsForUser(mockUser.getKeycloakUserId())).thenReturn(Collections.singletonList(mockReadingList));
         Response response = readingListController.getAllReadingListsForUser();
@@ -91,7 +91,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testUpdateReadingList() {
+    void shouldReturnOkWhenReadingListIsUpdated() {
         when(readingListService.updateReadingList(testReadingListId, mockReadingListRequestDTO, jwt)).thenReturn(mockReadingList);
         Response response = readingListController.updateReadingList(testReadingListId, mockReadingListRequestDTO);
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -99,7 +99,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testDeleteReadingList() {
+    void shouldReturnNoContentWhenReadingListIsDeleted() {
         doNothing().when(readingListService).deleteReadingListById(testReadingListId, jwt);
         Response response = readingListController.deleteReadingList(testReadingListId);
         assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());
@@ -107,7 +107,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testAddBookToReadingList() {
+    void shouldReturnOkWhenBookIsAdded() {
         UUID bookId = UUID.randomUUID();
         AddBookRequestDTO request = AddBookRequestDTO.builder().bookId(bookId).build();
         doNothing().when(readingListService).addBookToReadingList(testReadingListId, bookId, jwt);
@@ -117,7 +117,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testRemoveBookFromReadingList() {
+    void shouldReturnNoContentWhenBookIsRemoved() {
         UUID bookId = UUID.randomUUID();
         doNothing().when(readingListService).removeBookFromReadingList(testReadingListId, bookId, jwt);
         Response response = readingListController.removeBookFromReadingList(testReadingListId, bookId);
@@ -126,7 +126,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testGetBooksInReadingList() {
+    void shouldReturnOkWithListOfBooks() {
         when(readingListService.getBooksInReadingList(testReadingListId, jwt)).thenReturn(Collections.emptyList());
         Response response = readingListController.getBooksInReadingList(testReadingListId);
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -134,7 +134,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testGetReadingListForBookAndUser() {
+    void shouldReturnOkWhenReadingListForBookAndUserIsFound() {
         UUID bookId = UUID.randomUUID();
         when(jwt.getSubject()).thenReturn(mockUser.getKeycloakUserId().toString());
         when(readingListService.findReadingListForBookAndUser(mockUser.getKeycloakUserId(), bookId)).thenReturn(Optional.of(mockReadingList));
@@ -144,7 +144,7 @@ public class ReadingListControllerUnitTest {
     }
 
     @Test
-    void testMoveBookBetweenReadingLists() {
+    void shouldReturnOkWhenBookIsMoved() {
         UUID bookId = UUID.randomUUID();
         MoveBookRequestDTO request = new MoveBookRequestDTO(UUID.randomUUID(), UUID.randomUUID());
         when(jwt.getSubject()).thenReturn(mockUser.getKeycloakUserId().toString());
