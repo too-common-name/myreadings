@@ -4,7 +4,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.ForbiddenException;
 import modules.user.core.domain.User;
-import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserServiceImpl;
 import modules.user.core.usecases.repositories.UserRepository;
 import modules.user.utils.UserTestUtils;

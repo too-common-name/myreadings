@@ -7,6 +7,8 @@ import modules.catalog.core.domain.Book;
 import modules.catalog.core.usecases.repositories.BookRepository;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
+import modules.review.core.domain.Review;
+import modules.review.core.usecases.repositories.ReviewRepository;
 import modules.user.core.domain.User;
 import modules.user.core.usecases.repositories.UserRepository;
 
@@ -24,6 +26,9 @@ public class TransactionalTestHelper {
 
     @Inject
     ReadingListRepository readingListRepository;
+
+    @Inject
+    ReviewRepository reviewRepository;
 
     @Transactional
     public void addBookToReadingList(UUID readingListId, UUID bookId) {
@@ -44,7 +49,7 @@ public class TransactionalTestHelper {
     public ReadingList saveReadingList(ReadingList readingList) {
         return readingListRepository.create(readingList);
     }
-    
+
     @Transactional
     public void deleteReadingList(UUID id) {
         readingListRepository.deleteById(id);
@@ -62,5 +67,18 @@ public class TransactionalTestHelper {
 
     public List<ReadingList> findReadingListsByUserId(UUID userId) {
         return readingListRepository.findByUserId(userId);
+    }
+
+    @Transactional
+    public Review saveReview(Review review) {
+        return reviewRepository.create(review);
+    }
+
+    @Transactional
+    public void deleteReview(UUID id) {
+        try {
+            reviewRepository.deleteById(id);
+        } catch (Exception e) {
+        }
     }
 }

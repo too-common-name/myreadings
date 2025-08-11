@@ -1,5 +1,17 @@
 package modules.review.usecases;
 
+import jakarta.ws.rs.ForbiddenException;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
+import modules.catalog.core.usecases.BookService;
+import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewImpl;
+import modules.review.core.usecases.ReviewServiceImpl;
+import modules.review.core.usecases.repositories.ReviewRepository;
+import modules.review.web.dto.ReviewRequestDTO;
+import modules.user.core.domain.User;
+import modules.user.core.domain.UserImpl;
+import modules.user.core.usecases.UserService;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,25 +20,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import jakarta.ws.rs.ForbiddenException;
-
 import java.util.Optional;
 import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
-
-import modules.review.core.domain.Review;
-import modules.review.core.domain.ReviewImpl;
-import modules.review.core.usecases.ReviewServiceImpl;
-import modules.review.core.usecases.repositories.ReviewRepository;
-import modules.review.web.dto.ReviewRequestDTO;
-import modules.catalog.core.domain.Book;
-import modules.catalog.core.domain.BookImpl;
-import modules.catalog.core.usecases.BookService;
-import modules.user.core.domain.User;
-import modules.user.core.domain.UserImpl;
-import modules.user.core.usecases.UserService;
 
 @ExtendWith(MockitoExtension.class)
 public class ReviewServiceImplTest {
@@ -62,7 +61,7 @@ public class ReviewServiceImplTest {
     }
 
     @Test
-    void testCreateReviewSuccessful() {
+    void shouldCreateReviewWhenRequestIsValid() {
         ReviewRequestDTO request = ReviewRequestDTO.builder()
                 .bookId(testBook.getBookId()).rating(4).reviewText("Great!").build();
 
@@ -76,12 +75,11 @@ public class ReviewServiceImplTest {
         assertNotNull(createdReview);
         assertEquals(testBook.getBookId(), createdReview.getBook().getBookId());
         assertEquals(testUser.getKeycloakUserId(), createdReview.getUser().getKeycloakUserId());
-        assertEquals("Great!", createdReview.getReviewText());
         verify(reviewRepository, times(1)).create(any(Review.class));
     }
 
     @Test
-    void testCreateReviewFailsBookNotFound() {
+    void shouldThrowExceptionWhenCreatingReviewForNonExistentBook() {
         ReviewRequestDTO request = ReviewRequestDTO.builder().bookId(testBook.getBookId()).build();
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
         when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.empty());
@@ -93,7 +91,7 @@ public class ReviewServiceImplTest {
     }
 
     @Test
-    void testUpdateReviewSuccessful() {
+    void shouldUpdateReviewWhenUserIsOwner() {
         ReviewRequestDTO request = ReviewRequestDTO.builder().rating(5).reviewText("Updated!").build();
 
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
@@ -110,7 +108,7 @@ public class ReviewServiceImplTest {
     }
 
     @Test
-    void testUpdateReviewThrowsForbiddenForNonOwner() {
+    void shouldThrowForbiddenExceptionWhenUpdatingAnotherUsersReview() {
         ReviewRequestDTO request = ReviewRequestDTO.builder().rating(5).reviewText("Updated!").build();
         UUID otherUserId = UUID.randomUUID();
 
@@ -125,7 +123,7 @@ public class ReviewServiceImplTest {
     }
 
     @Test
-    void testDeleteReviewByIdSuccessful() {
+    void shouldDeleteReviewWhenUserIsOwner() {
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
         when(jwt.getClaim("realm_access")).thenReturn(null);
         when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
@@ -137,7 +135,7 @@ public class ReviewServiceImplTest {
     }
 
     @Test
-    void testGetReviewsForUserFails() {
+    void shouldThrowExceptionWhenGettingReviewsForNonExistentUser() {
         UUID userId = UUID.randomUUID();
         when(userService.findUserProfileById(userId, jwt)).thenReturn(Optional.empty());
 

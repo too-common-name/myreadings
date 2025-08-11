@@ -8,7 +8,6 @@ import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
 import modules.catalog.web.dto.BookResponseDTO;
 import modules.catalog.web.dto.PagedResponse;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
