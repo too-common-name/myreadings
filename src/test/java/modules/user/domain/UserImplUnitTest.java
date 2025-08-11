@@ -1,19 +1,23 @@
 package modules.user.domain;
 
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import modules.user.core.domain.UiTheme;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
-import jakarta.validation.ConstraintViolation;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class UserImplUnitTest {
 
@@ -27,139 +31,60 @@ public class UserImplUnitTest {
 
     @Test
     void createUserWithValidDataSuccessful() {
-        User user = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName("John")
-                .lastName("Doe")
-                .username("johndoe")
-                .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT)
-                .build();
-
+        User user = createValidUserBuilder().build();
         Set<ConstraintViolation<User>> violations = validator.validate(user);
         assertTrue(violations.isEmpty(), "Validation should pass for valid user data");
     }
 
-    @Test
-    void createUserWithTooLongFirstNameFailsValidation() {
-        String longFirstName = "VeryLongFirstNameExceedingFiftyCharactersForSureVeryLongFirstNameExceedingFiftyCharactersForSure";
-        User user = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName(longFirstName)
-                .lastName("Doe")
-                .username("johndoe")
-                .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT)
-                .build();
+    @ParameterizedTest(name = "Validation should fail for {0} with invalid value")
+    @MethodSource("provideInvalidUserArguments")
+    void userValidationFailsForInvalidFields(String fieldName, Object invalidValue) {
+        UserImpl.UserImplBuilder builder = createValidUserBuilder();
 
+        switch (fieldName) {
+            case "firstName": builder.firstName((String) invalidValue); break;
+            case "lastName": builder.lastName((String) invalidValue); break;
+            case "username": builder.username((String) invalidValue); break;
+            case "email": builder.email((String) invalidValue); break;
+            default: fail("Test case for field " + fieldName + " not implemented.");
+        }
+
+        User user = builder.build();
         Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertFalse(violations.isEmpty(), "Validation should fail for too long firstName");
+
+        assertFalse(violations.isEmpty(), "Validation should fail for " + fieldName);
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals(fieldName)),
+                "Validation error should be on field '" + fieldName + "'");
     }
 
-    @Test
-    void createUserWithBlankLastNameFailsValidation() {
-        User user = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName("John")
-                .lastName(" ")
-                .username("johndoe")
-                .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT)
-                .build();
-
-        Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertFalse(violations.isEmpty(), "Validation should fail for blank lastName");
-    }
-
-    @Test
-    void createUserWithTooLongLastNameFailsValidation() {
-        String longLastName = "VeryLongLastNameExceedingFiftyCharactersForSureVeryLongLastNameExceedingFiftyCharactersForSure";
-        User user = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName("John")
-                .lastName(longLastName)
-                .username("johndoe")
-                .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT)
-                .build();
-
-        Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertFalse(violations.isEmpty(), "Validation should fail for too long lastName");
-    }
-
-    @Test
-    void createUserWithBlankUsernameFailsValidation() {
-        User user = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName("John")
-                .lastName("Doe")
-                .username("")
-                .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT)
-                .build();
-
-        Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertFalse(violations.isEmpty(), "Validation should fail for blank username");
-    }
-
-    @Test
-    void createUserWithTooLongUsernameFailsValidation() {
-        String longUsername = "VeryLongUsernameExceedingFiftyCharactersForSureVeryLongUsernameExceedingFiftyCharactersForSureVeryLongUsernameExceedingFiftyCharactersForSure";
-        User user = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName("John")
-                .lastName("Doe")
-                .username(longUsername)
-                .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT)
-                .build();
-
-        Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertFalse(violations.isEmpty(), "Validation should fail for too long username");
-    }
-
-    @Test
-    void createUserWithBlankEmailFailsValidation() {
-        User user = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName("John")
-                .lastName("Doe")
-                .username("johndoe")
-                .email("   ") 
-                .themePreference(UiTheme.LIGHT)
-                .build();
-
-        Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertFalse(violations.isEmpty(), "Validation should fail for blank email");
-    }
-
-    @Test
-    void createUserWithInvalidEmailFormatFailsValidation() {
-        User user = UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName("John")
-                .lastName("Doe")
-                .username("johndoe")
-                .email("invalid-email-format")
-                .themePreference(UiTheme.LIGHT)
-                .build();
-
-        Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertFalse(violations.isEmpty(), "Validation should fail for invalid email format");
+    private static Stream<Arguments> provideInvalidUserArguments() {
+        String longString150 = ".".repeat(150);
+        return Stream.of(
+                Arguments.of("firstName", longString150),
+                Arguments.of("lastName", " "),
+                Arguments.of("lastName", longString150),
+                Arguments.of("username", ""),
+                Arguments.of("username", longString150),
+                Arguments.of("email", " "),
+                Arguments.of("email", "invalid-email-format"),
+                Arguments.of("email", longString150)
+        );
     }
 
     @Test
     void testUpdateUiTheme() {
-        UserImpl user = (UserImpl) UserImpl.builder()
+        UserImpl user = (UserImpl) createValidUserBuilder().build();
+        user.setThemePreference(UiTheme.DARK);
+        assertEquals(UiTheme.DARK, user.getThemePreference());
+    }
+
+    private UserImpl.UserImplBuilder createValidUserBuilder() {
+        return UserImpl.builder()
                 .keycloakUserId(UUID.randomUUID())
                 .firstName("John")
                 .lastName("Doe")
                 .username("johndoe")
                 .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT)
-                .build();
-
-        user.setThemePreference(UiTheme.DARK);
-        assertEquals(UiTheme.DARK, user.getThemePreference());
+                .themePreference(UiTheme.LIGHT);
     }
 }
