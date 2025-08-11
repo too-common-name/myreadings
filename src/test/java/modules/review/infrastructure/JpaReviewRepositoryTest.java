@@ -87,14 +87,14 @@ public class JpaReviewRepositoryTest {
                 .user(createdReview.getUser())
                 .book(createdReview.getBook())
                 .publicationDate(createdReview.getPublicationDate())
-                .rating(5)
+                .rating(4)
                 .reviewText("Updated Text!")
                 .build();
 
         Review updatedReview = reviewRepository.update(reviewToUpdate);
 
         assertEquals(createdReview.getReviewId(), updatedReview.getReviewId());
-        assertEquals(5, updatedReview.getRating());
+        assertEquals(4, updatedReview.getRating());
         assertEquals("Updated Text!", updatedReview.getReviewText());
     }
 
