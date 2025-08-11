@@ -1,25 +1,31 @@
 package modules.review.domain;
 
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
-import jakarta.validation.ConstraintViolation;
-
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import modules.catalog.core.domain.Book;
+import modules.review.core.domain.Review;
+import modules.review.core.domain.ReviewImpl;
+import modules.user.core.domain.User;
+import modules.user.utils.UserTestUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import modules.catalog.utils.CatalogTestUtils;
 
+import java.lang.annotation.Annotation;
 import java.time.LocalDateTime;
 import java.util.Set;
-import java.util.UUID;
+import java.util.stream.Stream;
 
-import modules.catalog.core.domain.Book;
-import modules.catalog.core.domain.BookImpl;
-import modules.review.core.domain.ReviewImpl;
-
-import modules.user.core.domain.UiTheme;
-import modules.user.core.domain.User;
-import modules.user.core.domain.UserImpl;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ReviewUnitTest {
 
@@ -32,132 +38,60 @@ public class ReviewUnitTest {
     }
 
     @Test
-    void createReviewWithValidDataSuccessful() {
-        ReviewImpl review = ReviewImpl.builder()
-                .reviewId(UUID.randomUUID())
-                .book(createValidBook())
-                .user(createValidUser())
-                .reviewText("This is a valid review text within the 200 character limit.")
-                .rating(3)
-                .publicationDate(LocalDateTime.now())
-                .build();
-
-        Set<ConstraintViolation<ReviewImpl>> violations = validator.validate(review);
-        assertTrue(violations.isEmpty(), "No validation errors expected for valid Review");
-        assertNotNull(review);
+    void shouldCreateReviewSuccessfullyWhenDataIsValid() {
+        Review review = createValidReviewBuilder().build();
+        Set<ConstraintViolation<Review>> violations = validator.validate(review);
+        assertTrue(violations.isEmpty());
     }
 
-    @Test
-    void createReviewWithoutBookFailsValidation() {
-        ReviewImpl review = ReviewImpl.builder()
-                .reviewId(UUID.randomUUID())
-                .book(null) // Book is null, should fail @NotNull
-                .user(createValidUser())
-                .reviewText("Test review text")
-                .rating(3)
-                .publicationDate(LocalDateTime.now())
-                .build();
+    @ParameterizedTest(name = "Validation for {0} should fail with {2}")
+    @MethodSource("provideInvalidArguments")
+    void shouldFailValidationForInvalidField(String fieldName, Object invalidValue, Class<? extends Annotation> expectedViolation) {
+        ReviewImpl.ReviewImplBuilder builder = createValidReviewBuilder();
 
-        Set<ConstraintViolation<ReviewImpl>> violations = validator.validate(review);
-        assertFalse(violations.isEmpty(), "Validation should fail for missing book");
-        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("book")),
-                "Validation error should be on field 'book'");
+        switch (fieldName) {
+            case "book":
+                builder.book((Book) invalidValue);
+                break;
+            case "user":
+                builder.user((User) invalidValue);
+                break;
+            case "reviewText":
+                builder.reviewText((String) invalidValue);
+                break;
+            case "rating":
+                builder.rating((Integer) invalidValue);
+                break;
+            default:
+                fail("Test case for field " + fieldName + " not implemented.");
+        }
+
+        Review review = builder.build();
+        Set<ConstraintViolation<Review>> violations = validator.validate(review);
+
+        assertFalse(violations.isEmpty());
+        assertTrue(violations.stream().anyMatch(v ->
+                v.getPropertyPath().toString().equals(fieldName) &&
+                v.getConstraintDescriptor().getAnnotation().annotationType().equals(expectedViolation)
+        ));
     }
 
-    @Test
-    void createReviewWithoutUserFailsValidation() {
-        ReviewImpl review = ReviewImpl.builder()
-                .reviewId(UUID.randomUUID())
-                .book(createValidBook())
-                .user(null) // User is null, should fail @NotNull
-                .reviewText("Test review text")
-                .rating(3)
-                .publicationDate(LocalDateTime.now())
-                .build();
-
-        Set<ConstraintViolation<ReviewImpl>> violations = validator.validate(review);
-        assertFalse(violations.isEmpty(), "Validation should fail for missing user");
-        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("user")),
-                "Validation error should be on field 'user'");
+    private static Stream<Arguments> provideInvalidArguments() {
+        return Stream.of(
+            Arguments.of("book", null, NotNull.class),
+            Arguments.of("user", null, NotNull.class),
+            Arguments.of("reviewText", ".".repeat(201), Size.class),
+            Arguments.of("rating", 0, Min.class),
+            Arguments.of("rating", 6, Max.class)
+        );
     }
 
-    @Test
-    void createReviewWithTooLongReviewTextFailsValidation() {
-        String longReviewText = "This review text is intentionally made very long to exceed the 200 character limit imposed by the @Size annotation. We need to make sure that validation correctly identifies this as an invalid review text because it is too long....................................................................................................................."; // Exceeds 200 chars
-
-        ReviewImpl review = ReviewImpl.builder()
-                .reviewId(UUID.randomUUID())
-                .book(createValidBook())
-                .user(createValidUser())
-                .reviewText(longReviewText) // reviewText is too long, should fail @Size
-                .rating(3)
-                .publicationDate(LocalDateTime.now())
-                .build();
-
-        Set<ConstraintViolation<ReviewImpl>> violations = validator.validate(review);
-        assertFalse(violations.isEmpty(), "Validation should fail for too long reviewText");
-        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("reviewText")),
-                "Validation error should be on field 'reviewText'");
-    }
-
-    @Test
-    void createReviewWithRatingTooLowFailsValidation() {
-        ReviewImpl review = ReviewImpl.builder()
-                .reviewId(UUID.randomUUID())
-                .book(createValidBook())
-                .user(createValidUser())
-                .reviewText("Test review text")
-                .rating(0) // Rating too low, should fail @Min
-                .publicationDate(LocalDateTime.now())
-                .build();
-
-        Set<ConstraintViolation<ReviewImpl>> violations = validator.validate(review);
-        assertFalse(violations.isEmpty(), "Validation should fail for rating too low");
-        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("rating")),
-                "Validation error should be on field 'rating'");
-    }
-
-    @Test
-    void createReviewWithRatingTooHighFailsValidation() {
-        ReviewImpl review = ReviewImpl.builder()
-                .reviewId(UUID.randomUUID())
-                .book(createValidBook())
-                .user(createValidUser())
-                .reviewText("Test review text")
-                .rating(6) // Rating too high, should fail @Max
-                .publicationDate(LocalDateTime.now())
-                .build();
-
-        Set<ConstraintViolation<ReviewImpl>> violations = validator.validate(review);
-        assertFalse(violations.isEmpty(), "Validation should fail for rating too high");
-        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("rating")),
-                "Validation error should be on field 'rating'");
-    }
-
-    // Helper methods to create valid Book and User instances for tests
-    private Book createValidBook() {
-        return BookImpl.builder()
-                .bookId(UUID.randomUUID())
-                .isbn("978-0321765723")
-                .title("The катание Programming Language")
-                .authors(java.util.Arrays.asList("Brian W. Kernighan", "Dennis M. Ritchie"))
-                .publicationDate(LocalDateTime.now().toLocalDate().minusYears(40))
-                .publisher("Prentice Hall")
-                .description("The classic book on C programming.")
-                .pageCount(272)
-                .coverImageId("cover123")
-                .originalLanguage("en")
-                .build();
-    }
-
-    private User createValidUser() {
-        return UserImpl.builder()
-                .keycloakUserId(UUID.randomUUID())
-                .firstName("John")
-                .lastName("Doe")
-                .username("johndoe")
-                .email("john.doe@example.com")
-                .themePreference(UiTheme.LIGHT)
-                .build();
+    private ReviewImpl.ReviewImplBuilder createValidReviewBuilder() {
+        return ReviewImpl.builder()
+                .book(CatalogTestUtils.createValidBook())
+                .user(UserTestUtils.createValidUser())
+                .reviewText("This is a valid review text.")
+                .rating(4)
+                .publicationDate(LocalDateTime.now());
     }
 }

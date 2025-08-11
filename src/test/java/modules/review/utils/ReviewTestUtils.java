@@ -3,6 +3,7 @@ package modules.review.utils;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import modules.catalog.utils.CatalogTestUtils;
+import modules.review.core.domain.Review;
 import modules.review.core.domain.ReviewImpl;
 
 import modules.user.utils.UserTestUtils;
@@ -27,5 +28,15 @@ public class ReviewTestUtils {
                 .book(CatalogTestUtils.createValidBookWithId(bookId))
                 .user(UserTestUtils.createValidUserWithId(userId)).reviewText(reviewText).rating(rating)
                 .publicationDate(LocalDateTime.now()).build();
+    }
+
+    public static ReviewImpl.ReviewImplBuilder from(Review review) {
+        return ReviewImpl.builder()
+                .reviewId(review.getReviewId())
+                .user(review.getUser())
+                .book(review.getBook())
+                .publicationDate(review.getPublicationDate())
+                .rating(review.getRating())
+                .reviewText(review.getReviewText());
     }
 }

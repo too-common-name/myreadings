@@ -88,125 +88,103 @@ public class ReviewControllerUnitTest {
     }
 
     @Test
-    void testCreateReviewShouldReturnCreatedAndDTO() {
+    void shouldReturnCreatedWhenReviewIsCreated() {
         when(reviewService.createReview(mockReviewRequestDTO, jwt)).thenReturn(mockReview);
-
         Response response = reviewController.createReview(mockReviewRequestDTO);
-
         assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
         assertEquals(expectedResponseDTO, response.getEntity());
         verify(reviewService, times(1)).createReview(mockReviewRequestDTO, jwt);
     }
 
     @Test
-    void testGetReviewByIdShouldReturnOkAndDTO() {
+    void shouldReturnOkWithDtoWhenReviewIsFound() {
         when(reviewService.findReviewAndCheckOwnership(testReviewId, jwt)).thenReturn(mockReview);
-
         Response response = reviewController.getReviewById(testReviewId);
-
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedResponseDTO, response.getEntity());
         verify(reviewService, times(1)).findReviewAndCheckOwnership(testReviewId, jwt);
     }
 
     @Test
-    void testGetReviewByIdShouldPropagateNotFoundException() {
+    void shouldPropagateNotFoundExceptionWhenReviewIsMissing() {
         when(reviewService.findReviewAndCheckOwnership(testReviewId, jwt)).thenThrow(new NotFoundException());
-
         assertThrows(NotFoundException.class, () -> reviewController.getReviewById(testReviewId));
-
         verify(reviewService, times(1)).findReviewAndCheckOwnership(testReviewId, jwt);
     }
 
     @Test
-    void testUpdateReviewShouldReturnOkAndDTO() {
+    void shouldReturnOkWithDtoWhenReviewIsUpdated() {
         when(reviewService.updateReview(testReviewId, mockReviewRequestDTO, jwt)).thenReturn(mockReview);
-
         Response response = reviewController.updateReview(testReviewId, mockReviewRequestDTO);
-
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedResponseDTO, response.getEntity());
         verify(reviewService, times(1)).updateReview(testReviewId, mockReviewRequestDTO, jwt);
     }
 
     @Test
-    void testDeleteReviewByIdShouldReturnNoContent() {
+    void shouldReturnNoContentWhenReviewIsDeleted() {
         doNothing().when(reviewService).deleteReviewById(testReviewId, jwt);
-
         Response response = reviewController.deleteReviewById(testReviewId);
-
         assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());
         verify(reviewService, times(1)).deleteReviewById(testReviewId, jwt);
     }
 
     @Test
-    void testDeleteReviewShouldPropagateForbiddenException() {
+    void shouldPropagateForbiddenExceptionWhenDeletingReview() {
         doThrow(new ForbiddenException()).when(reviewService).deleteReviewById(testReviewId, jwt);
-
         assertThrows(ForbiddenException.class, () -> reviewController.deleteReviewById(testReviewId));
-
         verify(reviewService, times(1)).deleteReviewById(testReviewId, jwt);
     }
 
     @Test
-    void testGetReviewsByBookIdShouldReturnOkAndListOfDTOs() {
+    void shouldReturnOkWithListOfDtosWhenGettingReviewsByBookId() {
         List<Review> reviews = Collections.singletonList(mockReview);
         List<ReviewResponseDTO> expectedList = Collections.singletonList(expectedResponseDTO);
         when(reviewService.getReviewsForBook(testBookId, jwt)).thenReturn(reviews);
-
         Response response = reviewController.getReviewsByBookId(testBookId);
-
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedList, response.getEntity());
         verify(reviewService, times(1)).getReviewsForBook(testBookId, jwt);
     }
 
     @Test
-    void testGetReviewsByUserIdShouldReturnOkAndListOfDTOs() {
+    void shouldReturnOkWithListOfDtosWhenGettingReviewsByUserId() {
         List<Review> reviews = Collections.singletonList(mockReview);
         List<ReviewResponseDTO> expectedList = Collections.singletonList(expectedResponseDTO);
         when(reviewService.getReviewsForUser(testUserId, jwt)).thenReturn(reviews);
-
         Response response = reviewController.getReviewsByUserId(testUserId);
-
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedList, response.getEntity());
         verify(reviewService, times(1)).getReviewsForUser(testUserId, jwt);
     }
 
     @Test
-    void testGetBookReviewStatsShouldReturnOkWithStats() {
+    void shouldReturnOkWithStatsWhenGettingBookReviewStats() {
         ReviewStats mockReviewStats = ReviewStats.builder().totalReviews(5L).averageRating(4.2).build();
         ReviewStatsResponseDTO expectedStatsResponseDTO = ReviewStatsResponseDTO.builder()
                 .bookId(testBookId.toString()).totalReviews(5L).averageRating(4.2).build();
         when(reviewService.getReviewStatsForBook(testBookId)).thenReturn(mockReviewStats);
-
         Response response = reviewController.getBookReviewStats(testBookId);
-
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedStatsResponseDTO, response.getEntity());
         verify(reviewService, times(1)).getReviewStatsForBook(testBookId);
     }
 
     @Test
-    void testGetMyReviewForBookShouldReturnOkAndDTO() {
+    void shouldReturnOkWithDtoWhenGettingMyReviewForBook() {
         when(jwt.getSubject()).thenReturn(testUserId.toString());
         when(reviewService.findReviewByUserAndBook(testUserId, testBookId, jwt)).thenReturn(Optional.of(mockReview));
-
         Response response = reviewController.getMyReviewForBook(testBookId);
-
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(expectedResponseDTO, response.getEntity());
         verify(reviewService, times(1)).findReviewByUserAndBook(testUserId, testBookId, jwt);
     }
 
     @Test
-    void testGetMyReviewForBookShouldThrowNotFound() {
+    void shouldThrowNotFoundWhenGettingMyReviewForBookThatDoesNotExist() {
         when(jwt.getSubject()).thenReturn(testUserId.toString());
         when(reviewService.findReviewByUserAndBook(testUserId, testBookId, jwt)).thenReturn(Optional.empty());
-
         assertThrows(NotFoundException.class, () -> reviewController.getMyReviewForBook(testBookId));
-
         verify(reviewService, times(1)).findReviewByUserAndBook(testUserId, testBookId, jwt);
     }
 }
