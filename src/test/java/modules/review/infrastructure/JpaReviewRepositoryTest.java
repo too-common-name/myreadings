@@ -3,6 +3,7 @@ package modules.review.infrastructure;
 import common.JpaRepositoryTestProfile;
 import common.TransactionalTestHelper;
 import io.quarkus.narayana.jta.QuarkusTransaction;
+import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
@@ -15,6 +16,7 @@ import java.util.function.Supplier;
 
 @QuarkusTest
 @TestProfile(JpaRepositoryTestProfile.class)
+@TestTransaction
 public class JpaReviewRepositoryTest extends AbstractReviewRepositoryTest {
 
     @Inject
