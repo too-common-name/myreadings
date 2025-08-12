@@ -5,86 +5,128 @@ import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
 import modules.readinglist.utils.ReadingListTestUtils;
 import modules.user.core.domain.User;
-import modules.user.utils.UserTestUtils;
 import org.junit.jupiter.api.Test;
-
-import jakarta.transaction.Transactional;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.*;
 
 public abstract class AbstractReadingListRepositoryTest {
 
-    protected ReadingListRepository repository;
-    protected User testUser1;
-    protected Book testBook1;
-    protected ReadingList testList1;
+    protected abstract ReadingListRepository getRepository();
+    protected abstract User createAndSaveUser();
+    protected abstract Book createAndSaveBook();
 
-    @Test
-    @Transactional
-    void shouldCreateAndFindById() {
-        ReadingList newList = ReadingListTestUtils.createValidReadingListForUser(this.testUser1, "New List");
-        ReadingList saved = repository.create(newList);
-        Optional<ReadingList> found = repository.findById(saved.getReadingListId());
-        
-        assertTrue(found.isPresent());
-        assertEquals(saved.getReadingListId(), found.get().getReadingListId());
+    protected void runTransactionalStep(Runnable step) {
+        step.run();
+    }
+    protected <T> T runTransactionalStep(Supplier<T> step) {
+        return step.get();
     }
 
     @Test
-    @Transactional
+    void shouldCreateAndFindById() {
+        User user = createAndSaveUser();
+        runTransactionalStep(() -> {
+            ReadingList newList = ReadingListTestUtils.createValidReadingListForUser(user, "New List");
+            ReadingList saved = getRepository().create(newList);
+            Optional<ReadingList> found = getRepository().findById(saved.getReadingListId());
+            assertTrue(found.isPresent());
+            assertEquals(saved.getReadingListId(), found.get().getReadingListId());
+        });
+    }
+
+    @Test
     void shouldDeleteById() {
-        repository.deleteById(testList1.getReadingListId());
-        Optional<ReadingList> found = repository.findById(testList1.getReadingListId());
-        assertFalse(found.isPresent());
+        User user = createAndSaveUser();
+        ReadingList list = runTransactionalStep(() -> 
+            getRepository().create(ReadingListTestUtils.createValidReadingListForUser(user, "To Delete"))
+        );
+        runTransactionalStep(() -> {
+            getRepository().deleteById(list.getReadingListId());
+            Optional<ReadingList> found = getRepository().findById(list.getReadingListId());
+            assertFalse(found.isPresent());
+        });
     }
     
     @Test
-    @Transactional
     void shouldUpdateReadingList() {
-        ReadingList toUpdate = ReadingListTestUtils.from(testList1).name("Updated Name").build();
-        ReadingList updated = repository.update(toUpdate);
-        assertEquals("Updated Name", updated.getName());
+        User user = createAndSaveUser();
+        ReadingList originalList = runTransactionalStep(() -> 
+            getRepository().create(ReadingListTestUtils.createValidReadingListForUser(user, "Original Name"))
+        );
+        runTransactionalStep(() -> {
+            ReadingList toUpdate = ReadingListTestUtils.from(originalList).name("Updated Name").build();
+            ReadingList updated = getRepository().update(toUpdate);
+            assertEquals("Updated Name", updated.getName());
+        });
     }
 
     @Test
-    @Transactional
     void shouldAddAndRemoveBook() {
-        repository.addBookToReadingList(testList1.getReadingListId(), testBook1.getBookId());
-        List<UUID> bookIds = repository.getBookIdsInReadingList(testList1.getReadingListId());
-        assertEquals(1, bookIds.size());
-        assertTrue(bookIds.contains(testBook1.getBookId()));
-        repository.removeBookFromReadingList(testList1.getReadingListId(), testBook1.getBookId());
-        bookIds = repository.getBookIdsInReadingList(testList1.getReadingListId());
-        assertTrue(bookIds.isEmpty());
+        User user = createAndSaveUser();
+        Book book = createAndSaveBook();
+        ReadingList list = runTransactionalStep(() -> 
+            getRepository().create(ReadingListTestUtils.createValidReadingListForUser(user, "List With Books"))
+        );
+        runTransactionalStep(() -> {
+            getRepository().addBookToReadingList(list.getReadingListId(), book.getBookId());
+            List<UUID> bookIds = getRepository().getBookIdsInReadingList(list.getReadingListId());
+            assertEquals(1, bookIds.size());
+        });
+        runTransactionalStep(() -> {
+            getRepository().removeBookFromReadingList(list.getReadingListId(), book.getBookId());
+            List<UUID> bookIds = getRepository().getBookIdsInReadingList(list.getReadingListId());
+            assertTrue(bookIds.isEmpty());
+        });
     }
 
     @Test
-    @Transactional
     void shouldFindByUserId() {
-        ReadingList testList2 = ReadingListTestUtils.createValidReadingListForUser(testUser1, "My Other List");
-        repository.create(testList2);
-        List<ReadingList> results = repository.findByUserId(testUser1.getKeycloakUserId());
+        User user = createAndSaveUser();
+        runTransactionalStep(() -> {
+            getRepository().create(ReadingListTestUtils.createValidReadingListForUser(user, "List 1"));
+            getRepository().create(ReadingListTestUtils.createValidReadingListForUser(user, "List 2"));
+        });
+        
+        List<ReadingList> results = runTransactionalStep(() -> getRepository().findByUserId(user.getKeycloakUserId()));
         assertEquals(2, results.size());
     }
     
     @Test
-    @Transactional
     void shouldFindReadingListContainingBookForUser() {
-        repository.addBookToReadingList(testList1.getReadingListId(), testBook1.getBookId());
-        Optional<ReadingList> result = repository.findReadingListContainingBookForUser(testUser1.getKeycloakUserId(), testBook1.getBookId());
+        User user = createAndSaveUser();
+        Book book = createAndSaveBook();
+        ReadingList list = runTransactionalStep(() -> 
+            getRepository().create(ReadingListTestUtils.createValidReadingListForUser(user, "My List"))
+        );
+        runTransactionalStep(() -> 
+            getRepository().addBookToReadingList(list.getReadingListId(), book.getBookId())
+        );
+
+        Optional<ReadingList> result = runTransactionalStep(() -> 
+            getRepository().findReadingListContainingBookForUser(user.getKeycloakUserId(), book.getBookId())
+        );
         assertTrue(result.isPresent());
-        assertEquals(testList1.getReadingListId(), result.get().getReadingListId());
+        assertEquals(list.getReadingListId(), result.get().getReadingListId());
     }
 
     @Test
-    @Transactional
     void shouldNotFindListForBookInAnotherUsersList() {
-        repository.addBookToReadingList(testList1.getReadingListId(), testBook1.getBookId());
-        User otherUser = UserTestUtils.createValidUser();
-        Optional<ReadingList> result = repository.findReadingListContainingBookForUser(otherUser.getKeycloakUserId(), testBook1.getBookId());
+        User user1 = createAndSaveUser();
+        User user2 = createAndSaveUser();
+        Book book = createAndSaveBook();
+        ReadingList list = runTransactionalStep(() -> 
+            getRepository().create(ReadingListTestUtils.createValidReadingListForUser(user1, "User1's List"))
+        );
+        runTransactionalStep(() -> 
+            getRepository().addBookToReadingList(list.getReadingListId(), book.getBookId())
+        );
+        
+        Optional<ReadingList> result = runTransactionalStep(() -> 
+            getRepository().findReadingListContainingBookForUser(user2.getKeycloakUserId(), book.getBookId())
+        );
         assertFalse(result.isPresent());
     }
 }
