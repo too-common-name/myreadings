@@ -1,15 +1,17 @@
 package modules.user.core.usecases;
 
-import modules.user.core.domain.User;
-import modules.user.core.usecases.repositories.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.ForbiddenException;
+import modules.user.core.domain.User;
+import modules.user.core.usecases.repositories.UserRepository;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
-import java.util.UUID;
+
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @ApplicationScoped
 public class UserServiceImpl implements UserService {
@@ -27,15 +29,15 @@ public class UserServiceImpl implements UserService {
     public User createUserProfile(User user) {
         LOGGER.infof("Creating user profile for keycloakUserId: %s, username: %s",
                 user.getKeycloakUserId(), user.getUsername());
-        return userRepository.save(user);
+        return userRepository.create(user);
     }
 
     @Override
     public Optional<User> findUserProfileById(UUID userId, JsonWebToken principal) {
         LOGGER.debugf("Attempting to find user profile with ID: %s", userId);
-        
+
         UUID authenticatedUserId = UUID.fromString(principal.getSubject());
-        
+
         boolean isAdmin = false;
         if (principal.getClaim("realm_access") instanceof jakarta.json.JsonObject) {
             jakarta.json.JsonObject realmAccess = principal.getClaim("realm_access");
@@ -46,13 +48,13 @@ public class UserServiceImpl implements UserService {
         }
 
         if (!authenticatedUserId.equals(userId) && !isAdmin) {
-            LOGGER.warnf("Authorization failed: User %s tried to access profile of user %s without admin role.", 
-                authenticatedUserId, userId);
+            LOGGER.warnf("Authorization failed: User %s tried to access profile of user %s without admin role.",
+                    authenticatedUserId, userId);
             throw new ForbiddenException("User is not authorized to access this profile.");
         }
 
-        LOGGER.infof("User %s authorized to access profile %s (isAdmin: %s)", 
-            authenticatedUserId, userId, isAdmin);
+        LOGGER.infof("User %s authorized to access profile %s (isAdmin: %s)",
+                authenticatedUserId, userId, isAdmin);
         return userRepository.findById(userId);
     }
 
@@ -60,7 +62,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public User updateUserProfile(User user) {
         LOGGER.infof("Updating user profile for keycloakUserId: %s", user.getKeycloakUserId());
-        return userRepository.save(user);
+        return userRepository.update(user);
     }
 
     @Override
@@ -69,4 +71,17 @@ public class UserServiceImpl implements UserService {
         LOGGER.infof("Deleting user profile for ID: %s", userId);
         userRepository.deleteById(userId);
     }
+
+    @Override
+    public Optional<User> findUserByIdInternal(UUID userId) {
+        LOGGER.debugf("Internal search for user profile with ID: %s", userId);
+        return userRepository.findById(userId);
+    }
+
+    @Override
+    public List<User> findUsersByIds(List<UUID> userIds) {
+        LOGGER.debugf("Searching for %d users by IDs", userIds.size());
+        return userRepository.findByIds(userIds);
+    }
+
 }

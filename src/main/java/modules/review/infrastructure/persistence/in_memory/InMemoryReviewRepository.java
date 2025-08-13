@@ -84,7 +84,7 @@ public class InMemoryReviewRepository implements ReviewRepository {
                 .average();
         return average.isPresent() ? average.getAsDouble() : null;
     }
-    
+
     @Override
     public void deleteAll() {
         LOGGER.debug("In-memory: Deleting all reviews");

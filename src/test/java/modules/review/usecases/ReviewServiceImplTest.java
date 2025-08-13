@@ -1,6 +1,7 @@
 package modules.review.usecases;
 
 import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotFoundException;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.usecases.BookService;
@@ -8,6 +9,8 @@ import modules.review.core.domain.Review;
 import modules.review.core.domain.ReviewImpl;
 import modules.review.core.usecases.ReviewServiceImpl;
 import modules.review.core.usecases.repositories.ReviewRepository;
+import modules.review.infrastructure.persistence.postgres.mapper.ReviewMapper;
+import modules.review.infrastructure.persistence.postgres.mapper.ReviewMapperImpl;
 import modules.review.web.dto.ReviewRequestDTO;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
@@ -18,8 +21,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,6 +49,9 @@ public class ReviewServiceImplTest {
 
     @InjectMocks
     private ReviewServiceImpl reviewService;
+
+    @Spy
+    private ReviewMapper reviewMapper = new ReviewMapperImpl();
 
     private User testUser;
     private Book testBook;
@@ -84,7 +92,7 @@ public class ReviewServiceImplTest {
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
         when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(NotFoundException.class, () -> {
             reviewService.createReview(request, jwt);
         });
         verify(reviewRepository, never()).create(any(Review.class));
@@ -95,7 +103,6 @@ public class ReviewServiceImplTest {
         ReviewRequestDTO request = ReviewRequestDTO.builder().rating(5).reviewText("Updated!").build();
 
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
-        when(jwt.getClaim("realm_access")).thenReturn(null);
         when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
         when(reviewRepository.update(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -125,7 +132,6 @@ public class ReviewServiceImplTest {
     @Test
     void shouldDeleteReviewWhenUserIsOwner() {
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
-        when(jwt.getClaim("realm_access")).thenReturn(null);
         when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
         doNothing().when(reviewRepository).deleteById(testReview.getReviewId());
 
@@ -135,13 +141,14 @@ public class ReviewServiceImplTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenGettingReviewsForNonExistentUser() {
+    void shouldReturnEmptyListWhenGettingReviewsForNonExistentUser() {
         UUID userId = UUID.randomUUID();
-        when(userService.findUserProfileById(userId, jwt)).thenReturn(Optional.empty());
+        when(userService.findUserProfileById(any(), any())).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            reviewService.getReviewsForUser(userId, jwt);
-        });
+        List<Review> reviews = reviewService.getReviewsForUser(userId, jwt);
+
+        assertNotNull(reviews);
+        assertTrue(reviews.isEmpty());
         verify(reviewRepository, never()).getUserReviews(any());
     }
 }

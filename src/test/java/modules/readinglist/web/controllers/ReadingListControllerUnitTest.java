@@ -4,6 +4,8 @@ import jakarta.ws.rs.core.Response;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.ReadingListService;
+import modules.readinglist.infrastructure.persistence.postgres.mapper.ReadingListMapper;
+import modules.readinglist.infrastructure.persistence.postgres.mapper.ReadingListMapperImpl;
 import modules.readinglist.web.dto.AddBookRequestDTO;
 import modules.readinglist.web.dto.MoveBookRequestDTO;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Collections;
 import java.util.Optional;
@@ -33,6 +36,9 @@ public class ReadingListControllerUnitTest {
 
     @Mock
     private JsonWebToken jwt;
+
+    @Spy
+    private ReadingListMapper readingListMapper = new ReadingListMapperImpl();
 
     private UUID testReadingListId;
     private User mockUser;

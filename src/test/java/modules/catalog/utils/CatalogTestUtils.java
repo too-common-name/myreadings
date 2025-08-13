@@ -1,6 +1,7 @@
 package modules.catalog.utils;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.UUID;
@@ -8,10 +9,9 @@ import java.util.UUID;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.catalog.web.dto.BookRequestDTO;
-import modules.catalog.web.dto.BookResponseDTO;
 
 public class CatalogTestUtils {
-    
+
     private static final Random random = new Random();
 
     public static String generateSimpleRandomISBN13() {
@@ -28,16 +28,15 @@ public class CatalogTestUtils {
 
     public static Book createValidBookWithId(UUID bookId) {
         return BookImpl.builder().bookId(bookId).isbn(generateSimpleRandomISBN13())
-                .title("Test Book Title").authors(Arrays.asList("Test Author"))
+                .title("Test Book Title").authors(new ArrayList<>(Arrays.asList("Test Author")))
                 .publicationDate(LocalDate.now().minusYears(5)).publisher("Test Publisher")
                 .description("Test book description").pageCount(300).coverImageId("coverTest123")
                 .originalLanguage("en").build();
     }
 
-
     public static Book createTestBook(String title, String description) {
         return BookImpl.builder().bookId(UUID.randomUUID()).isbn(generateSimpleRandomISBN13())
-                .title(title).authors(Arrays.asList("Test Author"))
+                .title(title).authors(new ArrayList<>(Arrays.asList("Test Author")))
                 .publicationDate(LocalDate.now().minusYears(5)).publisher("Test Publisher")
                 .description(description).pageCount(300).coverImageId("coverTest123")
                 .originalLanguage("en").build();
@@ -45,10 +44,10 @@ public class CatalogTestUtils {
 
     public static Book createTestBookWithDate(String title, String description, LocalDate publicationDate) {
         return BookImpl.builder().bookId(UUID.randomUUID()).isbn(generateSimpleRandomISBN13())
-                .title(title).authors(Arrays.asList("Test Author"))
+                .title(title).authors(new ArrayList<>(Arrays.asList("Test Author")))
                 .publicationDate(publicationDate).publisher("Test Publisher")
                 .description(description).pageCount(300).coverImageId("coverTest123")
-                .originalLanguage("en").genre("Fiction") // Aggiunto genere di default
+                .originalLanguage("en").genre("Fiction")
                 .build();
     }
 
@@ -56,7 +55,7 @@ public class CatalogTestUtils {
         return BookRequestDTO.builder()
                 .isbn(generateSimpleRandomISBN13())
                 .title("Test Title")
-                .authors(Arrays.asList("Test author"))
+                .authors(new ArrayList<>(Arrays.asList("Test author")))
                 .publicationDate(LocalDate.of(2023, 1, 1))
                 .publisher("Test Publisher")
                 .description("Test Description")
@@ -66,32 +65,33 @@ public class CatalogTestUtils {
                 .build();
     }
 
-    public static BookImpl.BookImplBuilder createValidBookBuilder(BookRequestDTO requestDTO) {
+    public static BookImpl.BookImplBuilder createValidBookBuilder() {
         return BookImpl.builder()
                 .bookId(UUID.randomUUID())
-                .isbn(requestDTO.getIsbn())
-                .title(requestDTO.getTitle())
-                .authors(requestDTO.getAuthors())
-                .publicationDate(requestDTO.getPublicationDate())
-                .publisher(requestDTO.getPublisher())
-                .description(requestDTO.getDescription())
-                .pageCount(requestDTO.getPageCount())
-                .coverImageId(requestDTO.getCoverImageId())
-                .originalLanguage(requestDTO.getOriginalLanguage());
+                .isbn("978-0321765723")
+                .title("Refactoring")
+                .authors(Arrays.asList("Martin Fowler", "Kent Beck"))
+                .publicationDate(LocalDate.now().minusYears(10))
+                .publisher("Addison-Wesley")
+                .description("Valid description")
+                .pageCount(400)
+                .coverImageId("cover123")
+                .originalLanguage("en");
     }
 
-    public static BookResponseDTO mapBookToResponseDto(Book book) {
-        return BookResponseDTO.builder()
-                .bookId(book.getBookId())
-                .isbn(book.getIsbn())
-                .title(book.getTitle())
-                .authors(book.getAuthors())
-                .publicationDate(book.getPublicationDate())
-                .publisher(book.getPublisher())
-                .description(book.getDescription())
-                .pageCount(book.getPageCount())
-                .coverImageId(book.getCoverImageId())
-                .originalLanguage(book.getOriginalLanguage())
+    public static Book fromRequestDTO(BookRequestDTO dto) {
+        return BookImpl.builder()
+                .bookId(UUID.randomUUID())
+                .isbn(dto.getIsbn())
+                .title(dto.getTitle())
+                .authors(dto.getAuthors() != null ? new ArrayList<>(dto.getAuthors()) : new ArrayList<>())
+                .publicationDate(dto.getPublicationDate())
+                .publisher(dto.getPublisher())
+                .description(dto.getDescription())
+                .pageCount(dto.getPageCount() != null ? dto.getPageCount() : 0)
+                .coverImageId(dto.getCoverImageId())
+                .originalLanguage(dto.getOriginalLanguage())
+                .genre(dto.getGenre())
                 .build();
     }
 }

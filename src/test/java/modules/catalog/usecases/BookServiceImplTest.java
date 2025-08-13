@@ -1,17 +1,23 @@
 package modules.catalog.usecases;
 
 import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.BookServiceImpl;
 import modules.catalog.core.usecases.repositories.BookRepository;
+import modules.catalog.infrastructure.persistence.postgres.mapper.BookMapper;
+import modules.catalog.infrastructure.persistence.postgres.mapper.BookMapperImpl;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
+import modules.catalog.web.dto.BookUpdateDTO;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,6 +37,9 @@ public class BookServiceImplTest {
     @Mock
     private BookRepository bookRepository;
 
+    @Spy
+    private BookMapper bookMapper = new BookMapperImpl();
+
     @InjectMocks
     private BookServiceImpl bookService;
 
@@ -43,14 +52,19 @@ public class BookServiceImplTest {
     void shouldCreateBookWhenRequestIsValid() {
         BookRequestDTO requestDTO = CatalogTestUtils.createValidBookRequestDTO();
         ArgumentCaptor<Book> bookCaptor = ArgumentCaptor.forClass(Book.class);
-        when(bookRepository.save(bookCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
-        
+
+        when(bookRepository.create(bookCaptor.capture())).thenAnswer(invocation -> {
+            Book bookToSave = invocation.getArgument(0);
+            ((BookImpl) bookToSave).setBookId(UUID.randomUUID());
+            return bookToSave;
+        });
+
         Book createdBook = bookService.createBook(requestDTO);
 
         assertNotNull(createdBook);
         assertNotNull(createdBook.getBookId());
         assertEquals(requestDTO.getTitle(), createdBook.getTitle());
-        verify(bookRepository, times(1)).save(any(Book.class));
+        verify(bookRepository, times(1)).create(any(Book.class));
     }
 
     @Test
@@ -79,7 +93,8 @@ public class BookServiceImplTest {
 
     @Test
     void shouldReturnListOfBooksWhenBooksExist() {
-        List<Book> expectedBooks = Arrays.asList(CatalogTestUtils.createValidBook(), CatalogTestUtils.createValidBook());
+        List<Book> expectedBooks = Arrays.asList(CatalogTestUtils.createValidBook(),
+                CatalogTestUtils.createValidBook());
         when(bookRepository.findAll(null, null, null)).thenReturn(expectedBooks);
 
         List<Book> retrievedBooks = bookService.getAllBooks(null, null, null);
@@ -101,21 +116,28 @@ public class BookServiceImplTest {
     }
 
     @Test
-    void shouldUpdateBookSuccessfully() {
-        Book bookToUpdate = CatalogTestUtils.createValidBook();
-        when(bookRepository.save(any(Book.class))).thenReturn(bookToUpdate);
+    void shouldUpdateBookSuccessfullyWhenBookExists() {
+        UUID bookId = UUID.randomUUID();
+        BookUpdateDTO updateDTO = BookUpdateDTO.builder().title("New Title").build();
+        Book originalBook = CatalogTestUtils.createValidBookWithId(bookId);
 
-        Book updatedBook = bookService.updateBook(bookToUpdate);
+        when(bookRepository.findById(bookId)).thenReturn(Optional.of(originalBook));
+        when(bookRepository.update(any(Book.class))).thenAnswer(i -> i.getArgument(0));
 
-        assertNotNull(updatedBook);
-        assertEquals(bookToUpdate.getBookId(), updatedBook.getBookId());
-        verify(bookRepository, times(1)).save(bookToUpdate);
+        Optional<Book> updatedBookOpt = bookService.updateBook(bookId, updateDTO);
+
+        assertTrue(updatedBookOpt.isPresent());
+        assertEquals("New Title", updatedBookOpt.get().getTitle());
+
+        ArgumentCaptor<Book> bookCaptor = ArgumentCaptor.forClass(Book.class);
+        verify(bookRepository, times(1)).update(bookCaptor.capture());
+        assertEquals("New Title", bookCaptor.getValue().getTitle());
     }
 
     @Test
     void shouldDeleteBookById() {
         UUID bookIdToDelete = UUID.randomUUID();
-        doNothing().when(bookRepository).deleteById(bookIdToDelete);
+        when(bookRepository.deleteById(bookIdToDelete)).thenReturn(true);
 
         bookService.deleteBookById(bookIdToDelete);
 
@@ -126,7 +148,8 @@ public class BookServiceImplTest {
     void shouldDelegateSearchToRepository() {
         String query = "test";
         DomainPage<Book> mockDomainPage = new DomainPage<>(Collections.emptyList(), 0, 0, 0, 10, true, true);
-        when(bookRepository.searchBooks(anyString(), anyInt(), anyInt(), anyString(), anyString())).thenReturn(mockDomainPage);
+        when(bookRepository.searchBooks(anyString(), anyInt(), anyInt(), anyString(), anyString()))
+                .thenReturn(mockDomainPage);
 
         DomainPage<Book> resultPage = bookService.searchBooks(query, 0, 10, "title", "asc");
 

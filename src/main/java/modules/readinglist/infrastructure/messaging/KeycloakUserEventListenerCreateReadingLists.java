@@ -74,7 +74,7 @@ public class KeycloakUserEventListenerCreateReadingLists {
                 .description("Books I have already completed.")
                 .build();
 
-        readingListService.createReadingList(toReadList);
-        readingListService.createReadingList(alreadyReadList);
+        readingListService.createReadingListInternal(toReadList);
+        readingListService.createReadingListInternal(alreadyReadList);
     }
 }

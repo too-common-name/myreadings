@@ -4,6 +4,8 @@ import jakarta.ws.rs.core.Response;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.BookService;
+import modules.catalog.infrastructure.persistence.postgres.mapper.BookMapper;
+import modules.catalog.infrastructure.persistence.postgres.mapper.BookMapperImpl;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
 import modules.catalog.web.dto.BookResponseDTO;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
@@ -28,6 +31,9 @@ public class BookControllerUnitTest {
 
     @InjectMocks
     private BookController bookController;
+
+    @Spy
+    private BookMapper bookMapper = new BookMapperImpl();
 
     @Mock
     private BookService bookService;

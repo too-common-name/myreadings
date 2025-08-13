@@ -1,19 +1,21 @@
 package modules.catalog.core.usecases;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.repositories.BookRepository;
+import modules.catalog.infrastructure.persistence.postgres.mapper.BookMapper;
 import modules.catalog.web.dto.BookRequestDTO;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
+import modules.catalog.web.dto.BookUpdateDTO;
+
+import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class BookServiceImpl implements BookService {
@@ -23,29 +25,17 @@ public class BookServiceImpl implements BookService {
     @Inject
     BookRepository bookRepository;
 
+    @Inject
+    BookMapper bookMapper;
+
     @Override
     @Transactional
     public Book createBook(BookRequestDTO createBookRequestDTO) {
         LOGGER.info("Starting creation process for a new book.");
-
-        Book book = BookImpl.builder()
-                .bookId(UUID.randomUUID())
-                .isbn(createBookRequestDTO.getIsbn())
-                .title(createBookRequestDTO.getTitle())
-                .authors(createBookRequestDTO.getAuthors())
-                .publicationDate(createBookRequestDTO.getPublicationDate())
-                .publisher(createBookRequestDTO.getPublisher())
-                .description(createBookRequestDTO.getDescription())
-                .pageCount(createBookRequestDTO.getPageCount())
-                .coverImageId(createBookRequestDTO.getCoverImageId())
-                .originalLanguage(createBookRequestDTO.getOriginalLanguage())
-                .build();
-
-        LOGGER.debugf("Domain object 'Book' created with ID %s, ready for persistence", book.getBookId());
-
-        Book savedBook = bookRepository.save(book);
+        Book book = bookMapper.toDomain(createBookRequestDTO);
+        LOGGER.debugf("Domain object 'Book' created, ready for persistence");
+        Book savedBook = bookRepository.create(book);
         LOGGER.infof("Book saved to repository with ID: %s", savedBook.getBookId());
-
         return savedBook;
     }
 
@@ -64,18 +54,26 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional
-    public Book updateBook(Book book) {
-        LOGGER.infof("Starting update process for book with ID: %s", book.getBookId());
-        Book updatedBook = bookRepository.save(book);
+    public Optional<Book> updateBook(UUID bookId, BookUpdateDTO updateDTO) {
+        LOGGER.infof("Starting update process for book with ID: %s", bookId);
+        Optional<Book> existingBookOpt = bookRepository.findById(bookId);
+        if (existingBookOpt.isEmpty()) {
+            LOGGER.warnf("Book with ID: %s not found. Update failed.", bookId);
+            return Optional.empty();
+        }
+        BookImpl bookToUpdate = (BookImpl) existingBookOpt.get();
+        LOGGER.debugf("Book found, applying updates...");
+        bookMapper.updateDomainFromDto(updateDTO, bookToUpdate);
+        Book updatedBook = bookRepository.update(bookToUpdate);
         LOGGER.infof("Book with ID: %s updated successfully.", updatedBook.getBookId());
-        return updatedBook;
+        return Optional.of(updatedBook);
     }
 
     @Override
     @Transactional
-    public void deleteBookById(UUID bookId) {
+    public boolean deleteBookById(UUID bookId) {
         LOGGER.infof("Deleting book with ID: %s", bookId);
-        bookRepository.deleteById(bookId);
+        return bookRepository.deleteById(bookId);
     }
 
     @Override

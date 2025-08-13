@@ -8,6 +8,8 @@ import io.quarkus.hibernate.orm.PersistenceUnit;
 import jakarta.persistence.TypedQuery;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
+import modules.readinglist.infrastructure.persistence.postgres.mapper.ReadingListMapper;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,14 +27,14 @@ public class JpaReadingListRepository implements ReadingListRepository {
     EntityManager entityManager;
 
     @Inject
-    ReadingListPersistenceMapper mapper;
+    ReadingListMapper mapper;
 
     @Override
     public ReadingList create(ReadingList list) {
         LOGGER.debugf("JPA: Creating reading list entity with ID: %s", list.getReadingListId());
         ReadingListEntity newEntity = mapper.toEntity(list);
-        ReadingListEntity managedEntity = entityManager.merge(newEntity);
-        return mapper.toDomain(managedEntity);
+        entityManager.persist(newEntity);
+        return mapper.toDomain(newEntity);
     }
 
     @Override
@@ -44,7 +46,7 @@ public class JpaReadingListRepository implements ReadingListRepository {
             throw new IllegalArgumentException(
                     "ReadingList with ID " + list.getReadingListId() + " not found for update.");
         }
-        mapper.updateEntityFromDomain(managedEntity, list);
+        mapper.updateEntityFromDomain(list, managedEntity);
         return mapper.toDomain(managedEntity);
     }
 

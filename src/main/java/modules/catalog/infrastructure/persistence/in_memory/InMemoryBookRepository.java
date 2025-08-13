@@ -1,11 +1,11 @@
 package modules.catalog.infrastructure.persistence.in_memory;
 
+import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 import modules.catalog.core.domain.Book;
 import modules.catalog.core.domain.BookImpl;
 import modules.catalog.core.domain.DomainPage;
 import modules.catalog.core.usecases.repositories.BookRepository;
-import io.quarkus.arc.properties.IfBuildProperty;
 import org.jboss.logging.Logger;
 
 import java.util.*;
@@ -13,17 +13,17 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @ApplicationScoped
-@IfBuildProperty(name = "app.repository.type", stringValue = "in-memory", enableIfMissing = true)
+@IfBuildProperty(name = "app.repository.type", stringValue = "in-memory")
 public class InMemoryBookRepository implements BookRepository {
 
     private static final Logger LOGGER = Logger.getLogger(InMemoryBookRepository.class);
     private final Map<UUID, Book> books = new HashMap<>();
 
     @Override
-    public Book save(Book book) {
-        LOGGER.debugf("In-memory: Saving or updating book with ID: %s", book.getBookId());
-        UUID bookId = book.getBookId() != null ? book.getBookId() : UUID.randomUUID();
-        
+    public Book create(Book book) {
+        LOGGER.debugf("In-memory: Creating book with ISBN: %s", book.getIsbn());
+        UUID bookId = UUID.randomUUID();
+
         Book bookToSave = BookImpl.builder()
                 .bookId(bookId)
                 .isbn(book.getIsbn())
@@ -43,6 +43,16 @@ public class InMemoryBookRepository implements BookRepository {
     }
 
     @Override
+    public Book update(Book book) {
+        LOGGER.debugf("In-memory: Updating book with ID: %s", book.getBookId());
+        if (book.getBookId() == null || !books.containsKey(book.getBookId())) {
+            throw new IllegalArgumentException("Book with ID " + book.getBookId() + " not found for update.");
+        }
+        books.put(book.getBookId(), book);
+        return book;
+    }
+
+    @Override
     public Optional<Book> findById(UUID bookId) {
         LOGGER.debugf("In-memory: Finding book by ID: %s", bookId);
         return Optional.ofNullable(books.get(bookId));
@@ -55,9 +65,9 @@ public class InMemoryBookRepository implements BookRepository {
             return Collections.emptyList();
         }
         return bookIds.stream()
-            .map(books::get)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+                .map(books::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -85,9 +95,9 @@ public class InMemoryBookRepository implements BookRepository {
     }
 
     @Override
-    public void deleteById(UUID bookId) {
+    public boolean deleteById(UUID bookId) {
         LOGGER.debugf("In-memory: Deleting book with ID: %s", bookId);
-        books.remove(bookId);
+        return books.remove(bookId) != null;
     }
 
     @Override
@@ -97,8 +107,9 @@ public class InMemoryBookRepository implements BookRepository {
 
         Stream<Book> filteredStream = books.values().stream()
                 .filter(book -> (book.getTitle() != null && book.getTitle().toLowerCase().contains(lowerCaseQuery)) ||
-                        (book.getDescription() != null && book.getDescription().toLowerCase().contains(lowerCaseQuery)));
-                                
+                        (book.getDescription() != null
+                                && book.getDescription().toLowerCase().contains(lowerCaseQuery)));
+
         if (sortBy != null && !sortBy.trim().isEmpty()) {
             Comparator<Book> comparator = getBookComparator(sortBy);
             if (comparator != null) {
@@ -107,7 +118,7 @@ public class InMemoryBookRepository implements BookRepository {
                 }
                 filteredStream = filteredStream.sorted(comparator);
             } else {
-                 LOGGER.warnf("In-memory: Invalid sort field provided for search: %s", sortBy);
+                LOGGER.warnf("In-memory: Invalid sort field provided for search: %s", sortBy);
             }
         }
 
@@ -133,13 +144,13 @@ public class InMemoryBookRepository implements BookRepository {
                 isLast,
                 isFirst);
     }
-    
+
     private Comparator<Book> getBookComparator(String sortField) {
         switch (sortField.toLowerCase()) {
             case "publicationdate":
                 return Comparator.comparing(Book::getPublicationDate, Comparator.nullsLast(Comparator.naturalOrder()));
             case "title":
-                 return Comparator.comparing(Book::getTitle, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                return Comparator.comparing(Book::getTitle, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
             default:
                 return null;
         }

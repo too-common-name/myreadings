@@ -3,7 +3,6 @@ package modules.user.infrastructure.messaging;
 import jakarta.json.bind.annotation.JsonbProperty;
 import lombok.Data;
 
-// DTO per mappare l'evento di registrazione da Keycloak
 @Data
 public class KeycloakEventDTO {
     

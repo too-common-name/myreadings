@@ -3,12 +3,16 @@ package modules.user.infrastructure.persistence.postgres;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
+import jakarta.ws.rs.NotFoundException;
 import modules.user.core.domain.User;
 import modules.user.core.usecases.repositories.UserRepository;
+import modules.user.infrastructure.persistence.postgres.mapper.UserMapper;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.hibernate.orm.PersistenceUnit;
 import org.jboss.logging.Logger;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,10 +29,10 @@ public class JpaUserRepository implements UserRepository {
     EntityManager entityManager;
 
     @Inject
-    UserPersistenceMapper mapper;
+    UserMapper mapper;
 
     @Override
-    public User save(User user) {
+    public User create(User user) {
         LOGGER.debugf("JPA: Saving or updating user entity with keycloak ID: %s", user.getKeycloakUserId());
         UserEntity userEntity = mapper.toEntity(user);
         UserEntity managedEntity = entityManager.merge(userEntity);
@@ -36,10 +40,37 @@ public class JpaUserRepository implements UserRepository {
     }
 
     @Override
+    public User update(User user) {
+        LOGGER.debugf("JPA: Updating user entity with keycloak ID: %s", user.getKeycloakUserId());
+        if (user.getKeycloakUserId() == null) {
+            throw new IllegalArgumentException("User ID cannot be null for update");
+        }
+        UserEntity entity = entityManager.find(UserEntity.class, user.getKeycloakUserId());
+        if (entity == null) {
+            throw new NotFoundException("User with ID " + user.getKeycloakUserId() + " not found.");
+        }
+        mapper.updateEntityFromDomain(user, entity);
+        return mapper.toDomain(entity);
+    }
+
+    @Override
     public Optional<User> findById(UUID userId) {
         LOGGER.debugf("JPA: Finding user entity by ID: %s", userId);
         return Optional.ofNullable(entityManager.find(UserEntity.class, userId))
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    public List<User> findByIds(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        TypedQuery<UserEntity> query = entityManager.createQuery(
+                "SELECT u FROM UserEntity u WHERE u.keycloakUserId IN :ids", UserEntity.class);
+        query.setParameter("ids", userIds);
+        return query.getResultList().stream()
+                .map(mapper::toDomain)
+                .collect(Collectors.toList());
     }
 
     @Override

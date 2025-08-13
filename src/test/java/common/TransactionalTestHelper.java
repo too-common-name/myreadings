@@ -37,12 +37,12 @@ public class TransactionalTestHelper {
 
     @Transactional
     public User saveUser(User user) {
-        return userRepository.save(user);
+        return userRepository.create(user);
     }
 
     @Transactional
     public Book saveBook(Book book) {
-        return bookRepository.save(book);
+        return bookRepository.create(book);
     }
 
     @Transactional

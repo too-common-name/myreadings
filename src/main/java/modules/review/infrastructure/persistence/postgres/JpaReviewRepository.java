@@ -6,6 +6,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import modules.review.core.domain.Review;
 import modules.review.core.usecases.repositories.ReviewRepository;
+import modules.review.infrastructure.persistence.postgres.mapper.ReviewMapper;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,14 +27,14 @@ public class JpaReviewRepository implements ReviewRepository {
     EntityManager entityManager;
 
     @Inject
-    ReviewPersistenceMapper mapper;
+    ReviewMapper mapper;
 
     @Override
     public Review create(Review review) {
         LOGGER.debugf("JPA: Creating review entity with ID: %s", review.getReviewId());
         ReviewEntity newEntity = mapper.toEntity(review);
-        ReviewEntity managedEntity = entityManager.merge(newEntity);
-        return mapper.toDomain(managedEntity);
+        entityManager.persist(newEntity);
+        return mapper.toDomain(newEntity);
     }
 
     @Override
@@ -42,7 +44,7 @@ public class JpaReviewRepository implements ReviewRepository {
         if (entityToUpdate == null) {
             throw new IllegalArgumentException("Review with ID " + review.getReviewId() + " not found for update.");
         }
-        mapper.updateEntityFromDomain(entityToUpdate, review);
+        mapper.updateEntityFromDomain(review, entityToUpdate);
         return mapper.toDomain(entityToUpdate);
     }
 
@@ -65,7 +67,8 @@ public class JpaReviewRepository implements ReviewRepository {
     @Override
     public List<Review> getBookReviews(UUID bookId) {
         LOGGER.debugf("JPA: Getting reviews for book ID: %s", bookId);
-        TypedQuery<ReviewEntity> query = entityManager.createQuery("SELECT r FROM ReviewEntity r WHERE r.bookId = :bookId", ReviewEntity.class);
+        TypedQuery<ReviewEntity> query = entityManager
+                .createQuery("SELECT r FROM ReviewEntity r WHERE r.bookId = :bookId", ReviewEntity.class);
         query.setParameter("bookId", bookId);
         return query.getResultList().stream().map(mapper::toDomain).collect(Collectors.toList());
     }
@@ -73,7 +76,8 @@ public class JpaReviewRepository implements ReviewRepository {
     @Override
     public List<Review> getUserReviews(UUID userId) {
         LOGGER.debugf("JPA: Getting reviews for user ID: %s", userId);
-        TypedQuery<ReviewEntity> query = entityManager.createQuery("SELECT r FROM ReviewEntity r WHERE r.userId = :userId", ReviewEntity.class);
+        TypedQuery<ReviewEntity> query = entityManager
+                .createQuery("SELECT r FROM ReviewEntity r WHERE r.userId = :userId", ReviewEntity.class);
         query.setParameter("userId", userId);
         return query.getResultList().stream().map(mapper::toDomain).collect(Collectors.toList());
     }
@@ -81,16 +85,20 @@ public class JpaReviewRepository implements ReviewRepository {
     @Override
     public Optional<Review> findByUserIdAndBookId(UUID userId, UUID bookId) {
         LOGGER.debugf("JPA: Finding review by user ID %s and book ID %s", userId, bookId);
-        TypedQuery<ReviewEntity> query = entityManager.createQuery("SELECT r FROM ReviewEntity r WHERE r.userId = :userId AND r.bookId = :bookId", ReviewEntity.class);
+        TypedQuery<ReviewEntity> query = entityManager.createQuery(
+                "SELECT r FROM ReviewEntity r WHERE r.userId = :userId AND r.bookId = :bookId", ReviewEntity.class);
         query.setParameter("userId", userId);
         query.setParameter("bookId", bookId);
-        return query.getResultStream().map(mapper::toDomain).findFirst();
+        return query.getResultStream()
+                .map(entity -> (Review) mapper.toDomain(entity))
+                .findFirst();
     }
 
     @Override
     public Long countReviewsByBookId(UUID bookId) {
         LOGGER.debugf("JPA: Counting reviews for book ID: %s", bookId);
-        TypedQuery<Long> query = entityManager.createQuery("SELECT COUNT(r) FROM ReviewEntity r WHERE r.bookId = :bookId", Long.class);
+        TypedQuery<Long> query = entityManager
+                .createQuery("SELECT COUNT(r) FROM ReviewEntity r WHERE r.bookId = :bookId", Long.class);
         query.setParameter("bookId", bookId);
         return query.getSingleResult();
     }
@@ -98,7 +106,8 @@ public class JpaReviewRepository implements ReviewRepository {
     @Override
     public Double findAverageRatingByBookId(UUID bookId) {
         LOGGER.debugf("JPA: Finding average rating for book ID: %s", bookId);
-        TypedQuery<Double> query = entityManager.createQuery("SELECT AVG(r.rating) FROM ReviewEntity r WHERE r.bookId = :bookId", Double.class);
+        TypedQuery<Double> query = entityManager
+                .createQuery("SELECT AVG(r.rating) FROM ReviewEntity r WHERE r.bookId = :bookId", Double.class);
         query.setParameter("bookId", bookId);
         return query.getSingleResult();
     }

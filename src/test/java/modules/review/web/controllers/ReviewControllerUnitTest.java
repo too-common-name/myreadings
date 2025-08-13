@@ -9,6 +9,8 @@ import modules.review.core.domain.Review;
 import modules.review.core.domain.ReviewImpl;
 import modules.review.core.domain.ReviewStats;
 import modules.review.core.usecases.ReviewService;
+import modules.review.infrastructure.persistence.postgres.mapper.ReviewMapper;
+import modules.review.infrastructure.persistence.postgres.mapper.ReviewMapperImpl;
 import modules.review.web.dto.ReviewRequestDTO;
 import modules.review.web.dto.ReviewResponseDTO;
 import modules.review.web.dto.ReviewStatsResponseDTO;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
@@ -43,6 +46,9 @@ public class ReviewControllerUnitTest {
 
     @Mock
     private JsonWebToken jwt;
+
+    @Spy
+    private ReviewMapper reviewMapper = new ReviewMapperImpl(); 
 
     private UUID testUserId;
     private UUID testBookId;

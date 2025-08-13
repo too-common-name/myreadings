@@ -28,7 +28,7 @@ public abstract class AbstractBookRepositoryTest {
     @Test
     void saveAndFindByIdSuccessful() {
         Book bookToSave = CatalogTestUtils.createValidBook();
-        Book savedBook = repository.save(bookToSave);
+        Book savedBook = repository.create(bookToSave);
         Optional<Book> retrievedBook = repository.findById(savedBook.getBookId());
 
         assertTrue(retrievedBook.isPresent());
@@ -44,8 +44,8 @@ public abstract class AbstractBookRepositoryTest {
 
     @Test
     void findAllSuccessful() {
-        repository.save(CatalogTestUtils.createValidBook());
-        repository.save(CatalogTestUtils.createValidBook());
+        repository.create(CatalogTestUtils.createValidBook());
+        repository.create(CatalogTestUtils.createValidBook());
         List<Book> allBooks = repository.findAll(null, null, null);
         assertEquals(2, allBooks.size());
     }
@@ -59,7 +59,7 @@ public abstract class AbstractBookRepositoryTest {
     @Test
     void deleteByIdSuccessful() {
         Book bookToDelete = CatalogTestUtils.createValidBook();
-        Book savedBook = repository.save(bookToDelete);
+        Book savedBook = repository.create(bookToDelete);
         repository.deleteById(savedBook.getBookId());
         Optional<Book> deletedBook = repository.findById(savedBook.getBookId());
         assertFalse(deletedBook.isPresent());
@@ -67,9 +67,9 @@ public abstract class AbstractBookRepositoryTest {
 
     @Test
     void shouldSearchBooksByTitleWithPagination() {
-        repository.save(CatalogTestUtils.createTestBookWithDate("The Great Gatsby", "A novel by F. Scott Fitzgerald.", LocalDate.of(1925, 4, 10)));
-        repository.save(CatalogTestUtils.createTestBookWithDate("Gatsby's Dream", "A sequel to the great Gatsby.", LocalDate.of(2000, 1, 1)));
-        repository.save(CatalogTestUtils.createTestBookWithDate("Moby Dick", "A classic about a whale.", LocalDate.of(1851, 10, 18)));
+        repository.create(CatalogTestUtils.createTestBookWithDate("The Great Gatsby", "A novel by F. Scott Fitzgerald.", LocalDate.of(1925, 4, 10)));
+        repository.create(CatalogTestUtils.createTestBookWithDate("Gatsby's Dream", "A sequel to the great Gatsby.", LocalDate.of(2000, 1, 1)));
+        repository.create(CatalogTestUtils.createTestBookWithDate("Moby Dick", "A classic about a whale.", LocalDate.of(1851, 10, 18)));
 
         DomainPage<Book> page1 = repository.searchBooks("gatsby", 0, 2, "title", "asc");
 
@@ -84,9 +84,9 @@ public abstract class AbstractBookRepositoryTest {
 
     @Test
     void shouldSearchBooksByDescriptionWithPagination() {
-        repository.save(CatalogTestUtils.createTestBook("Book A", "This is a test description about cats."));
-        repository.save(CatalogTestUtils.createTestBook("Book B", "Another description about dogs."));
-        repository.save(CatalogTestUtils.createTestBook("Book C", "A story featuring a cat."));
+        repository.create(CatalogTestUtils.createTestBook("Book A", "This is a test description about cats."));
+        repository.create(CatalogTestUtils.createTestBook("Book B", "Another description about dogs."));
+        repository.create(CatalogTestUtils.createTestBook("Book C", "A story featuring a cat."));
 
         DomainPage<Book> results = repository.searchBooks("cat", 0, 10, "title", "asc");
 
@@ -98,7 +98,7 @@ public abstract class AbstractBookRepositoryTest {
 
     @Test
     void shouldReturnEmptyPageIfNoResultsFound() {
-        repository.save(CatalogTestUtils.createValidBook());
+        repository.create(CatalogTestUtils.createValidBook());
         DomainPage<Book> results = repository.searchBooks("xyz", 0, 10, "title", "asc");
 
         assertTrue(results.content().isEmpty());

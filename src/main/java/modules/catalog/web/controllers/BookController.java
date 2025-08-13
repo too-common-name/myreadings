@@ -1,35 +1,27 @@
 package modules.catalog.web.controllers;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import modules.catalog.core.domain.Book;
-import modules.catalog.core.domain.DomainPage;
-import modules.catalog.core.usecases.BookService;
-import modules.catalog.web.dto.BookResponseDTO;
-import modules.catalog.web.dto.PagedResponse;
-import modules.catalog.web.dto.BookRequestDTO;
+import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import modules.catalog.core.domain.Book;
+import modules.catalog.core.domain.DomainPage;
+import modules.catalog.core.usecases.BookService;
+import modules.catalog.infrastructure.persistence.postgres.mapper.BookMapper;
+import modules.catalog.web.dto.BookRequestDTO;
+import modules.catalog.web.dto.BookResponseDTO;
+import modules.catalog.web.dto.BookUpdateDTO;
+import modules.catalog.web.dto.PagedResponse;
 import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
-
-import io.quarkus.security.Authenticated;
 
 @Path("/api/v1/books")
 @Produces(MediaType.APPLICATION_JSON)
@@ -42,18 +34,37 @@ public class BookController {
     @Inject
     BookService bookService;
 
+    @Inject
+    BookMapper bookMapper;
+
     @POST
     @RolesAllowed("admin")
     public Response createBook(@Valid BookRequestDTO createBookRequestDTO) {
         LOGGER.infof("Received request to create book with ISBN: %s", createBookRequestDTO.getIsbn());
         Book createdBook = bookService.createBook(createBookRequestDTO);
-
-        BookResponseDTO responseDTO = mapToBookResponseDTO(createdBook);
+        BookResponseDTO responseDTO = bookMapper.toResponseDTO(createdBook);
         LOGGER.infof("Book created successfully with ID: %s", createdBook.getBookId());
+        return Response.status(Response.Status.CREATED).entity(responseDTO).build();
+    }
 
-        return Response.status(Response.Status.CREATED)
-                .entity(responseDTO)
-                .build();
+    @PUT
+    @Path("/{bookId}")
+    @RolesAllowed("admin")
+    public Response updateBook(@PathParam("bookId") UUID bookId, @Valid BookUpdateDTO updateDTO) {
+        LOGGER.infof("Received request to update book with ID: %s", bookId);
+
+        Optional<Book> updatedBookOpt = bookService.updateBook(bookId, updateDTO);
+
+        return updatedBookOpt
+                .map(book -> {
+                    BookResponseDTO responseDTO = bookMapper.toResponseDTO(book);
+                    LOGGER.infof("Book with ID: %s updated successfully", bookId);
+                    return Response.ok(responseDTO).build();
+                })
+                .orElseGet(() -> {
+                    LOGGER.warnf("Book with ID: %s not found for update", bookId);
+                    return Response.status(Response.Status.NOT_FOUND).build();
+                });
     }
 
     @GET
@@ -63,14 +74,12 @@ public class BookController {
         LOGGER.infof("Received request to get book by ID: %s", bookId);
         Optional<Book> bookOptional = bookService.getBookById(bookId);
         if (bookOptional.isPresent()) {
-            BookResponseDTO responseDTO = mapToBookResponseDTO(bookOptional.get());
+            BookResponseDTO responseDTO = bookMapper.toResponseDTO(bookOptional.get());
             LOGGER.debugf("Book found with ID: %s", bookId);
-            return Response.ok(responseDTO)
-                    .build();
+            return Response.ok(responseDTO).build();
         } else {
             LOGGER.warnf("Book not found for ID: %s", bookId);
-            return Response.status(Response.Status.NOT_FOUND)
-                    .build();
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
     }
 
@@ -79,15 +88,14 @@ public class BookController {
     @RolesAllowed("admin")
     public Response deleteBookById(@PathParam("bookId") UUID bookId) {
         LOGGER.infof("Received request to delete book by ID: %s", bookId);
-        if (bookService.getBookById(bookId).isEmpty()) {
+        boolean deleted = bookService.deleteBookById(bookId);
+        if (deleted) {
+            LOGGER.info("Book deleted successfully.");
+            return Response.noContent().build();
+        } else {
             LOGGER.warnf("Attempted to delete non-existent book with ID: %s", bookId);
-            return Response.status(Response.Status.NOT_FOUND)
-                    .build();
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        bookService.deleteBookById(bookId);
-        LOGGER.info("Book deleted successfully.");
-        return Response.noContent()
-                .build();
     }
 
     @GET
@@ -99,12 +107,9 @@ public class BookController {
         LOGGER.infof("Received request to get all books with parameters [sort: %s, order: %s, limit: %s]",
                 sort, order, limit);
         List<Book> books = bookService.getAllBooks(sort, order, limit);
-        List<BookResponseDTO> responseDTOs = books.stream()
-                .map(this::mapToBookResponseDTO)
-                .collect(Collectors.toList());
+        List<BookResponseDTO> responseDTOs = bookMapper.toResponseDTOs(books);
         LOGGER.infof("Found and returning %d books.", responseDTOs.size());
-        return Response.ok(responseDTOs)
-                .build();
+        return Response.ok(responseDTOs).build();
     }
 
     @GET
@@ -117,16 +122,10 @@ public class BookController {
             @DefaultValue("title") @QueryParam("sort") String sortBy,
             @DefaultValue("asc") @QueryParam("order") String sortOrder) {
         LOGGER.infof("Received book search request with query: '%s', page: %d, size: %d", query, page, size);
-
         DomainPage<Book> searchResultPage = bookService.searchBooks(query, page, size, sortBy, sortOrder);
-
-        List<BookResponseDTO> content = searchResultPage.content().stream()
-                .map(this::mapToBookResponseDTO)
-                .collect(Collectors.toList());
-
+        List<BookResponseDTO> content = bookMapper.toResponseDTOs(searchResultPage.content());
         LOGGER.infof("Search returned %d books.", searchResultPage.totalElements());
-
-        return new PagedResponse<BookResponseDTO>(
+        return new PagedResponse<>(
                 content,
                 searchResultPage.pageNumber(),
                 searchResultPage.pageSize(),
@@ -134,21 +133,5 @@ public class BookController {
                 searchResultPage.totalPages(),
                 searchResultPage.isLast(),
                 searchResultPage.isFirst());
-    }
-
-    private BookResponseDTO mapToBookResponseDTO(Book book) {
-        return BookResponseDTO.builder()
-                .bookId(book.getBookId())
-                .isbn(book.getIsbn())
-                .title(book.getTitle())
-                .authors(book.getAuthors())
-                .publicationDate(book.getPublicationDate())
-                .publisher(book.getPublisher())
-                .description(book.getDescription())
-                .pageCount(book.getPageCount())
-                .coverImageId(book.getCoverImageId())
-                .originalLanguage(book.getOriginalLanguage())
-                .genre(book.getGenre())
-                .build();
     }
 }

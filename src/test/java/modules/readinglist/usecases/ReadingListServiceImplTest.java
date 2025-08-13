@@ -9,6 +9,8 @@ import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.ReadingListServiceImpl;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
+import modules.readinglist.infrastructure.persistence.postgres.mapper.ReadingListMapper;
+import modules.readinglist.infrastructure.persistence.postgres.mapper.ReadingListMapperImpl;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
@@ -39,17 +42,20 @@ public class ReadingListServiceImplTest {
 
     @Mock
     private UserService userService;
-    
+
     @Mock
     private JsonWebToken jwt;
 
     @InjectMocks
     private ReadingListServiceImpl readingListService;
 
+    @Spy
+    private ReadingListMapper readingListMapper = new ReadingListMapperImpl();
+
     private User testUser;
     private Book testBook;
     private ReadingList testReadingList;
-    
+
     @BeforeEach
     void setUp() {
         UUID userId = UUID.randomUUID();
@@ -66,11 +72,17 @@ public class ReadingListServiceImplTest {
         ReadingListRequestDTO request = ReadingListRequestDTO.builder().name("New List").build();
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
         when(userService.findUserProfileById(testUser.getKeycloakUserId(), jwt)).thenReturn(Optional.of(testUser));
-        when(readingListRepository.create(any(ReadingList.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(readingListRepository.create(any(ReadingList.class))).thenAnswer(invocation -> {
+            ReadingList listToSave = invocation.getArgument(0);
+            ((ReadingListImpl) listToSave).setReadingListId(UUID.randomUUID());
+            return listToSave;
+        });
 
         ReadingList result = readingListService.createReadingList(request, jwt);
 
         assertNotNull(result);
+        assertNotNull(result.getReadingListId(), "The created reading list must have an ID");
         assertEquals("New List", result.getName());
         assertEquals(testUser.getKeycloakUserId(), result.getUser().getKeycloakUserId());
         verify(readingListRepository, times(1)).create(any(ReadingList.class));
@@ -80,7 +92,8 @@ public class ReadingListServiceImplTest {
     void shouldUpdateReadingListWhenUserIsOwner() {
         ReadingListRequestDTO request = ReadingListRequestDTO.builder().name("Updated Name").build();
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
-        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        when(readingListRepository.findById(testReadingList.getReadingListId()))
+                .thenReturn(Optional.of(testReadingList));
         when(readingListRepository.update(any(ReadingList.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ReadingList result = readingListService.updateReadingList(testReadingList.getReadingListId(), request, jwt);
@@ -89,14 +102,15 @@ public class ReadingListServiceImplTest {
         assertEquals("Updated Name", result.getName());
         verify(readingListRepository, times(1)).update(any(ReadingList.class));
     }
-    
+
     @Test
     void shouldThrowForbiddenExceptionWhenUpdatingAnotherUsersList() {
         ReadingListRequestDTO request = ReadingListRequestDTO.builder().name("Updated Name").build();
         UUID otherUserId = UUID.randomUUID();
         when(jwt.getSubject()).thenReturn(otherUserId.toString());
         when(jwt.getClaim("realm_access")).thenReturn(null);
-        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        when(readingListRepository.findById(testReadingList.getReadingListId()))
+                .thenReturn(Optional.of(testReadingList));
 
         assertThrows(ForbiddenException.class, () -> {
             readingListService.updateReadingList(testReadingList.getReadingListId(), request, jwt);
@@ -107,7 +121,8 @@ public class ReadingListServiceImplTest {
     @Test
     void shouldDeleteReadingListWhenUserIsOwner() {
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
-        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        when(readingListRepository.findById(testReadingList.getReadingListId()))
+                .thenReturn(Optional.of(testReadingList));
         doNothing().when(readingListRepository).deleteById(testReadingList.getReadingListId());
 
         readingListService.deleteReadingListById(testReadingList.getReadingListId(), jwt);
@@ -118,20 +133,23 @@ public class ReadingListServiceImplTest {
     @Test
     void shouldAddBookToReadingListSuccessfully() {
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
-        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        when(readingListRepository.findById(testReadingList.getReadingListId()))
+                .thenReturn(Optional.of(testReadingList));
         when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.of(testBook));
         doNothing().when(readingListRepository).addBookToReadingList(any(UUID.class), any(UUID.class));
-        
+
         readingListService.addBookToReadingList(testReadingList.getReadingListId(), testBook.getBookId(), jwt);
-        
-        verify(readingListRepository, times(1)).addBookToReadingList(testReadingList.getReadingListId(), testBook.getBookId());
+
+        verify(readingListRepository, times(1)).addBookToReadingList(testReadingList.getReadingListId(),
+                testBook.getBookId());
     }
-    
+
     @Test
     void shouldThrowNotFoundExceptionWhenAddingNonExistentBook() {
         UUID nonExistentBookId = UUID.randomUUID();
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
-        when(readingListRepository.findById(testReadingList.getReadingListId())).thenReturn(Optional.of(testReadingList));
+        when(readingListRepository.findById(testReadingList.getReadingListId()))
+                .thenReturn(Optional.of(testReadingList));
         when(bookService.getBookById(nonExistentBookId)).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () -> {

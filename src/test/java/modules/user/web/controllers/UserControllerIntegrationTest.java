@@ -44,8 +44,8 @@ public class UserControllerIntegrationTest {
                 .keycloakUserId(UUID.fromString(ADMIN_UUID))
                 .firstName("Bruce").lastName("Wayne").username("admin").email("bwayne@test.com")
                 .build();
-        userRepository.save(alice);
-        userRepository.save(admin);
+        userRepository.create(alice);
+        userRepository.create(admin);
     }
 
     protected String getAccessToken(String userName) {

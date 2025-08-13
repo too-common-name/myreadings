@@ -1,18 +1,16 @@
 package modules.user.infrastructure.messaging;
 
+import common.filters.TraceIdFilter;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import modules.user.core.domain.User;
-import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserService;
-
+import modules.user.infrastructure.persistence.postgres.mapper.UserMapper;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.jboss.logging.Logger;
 import org.jboss.logging.MDC;
-
-import common.filters.TraceIdFilter;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -25,10 +23,12 @@ public class KeycloakUserEventListener {
     @Inject
     UserService userService;
 
+    @Inject
+    UserMapper userMapper;
+
     @Incoming("registrations")
     public void processUserEvent(byte[] event) {
         MDC.put(TraceIdFilter.TRACE_ID_KEY, "event-" + UUID.randomUUID().toString());
-
         String message = new String(event, StandardCharsets.UTF_8);
         LOGGER.infof("Received Keycloak user event: %s", message);
 
@@ -38,18 +38,9 @@ public class KeycloakUserEventListener {
             if (registrationEvent != null && registrationEvent.getDetails() != null) {
                 LOGGER.debugf("Successfully parsed user registration event for username: %s",
                         registrationEvent.getDetails().getUsername());
-
-                UUID keycloakUserId = UUID.fromString(registrationEvent.getUserId());
-                KeycloakEventDTO.Details details = registrationEvent.getDetails();
-
-                User user = UserImpl.builder()
-                        .keycloakUserId(keycloakUserId)
-                        .firstName(details.getFirstName())
-                        .lastName(details.getLastName())
-                        .username(details.getUsername())
-                        .email(details.getEmail())
-                        .build();
-
+                
+                User user = userMapper.toDomain(registrationEvent);
+                
                 userService.createUserProfile(user);
 
             } else {
