@@ -26,7 +26,7 @@ public abstract class AbstractUserRepositoryTest {
     @Test
     void shouldSaveAndFindUserById() {
         User userToSave = UserTestUtils.createValidUser();
-        repository.save(userToSave);
+        repository.create(userToSave);
 
         Optional<User> foundUser = repository.findById(userToSave.getKeycloakUserId());
 
@@ -45,8 +45,8 @@ public abstract class AbstractUserRepositoryTest {
     void shouldFindAllUsers() {
         User user1 = UserTestUtils.createValidUser();
         User user2 = UserTestUtils.createValidUser();
-        repository.save(user1);
-        repository.save(user2);
+        repository.create(user1);
+        repository.create(user2);
 
         List<User> allUsers = repository.findAll();
 
@@ -64,7 +64,7 @@ public abstract class AbstractUserRepositoryTest {
     @Test
     void shouldDeleteUserById() {
         User userToDelete = UserTestUtils.createValidUser();
-        repository.save(userToDelete);
+        repository.create(userToDelete);
 
         repository.deleteById(userToDelete.getKeycloakUserId());
         Optional<User> foundUser = repository.findById(userToDelete.getKeycloakUserId());

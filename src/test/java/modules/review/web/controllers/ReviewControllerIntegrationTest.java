@@ -79,7 +79,7 @@ public class ReviewControllerIntegrationTest {
                 .build();
 
         String newReviewId = given()
-            .auth().oauth2(getAccessToken("alice"))
+            .auth().oauth2(getAccessToken(alice.getUsername()))
             .contentType(MediaType.APPLICATION_JSON)
             .body(requestBody)
         .when()
@@ -102,7 +102,7 @@ public class ReviewControllerIntegrationTest {
                 .build();
 
         given()
-            .auth().oauth2(getAccessToken("alice"))
+            .auth().oauth2(getAccessToken(alice.getUsername()))
             .pathParam("reviewId", aliceReview.getReviewId())
             .contentType(MediaType.APPLICATION_JSON)
             .body(requestBody)
@@ -123,7 +123,7 @@ public class ReviewControllerIntegrationTest {
                 .build();
 
         given()
-            .auth().oauth2(getAccessToken("jdoe"))
+            .auth().oauth2(getAccessToken(jdoe.getUsername()))
             .pathParam("reviewId", aliceReview.getReviewId())
             .contentType(MediaType.APPLICATION_JSON)
             .body(requestBody)
@@ -136,7 +136,7 @@ public class ReviewControllerIntegrationTest {
     @Test
     void testAdminCanDeleteOthersReview() {
         given()
-            .auth().oauth2(getAccessToken("admin"))
+            .auth().oauth2(getAccessToken(admin.getUsername()))
             .pathParam("reviewId", aliceReview.getReviewId())
         .when()
             .delete("/{reviewId}")
@@ -147,7 +147,7 @@ public class ReviewControllerIntegrationTest {
     @Test
     void testUserCannotDeleteOthersReview() {
         given()
-            .auth().oauth2(getAccessToken("jdoe"))
+            .auth().oauth2(getAccessToken(jdoe.getUsername()))
             .pathParam("reviewId", aliceReview.getReviewId())
         .when()
             .delete("/{reviewId}")
@@ -158,7 +158,7 @@ public class ReviewControllerIntegrationTest {
     @Test
     void testGetReviewsByBookId() {
         given()
-            .auth().oauth2(getAccessToken("alice"))
+            .auth().oauth2(getAccessToken(alice.getUsername()))
             .pathParam("bookId", createdBook.getBookId())
         .when()
             .get("/books/{bookId}")

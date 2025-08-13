@@ -1,5 +1,6 @@
 package modules.readinglist.core.usecases;
 
+import common.security.SecurityUtils;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -10,16 +11,15 @@ import modules.catalog.core.usecases.BookService;
 import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.core.domain.ReadingListImpl;
 import modules.readinglist.core.usecases.repositories.ReadingListRepository;
+import modules.readinglist.infrastructure.persistence.postgres.mapper.ReadingListMapper;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
 import modules.user.core.domain.User;
 import modules.user.core.usecases.UserService;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -33,56 +33,23 @@ public class ReadingListServiceImpl implements ReadingListService {
     UserService userService;
     @Inject
     BookService bookService;
+    @Inject
+    ReadingListMapper readingListMapper;
 
-    private ReadingList enrichReadingList(ReadingList list, JsonWebToken principal) {
-        if (list == null) return null;
-        User fullUser = (principal != null) ? userService.findUserProfileById(list.getUser().getKeycloakUserId(), principal).orElse(list.getUser()) : list.getUser();
-        List<UUID> bookIds = readingListRepository.getBookIdsInReadingList(list.getReadingListId());
-        List<Book> fullBooks = bookIds.isEmpty() ? Collections.emptyList() : bookService.getBooksByIds(bookIds);
-        return ReadingListImpl.builder()
-            .readingListId(list.getReadingListId())
-            .user(fullUser)
-            .name(list.getName())
-            .description(list.getDescription())
-            .creationDate(list.getCreationDate())
-            .books(fullBooks)
-            .build();
-    }
-
-    private void checkOwnership(ReadingList readingList, JsonWebToken principal) {
-        UUID currentUserId = UUID.fromString(principal.getSubject());
-        boolean isAdmin = false;
-        if (principal.getClaim("realm_access") instanceof jakarta.json.JsonObject) {
-            jakarta.json.JsonObject realmAccess = principal.getClaim("realm_access");
-            jakarta.json.JsonArray roles = realmAccess.getJsonArray("roles");
-            if (roles != null) {
-                isAdmin = roles.stream().anyMatch(role -> "admin".equals(((jakarta.json.JsonString) role).getString()));
-            }
-        }
-        if (!readingList.getUser().getKeycloakUserId().equals(currentUserId) && !isAdmin) {
-            throw new ForbiddenException("Reading list does not belong to the current user.");
-        }
-    }
-    
     @Override
     public ReadingList createReadingList(ReadingListRequestDTO request, JsonWebToken principal) {
         UUID userId = UUID.fromString(principal.getSubject());
         LOGGER.infof("User %s creating new reading list named '%s'", userId, request.getName());
         User user = userService.findUserProfileById(userId, principal)
             .orElseThrow(() -> new NotFoundException("User not found."));
-        ReadingList newReadingList = ReadingListImpl.builder()
-                .readingListId(UUID.randomUUID())
-                .user(user)
-                .name(request.getName())
-                .description(request.getDescription())
-                .creationDate(LocalDateTime.now())
-                .build();
-        return createReadingList(newReadingList);
+        
+        ReadingList newReadingList = readingListMapper.toDomain(request, user);
+        return createInTransaction(newReadingList);
     }
-    
+
     @Override
     @Transactional
-    public ReadingList createReadingList(ReadingList readingList) {
+    public ReadingList createReadingListInternal(ReadingList readingList) {
         LOGGER.infof("Internally creating reading list '%s' for user %s", readingList.getName(), readingList.getUser().getKeycloakUserId());
         return readingListRepository.create(readingList);
     }
@@ -90,52 +57,49 @@ public class ReadingListServiceImpl implements ReadingListService {
     @Override
     public Optional<ReadingList> findReadingListById(UUID readingListId, JsonWebToken principal) {
         LOGGER.debugf("Finding reading list %s for user %s", readingListId, principal.getSubject());
-        Optional<ReadingList> readingListOpt = readingListRepository.findById(readingListId);
-        readingListOpt.ifPresent(list -> checkOwnership(list, principal));
-        return readingListOpt.map(list -> enrichReadingList(list, principal));
+        
+        Optional<ReadingList> readingListOpt = findByIdInTransaction(readingListId);
+        
+        if (readingListOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        
+        ReadingList list = readingListOpt.get();
+        checkOwnership(list, principal);
+
+        return Optional.of(enrichListWithBooks(list));
     }
 
     @Override
     public List<ReadingList> getReadingListsForUser(UUID userId) {
         LOGGER.debugf("Finding all reading lists for user ID: %s", userId);
-        List<ReadingList> lists = readingListRepository.findByUserId(userId);
-        return lists.stream()
-            .map(list -> enrichReadingList(list, null))
-            .collect(Collectors.toList());
+        List<ReadingList> lists = findByUserIdInTransaction(userId);
+        return enrichListsWithBooks(lists);
     }
 
     @Override
-    @Transactional
     public ReadingList updateReadingList(UUID readingListId, ReadingListRequestDTO request, JsonWebToken principal) {
         LOGGER.infof("User %s updating reading list %s", principal.getSubject(), readingListId);
-        ReadingList existing = readingListRepository.findById(readingListId)
-             .orElseThrow(() -> new NotFoundException("Reading list not found with ID: " + readingListId));
+        ReadingListImpl existing = (ReadingListImpl) findByIdInTransaction(readingListId)
+                 .orElseThrow(() -> new NotFoundException("Reading list not found with ID: " + readingListId));
         checkOwnership(existing, principal);
-        ReadingList updated = ReadingListImpl.builder()
-                .readingListId(existing.getReadingListId())
-                .user(existing.getUser())
-                .name(request.getName())
-                .description(request.getDescription())
-                .creationDate(existing.getCreationDate())
-                .books(existing.getBooks())
-                .build();
-        return readingListRepository.update(updated);
+        readingListMapper.updateFromDto(request, existing);
+        return updateInTransaction(existing);
     }
     
     @Override
-    @Transactional
     public void deleteReadingListById(UUID readingListId, JsonWebToken principal) {
         LOGGER.infof("User %s deleting reading list %s", principal.getSubject(), readingListId);
-        ReadingList listToDelete = readingListRepository.findById(readingListId)
+        ReadingList listToDelete = findByIdInTransaction(readingListId)
             .orElseThrow(() -> new NotFoundException("Reading list not found with ID: " + readingListId));
         checkOwnership(listToDelete, principal);
-        readingListRepository.deleteById(readingListId);
+        deleteByIdInTransaction(readingListId);
     }
 
     @Override
     public void addBookToReadingList(UUID readingListId, UUID bookId, JsonWebToken principal) {
         LOGGER.infof("User %s adding book %s to list %s", principal.getSubject(), bookId, readingListId);
-        ReadingList readingList = readingListRepository.findById(readingListId)
+        ReadingList readingList = findByIdInTransaction(readingListId)
             .orElseThrow(() -> new NotFoundException("Reading list not found with ID: " + readingListId));
         checkOwnership(readingList, principal);
         if (bookService.getBookById(bookId).isEmpty()) {
@@ -144,30 +108,25 @@ public class ReadingListServiceImpl implements ReadingListService {
         addBookInTransaction(readingListId, bookId);
     }
 
-    @Transactional
-    protected void addBookInTransaction(UUID readingListId, UUID bookId) {
-        readingListRepository.addBookToReadingList(readingListId, bookId);
-    }
-
     @Override
-    @Transactional
     public void removeBookFromReadingList(UUID readingListId, UUID bookId, JsonWebToken principal) {
         LOGGER.infof("User %s removing book %s from list %s", principal.getSubject(), bookId, readingListId);
-        ReadingList readingList = readingListRepository.findById(readingListId)
+        ReadingList readingList = findByIdInTransaction(readingListId)
             .orElseThrow(() -> new NotFoundException("Reading list not found with ID: " + readingListId));
         checkOwnership(readingList, principal);
-        readingListRepository.removeBookFromReadingList(readingListId, bookId);
+        removeBookInTransaction(readingListId, bookId);
     }
 
     @Override
     public List<Book> getBooksInReadingList(UUID readingListId, JsonWebToken principal) {
         LOGGER.debugf("User %s getting books from list %s", principal.getSubject(), readingListId);
-        ReadingList readingList = readingListRepository.findById(readingListId)
+        ReadingList readingList = findByIdInTransaction(readingListId)
             .orElseThrow(() -> new NotFoundException("Reading list not found with ID: " + readingListId));
         checkOwnership(readingList, principal);
-        List<UUID> bookIds = readingListRepository.getBookIdsInReadingList(readingListId);
+
+        List<UUID> bookIds = getBookIdsInTransaction(readingListId);
         if (bookIds.isEmpty()) {
-            return List.of();
+            return Collections.emptyList();
         }
         return bookService.getBooksByIds(bookIds);
     }
@@ -175,25 +134,106 @@ public class ReadingListServiceImpl implements ReadingListService {
     @Override
     public Optional<ReadingList> findReadingListForBookAndUser(UUID userId, UUID bookId) {
         LOGGER.debugf("Finding if user %s has book %s in any list", userId, bookId);
-        return readingListRepository.findReadingListContainingBookForUser(userId, bookId)
-            .map(list -> enrichReadingList(list, null));
+        Optional<ReadingList> listOpt = findListContainingBookForUserInTransaction(userId, bookId);
+        return listOpt.map(this::enrichListWithBooks);
     }
 
     @Override
     public void moveBookBetweenReadingLists(UUID userId, UUID bookId, UUID sourceListId, UUID targetListId, JsonWebToken principal) {
         LOGGER.infof("User %s moving book %s from list %s to list %s", userId, bookId, sourceListId, targetListId);
-        ReadingList sourceList = readingListRepository.findById(sourceListId)
+        ReadingList sourceList = findByIdInTransaction(sourceListId)
             .orElseThrow(() -> new NotFoundException("Source list not found with ID: " + sourceListId));
         checkOwnership(sourceList, principal);
-        ReadingList targetList = readingListRepository.findById(targetListId)
+        ReadingList targetList = findByIdInTransaction(targetListId)
             .orElseThrow(() -> new NotFoundException("Target list not found with ID: " + targetListId));
         checkOwnership(targetList, principal);
         
-        List<UUID> bookIdsInSource = readingListRepository.getBookIdsInReadingList(sourceListId);
-        if (!bookIdsInSource.contains(bookId)) {
-             throw new NotFoundException("Book not found in source list.");
-        }
         moveBookInTransaction(sourceListId, targetListId, bookId);
+    }
+    
+    private void checkOwnership(ReadingList readingList, JsonWebToken principal) {
+        UUID currentUserId = UUID.fromString(principal.getSubject());
+        boolean isAdmin = SecurityUtils.isAdmin(principal);
+        if (!readingList.getUser().getKeycloakUserId().equals(currentUserId) && !isAdmin) {
+            throw new ForbiddenException("Reading list does not belong to the current user.");
+        }
+    }
+
+    private ReadingList enrichListWithBooks(ReadingList list) {
+        List<UUID> bookIds = list.getBooks().stream().map(Book::getBookId).collect(Collectors.toList());
+        if (bookIds.isEmpty()) {
+            return list;
+        }
+        List<Book> fullBooks = bookService.getBooksByIds(bookIds);
+        ((ReadingListImpl) list).setBooks(fullBooks);
+        return list;
+    }
+
+    private List<ReadingList> enrichListsWithBooks(List<ReadingList> lists) {
+        if (lists.isEmpty()) return Collections.emptyList();
+        
+        List<UUID> allBookIds = lists.stream()
+            .flatMap(list -> list.getBooks().stream().map(Book::getBookId))
+            .distinct().collect(Collectors.toList());
+        
+        if (allBookIds.isEmpty()) return lists;
+
+        Map<UUID, Book> booksMap = bookService.getBooksByIds(allBookIds).stream()
+            .collect(Collectors.toMap(Book::getBookId, Function.identity()));
+            
+        lists.forEach(list -> {
+            List<Book> fullBooks = list.getBooks().stream()
+                .map(bookStub -> booksMap.get(bookStub.getBookId()))
+                .filter(Objects::nonNull).collect(Collectors.toList());
+            ((ReadingListImpl) list).setBooks(fullBooks);
+        });
+        
+        return lists;
+    }
+
+    @Transactional
+    public ReadingList createInTransaction(ReadingList readingList) {
+        return readingListRepository.create(readingList);
+    }
+
+    @Transactional
+    protected Optional<ReadingList> findByIdInTransaction(UUID readingListId) {
+        return readingListRepository.findById(readingListId);
+    }
+
+    @Transactional
+    protected List<ReadingList> findByUserIdInTransaction(UUID userId) {
+        return readingListRepository.findByUserId(userId);
+    }
+
+    @Transactional
+    protected ReadingList updateInTransaction(ReadingList readingList) {
+        return readingListRepository.update(readingList);
+    }
+    
+    @Transactional
+    protected void deleteByIdInTransaction(UUID readingListId) {
+        readingListRepository.deleteById(readingListId);
+    }
+
+    @Transactional
+    protected void addBookInTransaction(UUID readingListId, UUID bookId) {
+        readingListRepository.addBookToReadingList(readingListId, bookId);
+    }
+
+    @Transactional
+    protected void removeBookInTransaction(UUID readingListId, UUID bookId) {
+        readingListRepository.removeBookFromReadingList(readingListId, bookId);
+    }
+    
+    @Transactional
+    protected List<UUID> getBookIdsInTransaction(UUID readingListId) {
+        return readingListRepository.getBookIdsInReadingList(readingListId);
+    }
+    
+    @Transactional
+    protected Optional<ReadingList> findListContainingBookForUserInTransaction(UUID userId, UUID bookId) {
+        return readingListRepository.findReadingListContainingBookForUser(userId, bookId);
     }
 
     @Transactional

@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ReadingListService {
-    ReadingList createReadingList(ReadingList readingList);
+    ReadingList createReadingListInternal(ReadingList readingList);
     
     ReadingList createReadingList(ReadingListRequestDTO request, JsonWebToken principal);
 

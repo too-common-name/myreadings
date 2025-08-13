@@ -2,6 +2,8 @@ package modules.user.infrastructure.messaging;
 
 import modules.user.core.domain.User;
 import modules.user.core.usecases.UserService;
+import modules.user.infrastructure.persistence.postgres.mapper.UserMapper;
+import modules.user.infrastructure.persistence.postgres.mapper.UserMapperImpl;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -19,6 +22,9 @@ public class KeycloakUserEventListenerTest {
 
     @InjectMocks 
     KeycloakUserEventListener keycloakUserEventListener;
+
+    @Spy
+    UserMapper userMapper = new UserMapperImpl();
 
     @Mock 
     UserService userService;

@@ -18,21 +18,21 @@ import lombok.EqualsAndHashCode;
 public class ReviewImpl implements Review {
 
     @EqualsAndHashCode.Include
-    private final UUID reviewId;
+    private UUID reviewId;
     
     @NotNull
-    private final Book book; 
+    private Book book; 
     
     @NotNull
-    private final User user;
+    private User user;
     
     @Size(max = 200)
-    private final String reviewText;
+    private String reviewText;
     
     @Min(1)
     @Max(5)
-    private final int rating;
+    private int rating;
     
-    private final LocalDateTime publicationDate;
+    private LocalDateTime publicationDate;
 
 }

@@ -9,8 +9,10 @@ import java.util.List;
 
 public interface UserRepository {
 
-    User save(User user); 
+    User create(User user); 
+    User update(User user);
     Optional<User> findById(UUID userId);
+    List<User> findByIds(List<UUID> userIds);
     List<User> findAll();
     void deleteById(UUID userId);
 

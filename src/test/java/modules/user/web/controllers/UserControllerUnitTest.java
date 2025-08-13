@@ -5,12 +5,16 @@ import jakarta.ws.rs.core.Response;
 import modules.user.core.domain.User;
 import modules.user.core.domain.UserImpl;
 import modules.user.core.usecases.UserService;
+import modules.user.infrastructure.persistence.postgres.mapper.UserMapper;
+import modules.user.infrastructure.persistence.postgres.mapper.UserMapperImpl;
+
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
@@ -31,6 +35,9 @@ public class UserControllerUnitTest {
 
     @Mock
     private JsonWebToken jwt;
+
+    @Spy
+    UserMapper userMapper = new UserMapperImpl();
 
     private UUID testUserId;
     private User mockUser;

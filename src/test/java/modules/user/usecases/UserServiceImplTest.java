@@ -43,13 +43,13 @@ class UserServiceImplTest {
 
     @Test
     void shouldCreateUserProfileSuccessfully() {
-        when(userRepositoryMock.save(any(User.class))).thenReturn(testUser);
+        when(userRepositoryMock.create(any(User.class))).thenReturn(testUser);
 
         User createdUser = userService.createUserProfile(testUser);
 
         assertNotNull(createdUser);
         assertEquals(testUser, createdUser);
-        verify(userRepositoryMock, times(1)).save(any(User.class));
+        verify(userRepositoryMock, times(1)).create(any(User.class));
     }
 
     @Test
@@ -112,11 +112,11 @@ class UserServiceImplTest {
 
     @Test
     void shouldUpdateUserProfileSuccessfully() {
-        when(userRepositoryMock.save(testUser)).thenReturn(testUser);
+        when(userRepositoryMock.update(testUser)).thenReturn(testUser);
         User resultUser = userService.updateUserProfile(testUser);
         assertNotNull(resultUser);
         assertEquals(testUser, resultUser);
-        verify(userRepositoryMock, times(1)).save(testUser);
+        verify(userRepositoryMock, times(1)).update(testUser);
     }
 
     @Test

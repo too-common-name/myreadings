@@ -11,11 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import modules.catalog.utils.CatalogTestUtils;
 
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,7 +31,7 @@ public class BookImplUnitTest {
 
     @Test
     void shouldCreateBookSuccessfullyWhenDataIsValid() {
-        Book book = createValidBookBuilder().build();
+        Book book = CatalogTestUtils.createValidBookBuilder().build();
         Set<ConstraintViolation<Book>> violations = validator.validate(book);
         assertTrue(violations.isEmpty());
     }
@@ -40,7 +39,7 @@ public class BookImplUnitTest {
     @ParameterizedTest(name = "Validation for {0} should fail")
     @MethodSource("provideInvalidBookArguments")
     void shouldFailValidationWhenFieldIsInvalid(String fieldName, Object invalidValue) {
-        BookImpl.BookImplBuilder builder = createValidBookBuilder();
+        BookImpl.BookImplBuilder builder = CatalogTestUtils.createValidBookBuilder();
 
         switch (fieldName) {
             case "isbn":
@@ -90,19 +89,5 @@ public class BookImplUnitTest {
             Arguments.of("coverImageId", ".".repeat(256)),
             Arguments.of("originalLanguage", ".".repeat(51))
         );
-    }
-
-    private BookImpl.BookImplBuilder createValidBookBuilder() {
-        return BookImpl.builder()
-                .bookId(UUID.randomUUID())
-                .isbn("978-0321765723")
-                .title("Refactoring")
-                .authors(Arrays.asList("Martin Fowler", "Kent Beck"))
-                .publicationDate(LocalDate.now().minusYears(10))
-                .publisher("Addison-Wesley")
-                .description("Valid description")
-                .pageCount(400)
-                .coverImageId("cover123")
-                .originalLanguage("en");
     }
 }

@@ -1,20 +1,18 @@
 package modules.catalog.web.dto;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.PastOrPresent;
+
 import java.time.LocalDate;
 import java.util.List;
 
 @Data
 @Builder
-public class BookRequestDTO {
-
-    @NotBlank(message = "ISBN is required")
-    private String isbn;
+public class BookUpdateDTO {
 
     @NotBlank(message = "Title is required")
     @Size(max = 255, message = "Title cannot exceed 255 characters")

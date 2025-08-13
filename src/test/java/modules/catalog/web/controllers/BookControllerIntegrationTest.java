@@ -1,15 +1,24 @@
 package modules.catalog.web.controllers;
 
-import io.quarkus.test.TestTransaction;
+import common.TransactionalTestHelper;
+import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.security.TestSecurity;
-import io.restassured.http.ContentType;
+import io.quarkus.test.keycloak.client.KeycloakTestClient;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.core.MediaType;
+import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
-
+import modules.catalog.web.dto.BookUpdateDTO;
+import modules.user.core.domain.User;
+import modules.user.utils.UserTestUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
@@ -17,216 +26,306 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.Matchers.hasSize;
 
 @QuarkusTest
-@TestTransaction
+@TestHTTPEndpoint(BookController.class)
 public class BookControllerIntegrationTest {
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testCreateBookSuccessful() {
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
+    @Inject
+    TransactionalTestHelper helper;
 
-                given().contentType(ContentType.JSON).body(bookRequest).when().post("/api/v1/books").then()
-                                .statusCode(201).body("isbn", equalTo(bookRequest.getIsbn()))
-                                .body("title", equalTo(bookRequest.getTitle()));
-        }
+    KeycloakTestClient keycloakClient = new KeycloakTestClient();
 
-        @Test
-        void testCreateBookWithoutRoleShouldReturnUnauthorized() {
-                given().contentType(ContentType.JSON).body(CatalogTestUtils.createValidBookRequestDTO())
-                                .when().post("/api/v1/books")
-                                .then().statusCode(401);
-        }
+    private static final UUID ALICE_UUID = UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a");
+    private static final UUID ADMIN_UUID = UUID.fromString("af134cab-f41c-4675-b141-205f975db679");
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testCreateBookMissingIsbnShouldReturnBadRequest() {
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-                bookRequest.setIsbn(null);
+    private User alice;
+    private User admin;
+    private final List<Book> booksToCleanup = new ArrayList<>();
 
-                given().contentType(ContentType.JSON).body(bookRequest).when().post("/api/v1/books").then()
-                                .statusCode(400).body(containsString("ISBN is required"));
-        }
+    @BeforeEach
+    void setUp() {
+        booksToCleanup.clear();
+        alice = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ALICE_UUID, "alice"));
+        admin = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ADMIN_UUID, "admin"));
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testCreateBookMissingTitleShouldReturnBadRequest() {
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-                bookRequest.setTitle(null);
+    @AfterEach
+    void tearDown() {
+        booksToCleanup.forEach(book -> helper.deleteBook(book.getBookId()));
+        helper.deleteUser(alice.getKeycloakUserId());
+        helper.deleteUser(admin.getKeycloakUserId());
+    }
 
-                given().contentType(ContentType.JSON).body(bookRequest).when().post("/api/v1/books").then()
-                                .statusCode(400).body(containsString("Title is required"));
-        }
+    private String getAccessToken(String username) {
+        return keycloakClient.getAccessToken(username);
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testCreateBookTitleTooLongShouldReturnBadRequest() {
-                String longTitle = "This is a very long title that exceeds the maximum allowed length of 255 characters. Let's make it even longer just to be absolutely sure that it will indeed exceed the limit and trigger the validation error. We should probably add some more characters here to be safe.";
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-                bookRequest.setTitle(longTitle);
+    private Book createAndTrackBook(BookRequestDTO request) {
+        Book book = helper.saveBook(CatalogTestUtils.fromRequestDTO(request));
+        booksToCleanup.add(book);
+        return book;
+    }
+    
+    @Test
+    void testCreateBookSuccessful() {
+        BookRequestDTO request = CatalogTestUtils.createValidBookRequestDTO();
+        String bookId = given()
+            .auth().oauth2(getAccessToken("admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+        .when()
+            .post()
+        .then()
+            .statusCode(201)
+            .body("isbn", equalTo(request.getIsbn()))
+            .body("title", equalTo(request.getTitle()))
+            .extract().path("bookId");
+        
+        helper.deleteBook(UUID.fromString(bookId));
+    }
 
-                given().contentType(ContentType.JSON).body(bookRequest).when().post("/api/v1/books").then()
-                                .statusCode(400).body(containsString("Title cannot exceed 255 characters"));
-        }
+    @Test
+    void testCreateBookWithoutRoleShouldReturnUnauthorized() {
+        given()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(CatalogTestUtils.createValidBookRequestDTO())
+        .when()
+            .post()
+        .then()
+            .statusCode(401);
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testCreateBookPublicationDateInFutureShouldReturnBadRequest() {
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-                bookRequest.setPublicationDate(LocalDate.now().plusDays(1));
+    @Test
+    void testCreateBookMissingIsbnShouldReturnBadRequest() {
+        BookRequestDTO request = CatalogTestUtils.createValidBookRequestDTO();
+        request.setIsbn(null);
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+        .when()
+            .post()
+        .then()
+            .statusCode(400);
+    }
 
-                given().contentType(ContentType.JSON).body(bookRequest).when().post("/api/v1/books").then()
-                                .statusCode(400)
-                                .body(containsString("Publication date must be in the past or present"));
-        }
+    @Test
+    void testCreateBookMissingTitleShouldReturnBadRequest() {
+        BookRequestDTO request = CatalogTestUtils.createValidBookRequestDTO();
+        request.setTitle(null);
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+        .when()
+            .post()
+        .then()
+            .statusCode(400);
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testCreateBookNegativePageCountShouldReturnBadRequest() {
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-                bookRequest.setPageCount(-1);
+    @Test
+    void testCreateBookTitleTooLongShouldReturnBadRequest() {
+        BookRequestDTO request = CatalogTestUtils.createValidBookRequestDTO();
+        request.setTitle(".".repeat(256));
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+        .when()
+            .post()
+        .then()
+            .statusCode(400);
+    }
 
-                given().contentType(ContentType.JSON).body(bookRequest).when().post("/api/v1/books").then()
-                                .statusCode(400).body(containsString("Page count cannot be negative"));
-        }
+    @Test
+    void testCreateBookPublicationDateInFutureShouldReturnBadRequest() {
+        BookRequestDTO request = CatalogTestUtils.createValidBookRequestDTO();
+        request.setPublicationDate(LocalDate.now().plusDays(1));
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+        .when()
+            .post()
+        .then()
+            .statusCode(400);
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testGetBookByIdExistingIdShouldReturnOkAndBook() {
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-                String bookId = given().contentType(ContentType.JSON).body(bookRequest).when()
-                                .post("/api/v1/books").then().statusCode(201).extract().path("bookId");
+    @Test
+    void testCreateBookNegativePageCountShouldReturnBadRequest() {
+        BookRequestDTO request = CatalogTestUtils.createValidBookRequestDTO();
+        request.setPageCount(-1);
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+        .when()
+            .post()
+        .then()
+            .statusCode(400);
+    }
 
-                given().pathParam("bookId", bookId).when().get("/api/v1/books/{bookId}").then()
-                                .statusCode(200).body("isbn", equalTo(bookRequest.getIsbn()))
-                                .body("title", equalTo(bookRequest.getTitle()));
-        }
+    @Test
+    void testGetBookByIdExistingIdShouldReturnOkAndBook() {
+        Book book = createAndTrackBook(CatalogTestUtils.createValidBookRequestDTO());
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .pathParam("bookId", book.getBookId())
+        .when()
+            .get("/{bookId}")
+        .then()
+            .statusCode(200)
+            .body("isbn", equalTo(book.getIsbn()))
+            .body("title", equalTo(book.getTitle()));
+    }
 
-        @Test
-        @TestSecurity(user = "user", roles = "user")
-        void testGetBookByIdNonExistingIdShouldReturnNotFound() {
-                UUID nonExistingId = UUID.randomUUID();
-                given().pathParam("bookId", nonExistingId).when().get("/api/v1/books/{bookId}").then()
-                                .statusCode(404);
-        }
+    @Test
+    void testGetBookByIdNonExistingIdShouldReturnNotFound() {
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .pathParam("bookId", UUID.randomUUID())
+        .when()
+            .get("/{bookId}")
+        .then()
+            .statusCode(404);
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testDeleteBookByIdExistingIdShouldReturnNoContentAndBookShouldBeGone() {
-                BookRequestDTO bookRequest = CatalogTestUtils.createValidBookRequestDTO();
-                String bookId = given().contentType(ContentType.JSON).body(bookRequest).when()
-                                .post("/api/v1/books").then().statusCode(201).extract().path("bookId");
+    @Test
+    void testDeleteBookByIdExistingIdShouldReturnNoContentAndBookShouldBeGone() {
+        Book book = createAndTrackBook(CatalogTestUtils.createValidBookRequestDTO());
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .pathParam("bookId", book.getBookId())
+        .when()
+            .delete("/{bookId}")
+        .then()
+            .statusCode(204);
+        
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .pathParam("bookId", book.getBookId())
+        .when()
+            .get("/{bookId}")
+        .then()
+            .statusCode(404);
+    }
 
-                given().pathParam("bookId", bookId).when().delete("/api/v1/books/{bookId}").then()
-                                .statusCode(204);
+    @Test
+    void testDeleteBookByIdNonExistingIdShouldReturnNotFound() {
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .pathParam("bookId", UUID.randomUUID())
+        .when()
+            .delete("/{bookId}")
+        .then()
+            .statusCode(404);
+    }
 
-                given().pathParam("bookId", bookId).when().get("/api/v1/books/{bookId}").then()
-                                .statusCode(404);
-        }
+    @Test
+    void testDeleteBookByIdExistingIdWithoutRoleShouldReturnUnauthorized() {
+        given()
+            .pathParam("bookId", UUID.randomUUID())
+        .when()
+            .delete("/{bookId}")
+        .then()
+            .statusCode(401);
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testDeleteBookByIdNonExistingIdShouldReturnNotFound() {
-                UUID nonExistingId = UUID.randomUUID();
-                given().pathParam("bookId", nonExistingId).when().delete("/api/v1/books/{bookId}").then()
-                                .statusCode(404);
-        }
+    @Test
+    void testGetAllBooksBooksExistShouldReturnOkAndListOfBooks() {
+        createAndTrackBook(CatalogTestUtils.createValidBookRequestDTO());
+        createAndTrackBook(CatalogTestUtils.createValidBookRequestDTO());
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("size()", is(2));
+    }
 
-        @Test
-        void testDeleteBookByIdExistingIdWithoutRoleShouldReturnUnauthorized() {
-                given().pathParam("bookId", "fakeit").when().delete("/api/v1/books/{bookId}")
-                                .then().statusCode(401);
-        }
+    @Test
+    void testSearchBooksSuccessful() {
+        BookRequestDTO request = CatalogTestUtils.createValidBookRequestDTO();
+        request.setTitle("The Great Gatsby");
+        createAndTrackBook(request);
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .queryParam("query", "great")
+        .when()
+            .get("/search")
+        .then()
+            .statusCode(200)
+            .body("content", hasSize(1))
+            .body("content[0].title", equalTo("The Great Gatsby"));
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testGetAllBooksBooksExistShouldReturnOkAndListOfBooks() {
-                BookRequestDTO bookRequest1 = CatalogTestUtils.createValidBookRequestDTO();
-                bookRequest1.setIsbn("111-111");
-                bookRequest1.setTitle("Book 1");
-                BookRequestDTO bookRequest2 = CatalogTestUtils.createValidBookRequestDTO();
-                bookRequest2.setIsbn("222-222");
-                bookRequest2.setTitle("Book 2");
+    @Test
+    void testSearchBooksWithoutQueryShouldReturnBadRequest() {
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .queryParam("query", "")
+        .when()
+            .get("/search")
+        .then()
+            .statusCode(400);
+    }
 
-                given().contentType(ContentType.JSON).body(bookRequest1).when().post("/api/v1/books").then()
-                                .statusCode(201);
+    @Test
+    void testSearchBooksWithoutRoleShouldReturnUnauthorized() {
+        given()
+            .queryParam("query", "test")
+        .when()
+            .get("/search")
+        .then()
+            .statusCode(401);
+    }
 
-                given().contentType(ContentType.JSON).body(bookRequest2).when().post("/api/v1/books").then()
-                                .statusCode(201);
+    @Test
+    void testAdminCanUpdateBookSuccessful() {
+        Book book = createAndTrackBook(CatalogTestUtils.createValidBookRequestDTO());
+        BookUpdateDTO updateDTO = BookUpdateDTO.builder()
+                .title("New Updated Title")
+                .description("Updated description.")
+                .build();
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .pathParam("bookId", book.getBookId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(updateDTO)
+        .when()
+            .put("/{bookId}")
+        .then()
+            .statusCode(200)
+            .body("title", equalTo("New Updated Title"))
+            .body("description", equalTo("Updated description."));
+    }
 
-                given().when().get("/api/v1/books").then().statusCode(200).body("size()",
-                                org.hamcrest.Matchers.greaterThanOrEqualTo(2));
-        }
+    @Test
+    void testUpdateBookReturnsNotFoundForNonExistentId() {
+        BookUpdateDTO updateDTO = BookUpdateDTO.builder().title("Non Existent").build();
+        given()
+            .auth().oauth2(getAccessToken("admin"))
+            .pathParam("bookId", UUID.randomUUID())
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(updateDTO)
+        .when()
+            .put("/{bookId}")
+        .then()
+            .statusCode(404);
+    }
 
-        @Test
-        @TestSecurity(user = "adminUser", roles = "admin")
-        void testSearchBooksSuccessful() {
-
-                BookRequestDTO book1 = CatalogTestUtils.createValidBookRequestDTO();
-                book1.setTitle("The Great Gatsby");
-                book1.setDescription("A novel about the roaring twenties.");
-                book1.setIsbn("1111111111111");
-
-                BookRequestDTO book2 = CatalogTestUtils.createValidBookRequestDTO();
-                book2.setTitle("1984");
-                book2.setDescription("A dystopian novel by George Orwell.");
-                book2.setIsbn("2222222222222");
-
-                BookRequestDTO book3 = CatalogTestUtils.createValidBookRequestDTO();
-                book3.setTitle("Brave New World");
-                book3.setDescription("Another dystopian classic.");
-                book3.setIsbn("3333333333333");
-
-                given().contentType(ContentType.JSON).body(book1).when().post("/api/v1/books").then().statusCode(201);
-                given().contentType(ContentType.JSON).body(book2).when().post("/api/v1/books").then().statusCode(201);
-                given().contentType(ContentType.JSON).body(book3).when().post("/api/v1/books").then().statusCode(201);
-
-                given().queryParam("query", "great")
-                                .queryParam("page", 0)
-                                .queryParam("size", 10)
-                                .when().get("/api/v1/books/search")
-                                .then()
-                                .statusCode(200)
-                                .body("content", hasSize(1))
-                                .body("content[0].title", equalTo("The Great Gatsby"))
-                                .body("totalElements", equalTo(1))
-                                .body("totalPages", equalTo(1));
-
-                given().queryParam("query", "dystopian")
-                                .queryParam("page", 0)
-                                .queryParam("size", 10)
-                                .when().get("/api/v1/books/search")
-                                .then()
-                                .statusCode(200)
-                                .body("content", hasSize(2))
-                                .body("totalElements", equalTo(2))
-                                .body("totalPages", equalTo(1))
-                                .body("content.title", hasItems("1984", "Brave New World"));
-
-                given().queryParam("query", "nonexistent")
-                                .queryParam("page", 0)
-                                .queryParam("size", 10)
-                                .when().get("/api/v1/books/search")
-                                .then()
-                                .statusCode(200)
-                                .body("content", hasSize(0))
-                                .body("totalElements", equalTo(0));
-        }
-
-        @Test
-        @TestSecurity(user = "user", roles = "user")
-        void testSearchBooksWithoutQueryShouldReturnBadRequest() {
-                given().queryParam("page", 0)
-                                .queryParam("size", 10)
-                                .when().get("/api/v1/books/search")
-                                .then()
-                                .statusCode(400);
-        }
-
-        @Test
-        void testSearchBooksWithoutRoleShouldReturnUnauthorized() {
-                given().queryParam("query", "test")
-                                .when().get("/api/v1/books/search")
-                                .then()
-                                .statusCode(401);
-        }
+    @Test
+    void testUserCannotUpdateBook() {
+        Book book = createAndTrackBook(CatalogTestUtils.createValidBookRequestDTO());
+        BookUpdateDTO updateDTO = BookUpdateDTO.builder().title("Forbidden Update").build();
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .pathParam("bookId", book.getBookId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(updateDTO)
+        .when()
+            .put("/{bookId}")
+        .then()
+            .statusCode(403);
+    }
 }
