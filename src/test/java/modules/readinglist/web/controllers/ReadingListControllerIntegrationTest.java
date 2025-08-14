@@ -1,10 +1,8 @@
 package modules.readinglist.web.controllers;
 
-import common.TransactionalTestHelper;
+import common.AbstractControllerIntegrationTest;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.keycloak.client.KeycloakTestClient;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.core.MediaType;
 import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
@@ -12,8 +10,6 @@ import modules.readinglist.core.domain.ReadingList;
 import modules.readinglist.utils.ReadingListTestUtils;
 import modules.readinglist.web.dto.AddBookRequestDTO;
 import modules.readinglist.web.dto.ReadingListRequestDTO;
-import modules.user.core.domain.User;
-import modules.user.utils.UserTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,26 +22,14 @@ import static org.hamcrest.Matchers.notNullValue;
 
 @QuarkusTest
 @TestHTTPEndpoint(ReadingListController.class)
-public class ReadingListControllerIntegrationTest {
+public class ReadingListControllerIntegrationTest extends AbstractControllerIntegrationTest {
 
-    @Inject
-    TransactionalTestHelper helper;
-
-    KeycloakTestClient keycloakClient = new KeycloakTestClient();
-
-    private static final UUID ALICE_UUID = UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a");
-    private static final UUID ADMIN_UUID = UUID.fromString("af134cab-f41c-4675-b141-205f975db679");
-
-    private User alice;
-    private User admin;
     private Book createdBook;
     private ReadingList aliceList;
     private ReadingList adminList;
 
     @BeforeEach
     void setUp() {
-        alice = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ALICE_UUID, "alice"));
-        admin = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ADMIN_UUID, "admin"));
         createdBook = helper.saveBook(CatalogTestUtils.createValidBook());
         aliceList = helper.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(alice, "Alice's List"));
         adminList = helper.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(admin, "Admin's List"));
@@ -56,12 +40,6 @@ public class ReadingListControllerIntegrationTest {
         helper.deleteReadingList(aliceList.getReadingListId());
         helper.deleteReadingList(adminList.getReadingListId());
         helper.deleteBook(createdBook.getBookId());
-        helper.deleteUser(alice.getKeycloakUserId());
-        helper.deleteUser(admin.getKeycloakUserId());
-    }
-
-    protected String getAccessToken(String userName) {
-        return keycloakClient.getAccessToken(userName);
     }
 
     @Test

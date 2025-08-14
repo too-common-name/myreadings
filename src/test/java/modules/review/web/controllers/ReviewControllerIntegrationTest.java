@@ -1,10 +1,8 @@
 package modules.review.web.controllers;
 
-import common.TransactionalTestHelper;
+import common.AbstractControllerIntegrationTest;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.keycloak.client.KeycloakTestClient;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.core.MediaType;
 import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
@@ -25,19 +23,10 @@ import static org.hamcrest.CoreMatchers.is;
 
 @QuarkusTest
 @TestHTTPEndpoint(ReviewController.class)
-public class ReviewControllerIntegrationTest {
+public class ReviewControllerIntegrationTest extends AbstractControllerIntegrationTest {
 
-    @Inject
-    TransactionalTestHelper helper;
-
-    KeycloakTestClient keycloakClient = new KeycloakTestClient();
-
-    private static final UUID ALICE_UUID = UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a");
-    private static final UUID ADMIN_UUID = UUID.fromString("af134cab-f41c-4675-b141-205f975db679");
     private static final UUID JDOE_UUID = UUID.fromString("1eed6a8e-a853-4597-b4c6-c4c2533546a0");
 
-    private User alice;
-    private User admin;
     private User jdoe;
     private Book createdBook;
     private Book anotherBook;
@@ -45,8 +34,6 @@ public class ReviewControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        alice = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ALICE_UUID, "alice"));
-        admin = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ADMIN_UUID, "admin"));
         jdoe = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(JDOE_UUID, "jdoe"));
         
         createdBook = helper.saveBook(CatalogTestUtils.createValidBook());
@@ -61,13 +48,7 @@ public class ReviewControllerIntegrationTest {
         helper.deleteReview(aliceReview.getReviewId());
         helper.deleteBook(createdBook.getBookId());
         helper.deleteBook(anotherBook.getBookId());
-        helper.deleteUser(alice.getKeycloakUserId());
-        helper.deleteUser(admin.getKeycloakUserId());
         helper.deleteUser(jdoe.getKeycloakUserId());
-    }
-
-    protected String getAccessToken(String userName) {
-        return keycloakClient.getAccessToken(userName);
     }
 
     @Test

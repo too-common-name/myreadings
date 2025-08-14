@@ -1,17 +1,13 @@
 package modules.catalog.web.controllers;
 
-import common.TransactionalTestHelper;
+import common.AbstractControllerIntegrationTest;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.keycloak.client.KeycloakTestClient;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.core.MediaType;
 import modules.catalog.core.domain.Book;
 import modules.catalog.utils.CatalogTestUtils;
 import modules.catalog.web.dto.BookRequestDTO;
 import modules.catalog.web.dto.BookUpdateDTO;
-import modules.user.core.domain.User;
-import modules.user.utils.UserTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,36 +23,18 @@ import static org.hamcrest.Matchers.hasSize;
 
 @QuarkusTest
 @TestHTTPEndpoint(BookController.class)
-public class BookControllerIntegrationTest {
+public class BookControllerIntegrationTest extends AbstractControllerIntegrationTest {
 
-    @Inject
-    TransactionalTestHelper helper;
-
-    KeycloakTestClient keycloakClient = new KeycloakTestClient();
-
-    private static final UUID ALICE_UUID = UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a");
-    private static final UUID ADMIN_UUID = UUID.fromString("af134cab-f41c-4675-b141-205f975db679");
-
-    private User alice;
-    private User admin;
     private final List<Book> booksToCleanup = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         booksToCleanup.clear();
-        alice = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ALICE_UUID, "alice"));
-        admin = helper.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ADMIN_UUID, "admin"));
     }
 
     @AfterEach
     void tearDown() {
         booksToCleanup.forEach(book -> helper.deleteBook(book.getBookId()));
-        helper.deleteUser(alice.getKeycloakUserId());
-        helper.deleteUser(admin.getKeycloakUserId());
-    }
-
-    private String getAccessToken(String username) {
-        return keycloakClient.getAccessToken(username);
     }
 
     private Book createAndTrackBook(BookRequestDTO request) {
