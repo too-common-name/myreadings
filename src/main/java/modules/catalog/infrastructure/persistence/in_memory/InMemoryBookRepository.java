@@ -123,26 +123,8 @@ public class InMemoryBookRepository implements BookRepository {
         }
 
         List<Book> allFilteredBooks = filteredStream.collect(Collectors.toList());
-        long totalElements = allFilteredBooks.size();
-
-        int skip = page * size;
-        List<Book> pagedContent = allFilteredBooks.stream()
-                .skip(skip)
-                .limit(size)
-                .collect(Collectors.toList());
-
-        int totalPages = (int) Math.ceil((double) totalElements / size);
-        boolean isLast = (page + 1) * size >= totalElements;
-        boolean isFirst = page == 0;
-
-        return new DomainPage<>(
-                pagedContent,
-                totalElements,
-                totalPages,
-                page,
-                size,
-                isLast,
-                isFirst);
+        
+        return DomainPage.of(allFilteredBooks, page, size);
     }
 
     private Comparator<Book> getBookComparator(String sortField) {
