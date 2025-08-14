@@ -143,8 +143,6 @@ public class JpaBookRepository implements BookRepository {
         long totalElements = countQuery.getSingleResult();
 
         int totalPages = (int) Math.ceil((double) totalElements / size);
-        boolean isLast = (page + 1) * size >= totalElements;
-        boolean isFirst = page == 0;
 
         return new DomainPage<>(
                 content,
@@ -152,7 +150,7 @@ public class JpaBookRepository implements BookRepository {
                 totalPages,
                 page,
                 size,
-                isLast,
-                isFirst);
+                (page + 1) >= totalPages,
+                page == 0);
     }
 }
