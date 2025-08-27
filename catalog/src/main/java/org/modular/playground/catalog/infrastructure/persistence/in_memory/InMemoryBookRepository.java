@@ -103,6 +103,11 @@ public class InMemoryBookRepository implements BookRepository {
     @Override
     public DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder) {
         LOGGER.debugf("In-memory: Searching books with query: '%s', page: %d, size: %d", query, page, size);
+        
+        if (query == null || query.isBlank()) {
+            return new DomainPage<>(Collections.emptyList(), 0, 0, page, size, true, true);
+        }
+        
         String lowerCaseQuery = query.toLowerCase();
 
         Stream<Book> filteredStream = books.values().stream()

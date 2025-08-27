@@ -112,6 +112,11 @@ public class JpaBookRepository implements BookRepository {
     @Override
     public DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder) {
         LOGGER.debugf("JPA: Searching book entities with query: '%s', page: %d, size: %d", query, page, size);
+        
+        if (query == null || query.isBlank()) {
+            return new DomainPage<>(Collections.emptyList(), 0, 0, page, size, true, true);
+        }
+        
         String lowerCaseQuery = "%" + query.toLowerCase() + "%";
         String countJpqlString = "SELECT COUNT(b) FROM BookEntity b WHERE LOWER(b.title) LIKE :query OR LOWER(b.description) LIKE :query";
         StringBuilder contentJpql = new StringBuilder(
