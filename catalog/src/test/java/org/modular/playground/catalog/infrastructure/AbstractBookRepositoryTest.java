@@ -105,4 +105,105 @@ public abstract class AbstractBookRepositoryTest {
         assertEquals(0, results.totalElements());
         assertEquals(0, results.totalPages());
     }
+
+    @Test
+    void updateShouldThrowExceptionWhenBookIdIsNull() {
+        Book bookWithNullId = CatalogTestUtils.createValidBookWithId(null);
+        
+        assertThrows(IllegalArgumentException.class, () -> {
+            repository.update(bookWithNullId);
+        });
+    }
+
+    @Test
+    void updateShouldThrowExceptionWhenBookDoesNotExist() {
+        Book nonExistentBook = CatalogTestUtils.createValidBook();
+        
+        assertThrows(RuntimeException.class, () -> {
+            repository.update(nonExistentBook);
+        });
+    }
+
+    @Test
+    void searchBooksWithNullQueryShouldReturnEmptyPage() {
+        repository.create(CatalogTestUtils.createValidBook());
+        DomainPage<Book> results = repository.searchBooks(null, 0, 10, "title", "asc");
+
+        assertTrue(results.content().isEmpty());
+        assertEquals(0, results.totalElements());
+    }
+
+    @Test
+    void searchBooksWithBlankQueryShouldReturnEmptyPage() {
+        repository.create(CatalogTestUtils.createValidBook());
+        DomainPage<Book> results = repository.searchBooks("   ", 0, 10, "title", "asc");
+        
+        assertTrue(results.content().isEmpty());
+        assertEquals(0, results.totalElements());
+    }
+
+    @Test
+    void shouldFindBooksByIds() {
+        Book book1 = repository.create(CatalogTestUtils.createTestBook("Book One", "Desc 1"));
+        Book book2 = repository.create(CatalogTestUtils.createTestBook("Book Two", "Desc 2"));
+        repository.create(CatalogTestUtils.createTestBook("Book Three", "Desc 3")); // Questo non verrà cercato
+
+        List<UUID> idsToFind = List.of(book1.getBookId(), book2.getBookId());
+        List<Book> foundBooks = repository.findByIds(idsToFind);
+
+        assertEquals(2, foundBooks.size());
+        assertTrue(foundBooks.stream().anyMatch(b -> b.getBookId().equals(book1.getBookId())));
+        assertTrue(foundBooks.stream().anyMatch(b -> b.getBookId().equals(book2.getBookId())));
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenFindingByIdsWithEmptyList() {
+        List<Book> foundBooks = repository.findByIds(List.of());
+        assertTrue(foundBooks.isEmpty());
+    }
+
+    @Test
+    void shouldFindAllAndSortByTitleAsc() {
+        repository.create(CatalogTestUtils.createTestBook("Zebra", ""));
+        repository.create(CatalogTestUtils.createTestBook("Apple", ""));
+        
+        List<Book> allBooks = repository.findAll("title", "asc", null);
+
+        assertEquals(2, allBooks.size());
+        assertEquals("Apple", allBooks.get(0).getTitle());
+        assertEquals("Zebra", allBooks.get(1).getTitle());
+    }
+
+    @Test
+    void shouldFindAllAndSortByTitleDesc() {
+        repository.create(CatalogTestUtils.createTestBook("Zebra", ""));
+        repository.create(CatalogTestUtils.createTestBook("Apple", ""));
+
+        List<Book> allBooks = repository.findAll("title", "desc", null);
+
+        assertEquals(2, allBooks.size());
+        assertEquals("Zebra", allBooks.get(0).getTitle());
+        assertEquals("Apple", allBooks.get(1).getTitle());
+    }
+
+    @Test
+    void shouldFindAllAndApplyLimit() {
+        repository.create(CatalogTestUtils.createTestBook("Book 1", ""));
+        repository.create(CatalogTestUtils.createTestBook("Book 2", ""));
+        repository.create(CatalogTestUtils.createTestBook("Book 3", ""));
+        
+        List<Book> allBooks = repository.findAll(null, null, 2);
+
+        assertEquals(2, allBooks.size());
+    }
+
+    @Test
+    void shouldIgnoreInvalidSortField() {
+        repository.create(CatalogTestUtils.createTestBook("Book A", ""));
+        repository.create(CatalogTestUtils.createTestBook("Book B", ""));
+
+        List<Book> allBooks = repository.findAll("invalidField", "asc", null);
+        
+        assertEquals(2, allBooks.size());
+    }
 }

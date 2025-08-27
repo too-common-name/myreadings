@@ -156,4 +156,21 @@ public class BookServiceImplTest {
         verify(bookRepository, times(1)).searchBooks(query, 0, 10, "title", "asc");
         assertNotNull(resultPage);
     }
+
+    @Test
+    void shouldGetBooksByIdsWhenIdsAreProvided() {
+        List<UUID> bookIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        List<Book> expectedBooks = List.of(
+            CatalogTestUtils.createValidBookWithId(bookIds.get(0)),
+            CatalogTestUtils.createValidBookWithId(bookIds.get(1))
+        );
+
+        when(bookRepository.findByIds(bookIds)).thenReturn(expectedBooks);
+
+        List<Book> resultBooks = bookService.getBooksByIds(bookIds);
+
+        assertNotNull(resultBooks);
+        assertEquals(2, resultBooks.size());
+        verify(bookRepository, times(1)).findByIds(bookIds);
+    }
 }
