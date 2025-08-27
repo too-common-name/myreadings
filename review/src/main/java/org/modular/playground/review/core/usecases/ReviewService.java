@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.modular.playground.review.core.domain.Review;
-import org.modular.playground.review.core.domain.ReviewStats;
+import org.modular.playground.review.core.domain.ReviewStatsImpl;
 import org.modular.playground.review.web.dto.ReviewRequestDTO;
 
 public interface ReviewService {
@@ -17,5 +17,5 @@ public interface ReviewService {
     List<Review> getReviewsForUser(UUID userId, JsonWebToken principal);
     Review updateReview(UUID reviewId, ReviewRequestDTO reviewRequest, JsonWebToken principal); 
     void deleteReviewById(UUID reviewId, JsonWebToken principal);
-    ReviewStats getReviewStatsForBook(UUID bookId);
+    ReviewStatsImpl getReviewStatsForBook(UUID bookId);
 }

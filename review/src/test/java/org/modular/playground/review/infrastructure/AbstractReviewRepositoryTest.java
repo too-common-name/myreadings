@@ -153,4 +153,32 @@ public abstract class AbstractReviewRepositoryTest {
         Double averageRating = runTransactionalStep(() -> getRepository().findAverageRatingByBookId(UUID.randomUUID()));
         assertNull(averageRating);
     }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingNonExistentReview() {
+        Review nonExistentReview = ReviewTestUtils.createValidReviewForUserAndBook(UUID.randomUUID(), UUID.randomUUID(), "Doesn't exist", 3);
+
+        runTransactionalStep(() -> {
+            assertThrows(IllegalArgumentException.class, () -> {
+                getRepository().update(nonExistentReview);
+            });
+        });
+    }
+
+    @Test
+    void shouldDeleteAllReviews() {
+        User user = createAndSaveUser();
+        Book book = createAndSaveBook();
+        
+        runTransactionalStep(() -> {
+            getRepository().create(ReviewTestUtils.createValidReviewForUserAndBook(user.getKeycloakUserId(), book.getBookId(), "Review 1", 5));
+            getRepository().create(ReviewTestUtils.createValidReviewForUserAndBook(user.getKeycloakUserId(), book.getBookId(), "Review 2", 4));
+        });
+
+        runTransactionalStep(() -> {
+            getRepository().deleteAll();
+            long count = getRepository().countReviewsByBookId(book.getBookId());
+            assertEquals(0, count);
+        });
+    }
 }

@@ -8,7 +8,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.modular.playground.review.core.domain.Review;
-import org.modular.playground.review.core.domain.ReviewStats;
+import org.modular.playground.review.core.domain.ReviewStatsImpl;
 import org.modular.playground.review.core.usecases.ReviewService;
 import org.modular.playground.review.infrastructure.persistence.postgres.mapper.ReviewMapper;
 import org.modular.playground.review.web.dto.ReviewRequestDTO;
@@ -92,7 +92,7 @@ public class ReviewController {
     @RolesAllowed({"user", "admin"})
     public Response getBookReviewStats(@PathParam("bookId") UUID bookId) {
         LOGGER.infof("Received request for review stats for book ID: %s", bookId);
-        ReviewStats stats = reviewService.getReviewStatsForBook(bookId);
+        ReviewStatsImpl stats = reviewService.getReviewStatsForBook(bookId);
         ReviewStatsResponseDTO responseDTO = reviewMapper.toStatsResponseDTO(stats, bookId);
         return Response.ok(responseDTO).build();
     }
