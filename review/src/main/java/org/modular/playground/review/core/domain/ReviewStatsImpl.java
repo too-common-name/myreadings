@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class ReviewStats {
+public class ReviewStatsImpl {
     private long totalReviews;
     private Double averageRating;
 }

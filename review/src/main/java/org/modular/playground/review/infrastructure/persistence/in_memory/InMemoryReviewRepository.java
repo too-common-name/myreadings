@@ -27,6 +27,11 @@ public class InMemoryReviewRepository implements ReviewRepository {
     @Override
     public Review update(Review review) {
         LOGGER.debugf("In-memory: Updating review with ID: %s", review.getReviewId());
+
+        if (!reviews.containsKey(review.getReviewId())) {
+            throw new IllegalArgumentException("Review with ID " + review.getReviewId() + " not found for update.");
+        }
+
         reviews.put(review.getReviewId(), review);
         return review;
     }

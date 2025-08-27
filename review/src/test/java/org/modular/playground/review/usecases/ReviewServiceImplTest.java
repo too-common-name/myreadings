@@ -2,6 +2,14 @@ package org.modular.playground.review.usecases;
 
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.modular.playground.catalog.core.domain.Book;
 import org.modular.playground.catalog.core.domain.BookImpl;
 import org.modular.playground.catalog.core.usecases.BookService;
@@ -15,14 +23,6 @@ import org.modular.playground.review.web.dto.ReviewRequestDTO;
 import org.modular.playground.user.core.domain.User;
 import org.modular.playground.user.core.domain.UserImpl;
 import org.modular.playground.user.core.usecases.UserService;
-import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Spy;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +30,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -92,10 +93,115 @@ public class ReviewServiceImplTest {
         when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
         when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> {
-            reviewService.createReview(request, jwt);
-        });
+        assertThrows(NotFoundException.class, () -> reviewService.createReview(request, jwt));
         verify(reviewRepository, never()).create(any(Review.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCreatingReviewForNonExistentUser() {
+        ReviewRequestDTO request = ReviewRequestDTO.builder().bookId(testBook.getBookId()).build();
+        when(jwt.getSubject()).thenReturn(testUser.getKeycloakUserId().toString());
+        when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.of(testBook));
+        when(userService.findUserProfileById(testUser.getKeycloakUserId(), jwt)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> reviewService.createReview(request, jwt));
+        verify(reviewRepository, never()).create(any(Review.class));
+    }
+
+    @Test
+    void shouldFindReviewByIdAndEnrichIt() {
+        when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
+        when(userService.findUserByIdInternal(testUser.getKeycloakUserId())).thenReturn(Optional.of(testUser));
+        when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.of(testBook));
+
+        Optional<Review> result = reviewService.findReviewById(testReview.getReviewId(), jwt);
+
+        assertTrue(result.isPresent());
+        assertEquals(testReview.getReviewId(), result.get().getReviewId());
+        verify(userService, times(1)).findUserByIdInternal(testUser.getKeycloakUserId());
+        verify(bookService, times(1)).getBookById(testBook.getBookId());
+    }
+
+    @Test
+    void shouldReturnEmptyOptionalWhenFindingNonExistentReviewById() {
+        UUID nonExistentId = UUID.randomUUID();
+        when(reviewRepository.findById(nonExistentId)).thenReturn(Optional.empty());
+
+        Optional<Review> result = reviewService.findReviewById(nonExistentId, jwt);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void shouldFindReviewByUserAndBook() {
+        when(reviewRepository.findByUserIdAndBookId(testUser.getKeycloakUserId(), testBook.getBookId())).thenReturn(Optional.of(testReview));
+        when(userService.findUserByIdInternal(testUser.getKeycloakUserId())).thenReturn(Optional.of(testUser));
+        when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.of(testBook));
+
+        Optional<Review> result = reviewService.findReviewByUserAndBook(testUser.getKeycloakUserId(), testBook.getBookId(), jwt);
+
+        assertTrue(result.isPresent());
+        assertEquals(testReview.getReviewId(), result.get().getReviewId());
+    }
+
+    @Test
+    void shouldReturnEnrichedReviewsForUser() {
+        List<Review> rawReviews = List.of(testReview);
+        when(userService.findUserProfileById(testUser.getKeycloakUserId(), jwt)).thenReturn(Optional.of(testUser));
+        when(reviewRepository.getUserReviews(testUser.getKeycloakUserId())).thenReturn(rawReviews);
+        when(userService.findUsersByIds(anyList())).thenReturn(List.of(testUser));
+        when(bookService.getBooksByIds(anyList())).thenReturn(List.of(testBook));
+
+        List<Review> result = reviewService.getReviewsForUser(testUser.getKeycloakUserId(), jwt);
+
+        assertFalse(result.isEmpty());
+        assertEquals(1, result.size());
+        verify(userService, times(1)).findUsersByIds(anyList());
+        verify(bookService, times(1)).getBooksByIds(anyList());
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenGettingReviewsForNonExistentUser() {
+        UUID userId = UUID.randomUUID();
+        when(userService.findUserProfileById(any(), any())).thenReturn(Optional.empty());
+
+        List<Review> reviews = reviewService.getReviewsForUser(userId, jwt);
+
+        assertNotNull(reviews);
+        assertTrue(reviews.isEmpty());
+        verify(reviewRepository, never()).getUserReviews(any());
+    }
+
+    @Test
+    void shouldHandleNullListFromRepositoryWhenEnriching() {
+        when(userService.findUserProfileById(testUser.getKeycloakUserId(), jwt)).thenReturn(Optional.of(testUser));
+        when(reviewRepository.getUserReviews(testUser.getKeycloakUserId())).thenReturn(null);
+
+        List<Review> result = reviewService.getReviewsForUser(testUser.getKeycloakUserId(), jwt);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void shouldGetReviewStatsForBook() {
+        when(bookService.getBookById(testBook.getBookId())).thenReturn(Optional.of(testBook));
+        when(reviewRepository.countReviewsByBookId(testBook.getBookId())).thenReturn(2L);
+        when(reviewRepository.findAverageRatingByBookId(testBook.getBookId())).thenReturn(4.5);
+
+        var stats = reviewService.getReviewStatsForBook(testBook.getBookId());
+
+        assertNotNull(stats);
+        assertEquals(2L, stats.getTotalReviews());
+        assertEquals(4.5, stats.getAverageRating());
+    }
+
+    @Test
+    void shouldThrowNotFoundExceptionWhenGettingStatsForNonExistentBook() {
+        UUID nonExistentBookId = UUID.randomUUID();
+        when(bookService.getBookById(nonExistentBookId)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> reviewService.getReviewStatsForBook(nonExistentBookId));
     }
 
     @Test
@@ -115,6 +221,15 @@ public class ReviewServiceImplTest {
     }
 
     @Test
+    void shouldThrowNotFoundExceptionWhenUpdatingNonExistentReview() {
+        UUID nonExistentReviewId = UUID.randomUUID();
+        ReviewRequestDTO request = ReviewRequestDTO.builder().rating(5).reviewText("Updated!").build();
+        when(reviewRepository.findById(nonExistentReviewId)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> reviewService.updateReview(nonExistentReviewId, request, jwt));
+    }
+
+    @Test
     void shouldThrowForbiddenExceptionWhenUpdatingAnotherUsersReview() {
         ReviewRequestDTO request = ReviewRequestDTO.builder().rating(5).reviewText("Updated!").build();
         UUID otherUserId = UUID.randomUUID();
@@ -123,9 +238,7 @@ public class ReviewServiceImplTest {
         when(jwt.getClaim("realm_access")).thenReturn(null);
         when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
 
-        assertThrows(ForbiddenException.class, () -> {
-            reviewService.updateReview(testReview.getReviewId(), request, jwt);
-        });
+        assertThrows(ForbiddenException.class, () -> reviewService.updateReview(testReview.getReviewId(), request, jwt));
         verify(reviewRepository, never()).update(any(Review.class));
     }
 
@@ -141,14 +254,13 @@ public class ReviewServiceImplTest {
     }
 
     @Test
-    void shouldReturnEmptyListWhenGettingReviewsForNonExistentUser() {
-        UUID userId = UUID.randomUUID();
-        when(userService.findUserProfileById(any(), any())).thenReturn(Optional.empty());
+    void shouldThrowForbiddenExceptionWhenDeletingAnotherUsersReview() {
+        UUID otherUserId = UUID.randomUUID();
+        when(jwt.getSubject()).thenReturn(otherUserId.toString());
+        when(jwt.getClaim("realm_access")).thenReturn(null);
+        when(reviewRepository.findById(testReview.getReviewId())).thenReturn(Optional.of(testReview));
 
-        List<Review> reviews = reviewService.getReviewsForUser(userId, jwt);
-
-        assertNotNull(reviews);
-        assertTrue(reviews.isEmpty());
-        verify(reviewRepository, never()).getUserReviews(any());
+        assertThrows(ForbiddenException.class, () -> reviewService.deleteReviewById(testReview.getReviewId(), jwt));
+        verify(reviewRepository, never()).deleteById(any());
     }
 }

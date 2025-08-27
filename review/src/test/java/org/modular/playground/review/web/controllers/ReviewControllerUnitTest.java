@@ -7,7 +7,7 @@ import org.modular.playground.catalog.core.domain.Book;
 import org.modular.playground.catalog.core.domain.BookImpl;
 import org.modular.playground.review.core.domain.Review;
 import org.modular.playground.review.core.domain.ReviewImpl;
-import org.modular.playground.review.core.domain.ReviewStats;
+import org.modular.playground.review.core.domain.ReviewStatsImpl;
 import org.modular.playground.review.core.usecases.ReviewService;
 import org.modular.playground.review.infrastructure.persistence.postgres.mapper.ReviewMapper;
 import org.modular.playground.review.infrastructure.persistence.postgres.mapper.ReviewMapperImpl;
@@ -166,7 +166,7 @@ public class ReviewControllerUnitTest {
 
     @Test
     void shouldReturnOkWithStatsWhenGettingBookReviewStats() {
-        ReviewStats mockReviewStats = ReviewStats.builder().totalReviews(5L).averageRating(4.2).build();
+        ReviewStatsImpl mockReviewStats = ReviewStatsImpl.builder().totalReviews(5L).averageRating(4.2).build();
         ReviewStatsResponseDTO expectedStatsResponseDTO = ReviewStatsResponseDTO.builder()
                 .bookId(testBookId.toString()).totalReviews(5L).averageRating(4.2).build();
         when(reviewService.getReviewStatsForBook(testBookId)).thenReturn(mockReviewStats);

@@ -4,7 +4,7 @@ import org.modular.playground.catalog.core.domain.Book;
 import org.modular.playground.catalog.core.domain.BookImpl;
 import org.modular.playground.review.core.domain.Review;
 import org.modular.playground.review.core.domain.ReviewImpl;
-import org.modular.playground.review.core.domain.ReviewStats;
+import org.modular.playground.review.core.domain.ReviewStatsImpl;
 import org.modular.playground.review.infrastructure.persistence.postgres.ReviewEntity;
 import org.modular.playground.review.web.dto.ReviewRequestDTO;
 import org.modular.playground.review.web.dto.ReviewResponseDTO;
@@ -48,7 +48,7 @@ public interface ReviewMapper {
     ReviewImpl toDomain(ReviewEntity entity);
 
     @Mapping(source = "bookId", target = "bookId")
-    ReviewStatsResponseDTO toStatsResponseDTO(ReviewStats stats, UUID bookId);
+    ReviewStatsResponseDTO toStatsResponseDTO(ReviewStatsImpl stats, UUID bookId);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "reviewId", ignore = true)

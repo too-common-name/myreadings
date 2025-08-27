@@ -10,7 +10,7 @@ import org.modular.playground.catalog.core.usecases.BookService;
 import org.modular.playground.common.security.SecurityUtils;
 import org.modular.playground.review.core.domain.Review;
 import org.modular.playground.review.core.domain.ReviewImpl;
-import org.modular.playground.review.core.domain.ReviewStats;
+import org.modular.playground.review.core.domain.ReviewStatsImpl;
 import org.modular.playground.review.core.usecases.repositories.ReviewRepository;
 import org.modular.playground.review.infrastructure.persistence.postgres.mapper.ReviewMapper;
 import org.modular.playground.review.web.dto.ReviewRequestDTO;
@@ -112,7 +112,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public ReviewStats getReviewStatsForBook(UUID bookId) {
+    public ReviewStatsImpl getReviewStatsForBook(UUID bookId) {
         LOGGER.debugf("Getting review stats for book ID: %s", bookId);
         if (bookService.getBookById(bookId).isEmpty()) {
             throw new NotFoundException("Book not found with ID: " + bookId);
@@ -197,10 +197,10 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Transactional
-    protected ReviewStats getReviewStatsInTransaction(UUID bookId) {
+    protected ReviewStatsImpl getReviewStatsInTransaction(UUID bookId) {
         Long totalReviews = reviewRepository.countReviewsByBookId(bookId);
         Double averageRating = reviewRepository.findAverageRatingByBookId(bookId);
-        return ReviewStats.builder()
+        return ReviewStatsImpl.builder()
                 .totalReviews(totalReviews)
                 .averageRating(averageRating == null ? 0.0 : averageRating)
                 .build();
