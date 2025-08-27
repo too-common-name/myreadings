@@ -13,10 +13,15 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
+import java.nio.charset.StandardCharsets;
 
 public class KeycloakUserEventListenerTest {
 
@@ -68,5 +73,25 @@ public class KeycloakUserEventListenerTest {
         assertEquals("Daniele", capturedUser.getFirstName());
         assertEquals("Rossi", capturedUser.getLastName());
         assertNotNull(capturedUser.getKeycloakUserId());
+    }
+
+    @Test
+    public void testProcessEventWithoutDetails() {
+        String eventWithoutDetails = "{\"userId\":\"some-uuid\",\"type\":\"REGISTER\"}";
+
+        keycloakUserEventListener.processUserEvent(eventWithoutDetails.getBytes(StandardCharsets.UTF_8));
+
+        verify(userService, never()).createUserProfile(any(User.class));
+    }
+
+    @Test
+    public void testProcessCorruptEvent() {
+        String corruptEvent = "this is not valid json";
+
+        assertDoesNotThrow(() -> {
+            keycloakUserEventListener.processUserEvent(corruptEvent.getBytes(StandardCharsets.UTF_8));
+        });
+
+        verify(userService, never()).createUserProfile(any(User.class));
     }
 }
