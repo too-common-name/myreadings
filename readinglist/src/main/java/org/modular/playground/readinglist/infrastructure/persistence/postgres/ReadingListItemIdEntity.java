@@ -15,7 +15,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReadingListItemId implements Serializable {
+public class ReadingListItemIdEntity implements Serializable {
 
     @Column(name = "reading_list_id")
     private UUID readingListId;
@@ -27,7 +27,7 @@ public class ReadingListItemId implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ReadingListItemId that = (ReadingListItemId) o;
+        ReadingListItemIdEntity that = (ReadingListItemIdEntity) o;
         return Objects.equals(readingListId, that.readingListId) &&
                Objects.equals(bookId, that.bookId);
     }

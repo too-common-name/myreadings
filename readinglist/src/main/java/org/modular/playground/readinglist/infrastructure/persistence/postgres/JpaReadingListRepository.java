@@ -94,7 +94,7 @@ public class JpaReadingListRepository implements ReadingListRepository {
         }
 
         ReadingListItemEntity newItem = new ReadingListItemEntity();
-        newItem.setId(new ReadingListItemId(readingListId, bookId));
+        newItem.setId(new ReadingListItemIdEntity(readingListId, bookId));
         newItem.setReadingList(listEntity);
 
         listEntity.getItems().add(newItem);
@@ -104,11 +104,20 @@ public class JpaReadingListRepository implements ReadingListRepository {
     @Override
     public void removeBookFromReadingList(UUID readingListId, UUID bookId) {
         LOGGER.debugf("JPA: Removing book %s from list %s", bookId, readingListId);
-        ReadingListItemId id = new ReadingListItemId(readingListId, bookId);
-        ReadingListItemEntity item = entityManager.find(ReadingListItemEntity.class, id);
-        if (item != null) {
-            entityManager.remove(item);
+        ReadingListEntity listEntity = entityManager.find(ReadingListEntity.class, readingListId);
+        if (listEntity == null) {
+            throw new IllegalArgumentException("ReadingList with ID " + readingListId + " not found.");
         }
+
+        ReadingListItemIdEntity id = new ReadingListItemIdEntity(readingListId, bookId);
+        ReadingListItemEntity item = entityManager.find(ReadingListItemEntity.class, id);
+
+        if (item == null) {
+            throw new IllegalArgumentException(
+                    "Book with ID " + bookId + " not found in reading list " + readingListId + ".");
+        }
+
+        entityManager.remove(item);
     }
 
     @Override

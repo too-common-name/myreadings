@@ -5,6 +5,11 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.MediaType;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.modular.playground.catalog.core.domain.Book;
 import org.modular.playground.catalog.utils.CatalogRepositoryUtils;
 import org.modular.playground.catalog.utils.CatalogTestUtils;
@@ -16,68 +21,74 @@ import org.modular.playground.readinglist.web.dto.ReadingListRequestDTO;
 import org.modular.playground.user.core.domain.User;
 import org.modular.playground.user.utils.UserRepositoryUtils;
 import org.modular.playground.user.utils.UserTestUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 
 @QuarkusTest
 @TestHTTPEndpoint(ReadingListController.class)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ReadingListControllerIntegrationTest {
+
     @Inject
     UserRepositoryUtils userRepositoryUtils;
-
     @Inject
     CatalogRepositoryUtils catalogRepositoryUtils;
-
     @Inject
     ReadingListRepositoryUtils readingListRepositoryUtils;
-    
 
     KeycloakTestClient keycloakClient = new KeycloakTestClient();
+    private Map<String, Object> testData;
 
-    private static final UUID ALICE_UUID = UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a");
-    private static final UUID ADMIN_UUID = UUID.fromString("af134cab-f41c-4675-b141-205f975db679");
-
-    private User alice;
-    private User admin;
-    private Book createdBook;
-    private ReadingList aliceList;
-    private ReadingList adminList;
+    private User getUser(String key) { return (User) testData.get(key); }
+    private Book getBook(String key) { return (Book) testData.get(key); }
+    private ReadingList getList(String key) { return (ReadingList) testData.get(key); }
+    private UUID getBookId(String key) { return getBook(key).getBookId(); }
+    private UUID getListId(String key) { return getList(key).getReadingListId(); }
+    protected String getAccessToken(String userName) { return keycloakClient.getAccessToken(userName); }
 
     @BeforeEach
     void setUp() {
-        alice = userRepositoryUtils.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ALICE_UUID, "alice"));
-        admin = userRepositoryUtils.saveUser(UserTestUtils.createValidUserWithIdAndUsername(ADMIN_UUID, "admin"));
-        createdBook = catalogRepositoryUtils.saveBook(CatalogTestUtils.createValidBook());
-        aliceList = readingListRepositoryUtils.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(alice, "Alice's List"));
-        adminList = readingListRepositoryUtils.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(admin, "Admin's List"));
+        testData = new HashMap<>();
+
+        User alice = userRepositoryUtils.saveUser(UserTestUtils.createValidUserWithIdAndUsername(UUID.fromString("eb4123a3-b722-4798-9af5-8957f823657a"), "alice"));
+        User admin = userRepositoryUtils.saveUser(UserTestUtils.createValidUserWithIdAndUsername(UUID.fromString("af134cab-f41c-4675-b141-205f975db679"), "admin"));
+        testData.put("userAlice", alice);
+        testData.put("userAdmin", admin);
+        
+        testData.put("book1", catalogRepositoryUtils.saveBook(CatalogTestUtils.createValidBook()));
+        testData.put("book2", catalogRepositoryUtils.saveBook(CatalogTestUtils.createValidBook()));
+
+        testData.put("listAlice1", readingListRepositoryUtils.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(alice, "Alice's List")));
+        testData.put("listAlice2", readingListRepositoryUtils.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(alice, "Alice's Second List")));
+        testData.put("listAdmin1", readingListRepositoryUtils.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(admin, "Admin's List")));
     }
 
     @AfterEach
-    void tearDown() {  
-        readingListRepositoryUtils.deleteReadingList(aliceList.getReadingListId());
-        readingListRepositoryUtils.deleteReadingList(adminList.getReadingListId());
-        catalogRepositoryUtils.deleteBook(createdBook.getBookId());
-        userRepositoryUtils.deleteUser(alice.getKeycloakUserId());
-        userRepositoryUtils.deleteUser(admin.getKeycloakUserId());
+    void tearDown() {
+        readingListRepositoryUtils.deleteReadingList(getListId("listAlice1"));
+        readingListRepositoryUtils.deleteReadingList(getListId("listAlice2"));
+        readingListRepositoryUtils.deleteReadingList(getListId("listAdmin1"));
+        
+        catalogRepositoryUtils.deleteBook(getBookId("book1"));
+        catalogRepositoryUtils.deleteBook(getBookId("book2"));
+        
+        userRepositoryUtils.deleteUser(getUser("userAlice").getKeycloakUserId());
+        userRepositoryUtils.deleteUser(getUser("userAdmin").getKeycloakUserId());
+        
+        testData.clear();
     }
-
-    protected String getAccessToken(String userName) {
-        return keycloakClient.getAccessToken(userName);
-    }
-
+    
     @Test
+
     void testUserCanCreateReadingList() {
-        ReadingListRequestDTO requestBody = ReadingListRequestDTO.builder()
-                .name("New List for Alice")
-                .description("A new list")
-                .build();
+        ReadingListRequestDTO requestBody = ReadingListRequestDTO.builder().name("New List for Alice").build();
 
         String newListId = given()
             .auth().oauth2(getAccessToken("alice"))
@@ -91,14 +102,56 @@ public class ReadingListControllerIntegrationTest {
             .body("name", is("New List for Alice"))
             .extract().path("readingListId");
         
-        
         readingListRepositoryUtils.deleteReadingList(UUID.fromString(newListId));
     }
 
     @Test
+    void testUserCanGetOwnReadingLists() {
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("$", hasSize(2))
+            .body("[0].readingListId", is(getListId("listAlice1").toString()))
+            .body("[0].name", is(getList("listAlice1").getName()))
+            .body("[1].readingListId", is(getListId("listAlice2").toString()))
+            .body("[1].name", is(getList("listAlice2").getName()));
+    }
+
+    @Test
+    void testUserCanGetOwnReadingListById() {
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .pathParam("readingListId", getListId("listAlice1"))
+        .when()
+            .get("/{readingListId}")
+        .then()
+            .statusCode(200)
+            .body("readingListId", is(getListId("listAlice1").toString()))
+            .body("name", is(getList("listAlice1").getName()));
+    }
+    
+    @Test
+    void testUserCanUpdateOwnReadingList() {
+        ReadingListRequestDTO requestBody = ReadingListRequestDTO.builder().name("Updated Name").build();
+
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .pathParam("readingListId", getListId("listAlice1"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(requestBody)
+        .when()
+            .put("/{readingListId}")
+        .then()
+            .statusCode(200)
+            .body("name", is("Updated Name"));
+    }
+
+    @Test
     void testUserCanDeleteOwnReadingList() {
-        
-        ReadingList listToDelete = readingListRepositoryUtils.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(alice, "To Delete"));
+        ReadingList listToDelete = readingListRepositoryUtils.saveReadingList(ReadingListTestUtils.createValidReadingListForUser(getUser("userAlice"), "To Delete"));
         
         given()
             .auth().oauth2(getAccessToken("alice"))
@@ -110,89 +163,95 @@ public class ReadingListControllerIntegrationTest {
     }
 
     @Test
-    void testUserCanRemoveBookFromOwnReadingList() {
-        
-        readingListRepositoryUtils.addBookToReadingList(aliceList.getReadingListId(), createdBook.getBookId());
+    void testUserCanAddBookToOwnReadingList() {
+        AddBookRequestDTO requestBody = AddBookRequestDTO.builder().bookId(getBookId("book1")).build();
 
         given()
             .auth().oauth2(getAccessToken("alice"))
-            .pathParam("readingListId", aliceList.getReadingListId())
-            .pathParam("bookId", createdBook.getBookId())
+            .pathParam("readingListId", getListId("listAlice1"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(requestBody)
+        .when()
+            .post("/{readingListId}/books")
+        .then()
+            .statusCode(200);
+    }
+
+    @Test
+    void testUserCanGetBooksInOwnReadingList() {
+        readingListRepositoryUtils.addBookToReadingList(getListId("listAlice1"), getBookId("book1"));
+
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .pathParam("readingListId", getListId("listAlice1"))
+        .when()
+            .get("/{readingListId}/books")
+        .then()
+            .statusCode(200)
+            .body("$", hasSize(1))
+            .body("[0].bookId", is(getBookId("book1").toString()));
+    }
+    
+    @Test
+    void testUserCanRemoveBookFromOwnReadingList() {
+        readingListRepositoryUtils.addBookToReadingList(getListId("listAlice1"), getBookId("book1"));
+
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+            .pathParam("readingListId", getListId("listAlice1"))
+            .pathParam("bookId", getBookId("book1"))
         .when()
             .delete("/{readingListId}/books/{bookId}")
         .then()
             .statusCode(204);
     }
-    
+
     @Test
-    void testUserCanGetBooksInOwnReadingList() {
-        
-        readingListRepositoryUtils.addBookToReadingList(aliceList.getReadingListId(), createdBook.getBookId());
+    void testUserCanGetOwnReadingListByIdWithBooksId() {
+        readingListRepositoryUtils.addBookToReadingList(getListId("listAlice1"), getBookId("book1"));
 
         given()
             .auth().oauth2(getAccessToken("alice"))
-            .pathParam("readingListId", aliceList.getReadingListId())
-        .when()
-            .get("/{readingListId}/books")
-        .then()
-            .statusCode(200)
-            .body("size()", is(1))
-            .body("[0].bookId", is(createdBook.getBookId().toString()));
-    }
-    
-    
-    @Test
-    void testUserCanGetOwnReadingListById() {
-        given()
-            .auth().oauth2(getAccessToken("alice"))
-            .pathParam("readingListId", aliceList.getReadingListId())
+            .pathParam("readingListId", getListId("listAlice1"))
         .when()
             .get("/{readingListId}")
         .then()
             .statusCode(200)
-            .body("readingListId", is(aliceList.getReadingListId().toString()))
-            .body("name", is("Alice's List"));
+            .body("readingListId", is(getListId("listAlice1").toString()))
+            .body("name", is(getList("listAlice1").getName()))
+            .body("books", hasSize(1))
+            .body("books[0]", is(getBookId("book1").toString()));
+    }
+
+    @Test
+    void testUserCanGetOwnReadingListsWithBooksId() {
+        readingListRepositoryUtils.addBookToReadingList(getListId("listAlice1"), getBookId("book1"));
+        readingListRepositoryUtils.addBookToReadingList(getListId("listAlice2"), getBookId("book2"));
+        
+        given()
+            .auth().oauth2(getAccessToken("alice"))
+        .when()
+            .get()
+        .then()
+            .statusCode(200)
+            .body("$", hasSize(2))
+            .body("[0].name", is(getList("listAlice1").getName()))
+            .body("[0].books", hasSize(1))
+            .body("[0].books[0]", is(getBookId("book1").toString()))
+            .body("[1].name", is(getList("listAlice2").getName()))
+            .body("[1].books", hasSize(1))
+            .body("[1].books[0]", is(getBookId("book2").toString()));
     }
 
     @Test
     void testUserCannotGetOthersReadingListById() {
         given()
             .auth().oauth2(getAccessToken("alice"))
-            .pathParam("readingListId", adminList.getReadingListId())
+            .pathParam("readingListId", getListId("listAdmin1"))
         .when()
             .get("/{readingListId}")
         .then()
             .statusCode(403);
-    }
-
-    @Test
-    void testAdminCanGetOthersReadingListById() {
-        given()
-            .auth().oauth2(getAccessToken("admin"))
-            .pathParam("readingListId", aliceList.getReadingListId())
-        .when()
-            .get("/{readingListId}")
-        .then()
-            .statusCode(200);
-    }
-    
-    @Test
-    void testUserCanUpdateOwnReadingList() {
-        ReadingListRequestDTO requestBody = ReadingListRequestDTO.builder()
-                .name("Updated Name")
-                .description("Updated description")
-                .build();
-
-        given()
-            .auth().oauth2(getAccessToken("alice"))
-            .pathParam("readingListId", aliceList.getReadingListId())
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(requestBody)
-        .when()
-            .put("/{readingListId}")
-        .then()
-            .statusCode(200)
-            .body("name", is("Updated Name"));
     }
 
     @Test
@@ -201,7 +260,7 @@ public class ReadingListControllerIntegrationTest {
 
         given()
             .auth().oauth2(getAccessToken("alice"))
-            .pathParam("readingListId", adminList.getReadingListId())
+            .pathParam("readingListId", getListId("listAdmin1"))
             .contentType(MediaType.APPLICATION_JSON)
             .body(requestBody)
         .when()
@@ -214,7 +273,7 @@ public class ReadingListControllerIntegrationTest {
     void testUserCannotDeleteOthersReadingList() {
         given()
             .auth().oauth2(getAccessToken("alice"))
-            .pathParam("readingListId", adminList.getReadingListId())
+            .pathParam("readingListId", getListId("listAdmin1"))
         .when()
             .delete("/{readingListId}")
         .then()
@@ -222,18 +281,12 @@ public class ReadingListControllerIntegrationTest {
     }
 
     @Test
-    void testUserCanAddBookToOwnReadingList() {
-        AddBookRequestDTO requestBody = AddBookRequestDTO.builder()
-                .bookId(createdBook.getBookId())
-                .build();
-
+    void testAdminCanGetOthersReadingListById() {
         given()
-            .auth().oauth2(getAccessToken("alice"))
-            .pathParam("readingListId", aliceList.getReadingListId())
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(requestBody)
+            .auth().oauth2(getAccessToken("admin"))
+            .pathParam("readingListId", getListId("listAlice1"))
         .when()
-            .post("/{readingListId}/books")
+            .get("/{readingListId}")
         .then()
             .statusCode(200);
     }
