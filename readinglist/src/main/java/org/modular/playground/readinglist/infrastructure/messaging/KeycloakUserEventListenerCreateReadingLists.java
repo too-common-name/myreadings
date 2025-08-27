@@ -43,7 +43,7 @@ public class KeycloakUserEventListenerCreateReadingLists {
 
             if (userIdString != null) {
                 UUID userId = UUID.fromString(userIdString);
-                userService.findUserProfileById(userId, null)
+                userService.findUserByIdInternal(userId)
                     .ifPresentOrElse(
                         this::createDefaultReadingListsForUser,
                         () -> LOGGER.warnf("User with ID %s not found, cannot create default lists.", userId)

@@ -18,7 +18,7 @@ import lombok.EqualsAndHashCode;
 public class ReadingListItemEntity extends PanacheEntityBase {
 
     @EmbeddedId
-    private ReadingListItemId id;
+    private ReadingListItemIdEntity id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("readingListId")
