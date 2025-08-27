@@ -19,7 +19,7 @@
         <rest-assured.version>5.4.0</rest-assured.version>
         <hamcrest.version>2.2</hamcrest.version>
         <checkstyle-plugin.version>3.3.1</checkstyle-plugin.version>
-        <jacoco-plugin.version>0.8.12</jacoco-plugin.version>
+        <jacoco.version>0.8.12</jacoco.version>
     </properties>
 
     <modules>
@@ -39,8 +39,7 @@
                 <version>${quarkus.platform.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            
+            </dependency> 
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
@@ -78,6 +77,14 @@
         </dependencies>
     </dependencyManagement>
 
+    <dependencies>
+        <dependency>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-jacoco</artifactId>
+          <scope>test</scope>
+        </dependency>
+    </dependencies>
+
     <build>
         <resources>
             <resource>
@@ -86,7 +93,8 @@
             <resource>
                 <directory>../config</directory> </resource>
         </resources>
-        <pluginManagement> <plugins>
+        <pluginManagement> 
+            <plugins>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>${compiler-plugin.version}</version>
@@ -119,14 +127,44 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
                     <version>${checkstyle-plugin.version}</version>
-                    </plugin>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>${jacoco-plugin.version}</version>
-                    </plugin>
-            </plugins>
-        </pluginManagement>
+                    <version>${jacoco.version}</version>
+                    <configuration>
+                        <excludes>
+                            <exclude>**/web/dto/**/*.class</exclude>
+                            <exclude>**/messaging/*DTO*.class</exclude>
+                            <exclude>**/persistence/postgres/*Entity*.class</exclude>
+                            <exclude>**/core/domain/*Impl*.class</exclude>
+                            <exclude>**/*MapperImpl.class</exclude>
+                            <exclude>**/*Event.class</exclude>
+                        </excludes>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>default-prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                            <configuration>
+                                <exclClassLoaders>*QuarkusClassLoader</exclClassLoaders>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>default-report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+        </plugins>
     </build>
 
     <profiles>

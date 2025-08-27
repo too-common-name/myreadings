@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -125,5 +126,27 @@ class UserServiceImplTest {
         doNothing().when(userRepositoryMock).deleteById(userIdToDelete);
         userService.deleteUserProfile(userIdToDelete);
         verify(userRepositoryMock, times(1)).deleteById(userIdToDelete);
+    }
+
+    @Test
+    void shouldFindUserByIdInternalWhenUserExists() {
+        when(userRepositoryMock.findById(testUser.getKeycloakUserId())).thenReturn(Optional.of(testUser));
+
+        Optional<User> result = userService.findUserByIdInternal(testUser.getKeycloakUserId());
+
+        assertTrue(result.isPresent());
+        assertEquals(testUser.getKeycloakUserId(), result.get().getKeycloakUserId());
+        verify(userRepositoryMock, times(1)).findById(testUser.getKeycloakUserId());
+    }
+
+    @Test
+    void shouldFindUsersByIdsWhenIdsAreProvided() {
+        List<UUID> userIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        when(userRepositoryMock.findByIds(userIds)).thenReturn(List.of(testUser));
+
+        List<User> result = userService.findUsersByIds(userIds);
+
+        assertNotNull(result);
+        verify(userRepositoryMock, times(1)).findByIds(userIds);
     }
 }

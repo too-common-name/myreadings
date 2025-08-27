@@ -68,6 +68,62 @@ public class UserImplUnitTest {
         ));
     }
 
+    @Test
+    void shouldApplyDefaultThemePreference() {
+        User user = createBaseUserBuilder()
+                .firstName("John")
+                .lastName("Doe")
+                .username("johndoe")
+                .email("john.doe@example.com")
+                .build();
+
+        assertEquals(UiTheme.LIGHT, user.getThemePreference());
+    }
+
+    @Test
+    void shouldRespectEqualsAndHashCodeContracts() {
+        UUID userId = UUID.randomUUID();
+        User user1 = createBaseUserBuilder()
+                .keycloakUserId(userId)
+                .firstName("John")
+                .lastName("Doe")
+                .username("johndoe")
+                .email("john.doe@example.com")
+                .build();
+
+        User user2 = createBaseUserBuilder()
+                .keycloakUserId(userId)
+                .firstName("John")
+                .lastName("Doe")
+                .username("johndoe")
+                .email("john.doe@example.com")
+                .build();
+
+        User user3 = createBaseUserBuilder()
+                .keycloakUserId(UUID.randomUUID())
+                .firstName("Jane")
+                .build();
+        
+        assertEquals(user1, user2, "Users with the same ID should be equal");
+        assertEquals(user1.hashCode(), user2.hashCode(), "Hash codes for equal objects should be the same");
+
+        assertNotEquals(user1, user3, "Users with different IDs should not be equal");
+        assertNotEquals(user1.hashCode(), user3.hashCode(), "Hash codes for non-equal objects should ideally be different");
+        
+        assertNotEquals(user1, null);
+        assertNotEquals(user1, new Object());
+    }
+
+    @Test
+    void shouldGenerateValidToString() {
+        User user = createValidUserBuilder().build();
+        String userString = user.toString();
+
+        assertNotNull(userString);
+        assertTrue(userString.contains("keycloakUserId"));
+        assertTrue(userString.contains("johndoe"));
+    }
+
     private static Stream<Arguments> provideInvalidUserArguments() {
         return Stream.of(
                 Arguments.of("firstName", " ", NotBlank.class),
