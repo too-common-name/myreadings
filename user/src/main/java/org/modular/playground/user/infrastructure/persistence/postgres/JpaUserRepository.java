@@ -9,7 +9,6 @@ import org.modular.playground.user.core.domain.User;
 import org.modular.playground.user.core.usecases.repositories.UserRepository;
 import org.modular.playground.user.infrastructure.persistence.postgres.mapper.UserMapper;
 
-import io.quarkus.arc.lookup.LookupUnlessProperty;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.hibernate.orm.PersistenceUnit;
 import org.jboss.logging.Logger;

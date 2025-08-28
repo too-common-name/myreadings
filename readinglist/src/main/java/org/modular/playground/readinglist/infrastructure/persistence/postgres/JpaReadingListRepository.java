@@ -3,7 +3,6 @@ package org.modular.playground.readinglist.infrastructure.persistence.postgres;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import io.quarkus.arc.lookup.LookupUnlessProperty;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.hibernate.orm.PersistenceUnit;
 import jakarta.persistence.TypedQuery;
