@@ -5,14 +5,13 @@
     <artifactId>myreadings-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-
     <properties>
-        <quarkus.platform.version>3.12.2</quarkus.platform.version> <compiler-plugin.version>3.13.0</compiler-plugin.version>
+        <quarkus.platform.version>3.12.2</quarkus.platform.version>
+        <compiler-plugin.version>3.13.0</compiler-plugin.version>
         <surefire-plugin.version>3.2.5</surefire-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        
         <mockito.version>5.11.0</mockito.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <lombok.version>1.18.32</lombok.version>
@@ -21,7 +20,6 @@
         <checkstyle-plugin.version>3.3.1</checkstyle-plugin.version>
         <jacoco.version>0.8.12</jacoco.version>
     </properties>
-
     <modules>
         <module>common-utils</module>
         <module>user</module>
@@ -30,7 +28,6 @@
         <module>review</module>
         <module>application</module>
     </modules>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -39,7 +36,7 @@
                 <version>${quarkus.platform.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency> 
+            </dependency>
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
@@ -76,24 +73,23 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
     <dependencies>
         <dependency>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-jacoco</artifactId>
-          <scope>test</scope>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jacoco</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
-
     <build>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
             </resource>
             <resource>
-                <directory>${maven.multiModuleProjectDirectory}/config</directory> </resource>
+                <directory>${maven.multiModuleProjectDirectory}/config</directory>
+            </resource>
         </resources>
-        <pluginManagement> 
+        <pluginManagement>
             <plugins>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
@@ -131,54 +127,60 @@
             </plugins>
         </pluginManagement>
         <plugins>
-                <plugin>
-                    <groupId>org.jacoco</groupId>
-                    <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>${jacoco.version}</version>
-                    <configuration>
-                        <excludes>
-                            <exclude>**/web/dto/**/*.class</exclude>
-                            <exclude>**/messaging/*DTO*.class</exclude>
-                            <exclude>**/persistence/postgres/*Entity*.class</exclude>
-                            <exclude>**/core/domain/*Impl*.class</exclude>
-                            <exclude>**/*MapperImpl.class</exclude>
-                            <exclude>**/*Event.class</exclude>
-                        </excludes>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>default-prepare-agent</id>
-                            <goals>
-                                <goal>prepare-agent</goal>
-                            </goals>
-                            <configuration>
-                                <exclClassLoaders>*QuarkusClassLoader</exclClassLoaders>
-                            </configuration>
-                        </execution>
-                        <execution>
-                            <id>default-report</id>
-                            <phase>test</phase>
-                            <goals>
-                                <goal>report</goal>
-                            </goals>
-                        </execution>
-
-                        <execution>
-                            <id>report-aggregate</id>
-                            <phase>verify</phase> <goals>
-                                <goal>report-aggregate</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/web/dto/**/*.class</exclude>
+                        <exclude>**/messaging/*DTO*.class</exclude>
+                        <exclude>**/persistence/postgres/*Entity*.class</exclude>
+                        <exclude>**/core/domain/*Impl*.class</exclude>
+                        <exclude>**/*MapperImpl.class</exclude>
+                        <exclude>**/*Event.class</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>default-prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <exclClassLoaders>*QuarkusClassLoader</exclClassLoaders>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>default-report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report-aggregate</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <dataFileIncludes>
+                                <dataFileInclude>**/target/jacoco.exec</dataFileInclude>
+                            </dataFileIncludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
     <profiles>
         <profile>
             <id>native</id>
             <activation>
-                <property><name>native</name></property>
+                <property>
+                    <name>native</name>
+                </property>
             </activation>
             <properties>
                 <quarkus.native.enabled>true</quarkus.native.enabled>
