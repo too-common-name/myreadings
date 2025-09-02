@@ -1,6 +1,5 @@
 package org.modular.playground.readinglist.infrastructure.messaging;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
@@ -8,8 +7,6 @@ import org.jboss.logging.Logger;
 import org.jboss.logging.MDC;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.json.bind.Jsonb;
-import jakarta.json.bind.JsonbBuilder;
 
 import org.modular.playground.common.filters.TraceIdFilter;
 import org.modular.playground.readinglist.core.domain.ReadingList;
@@ -17,7 +14,8 @@ import org.modular.playground.readinglist.core.domain.ReadingListImpl;
 import org.modular.playground.readinglist.core.usecases.ReadingListService;
 import org.modular.playground.user.core.domain.User;
 import org.modular.playground.user.core.usecases.UserService;
-import org.modular.playground.user.infrastructure.messaging.KeycloakEventDTO;
+
+import io.smallrye.common.annotation.Blocking;
 
 @ApplicationScoped
 public class KeycloakUserEventListenerCreateReadingLists {
@@ -30,29 +28,17 @@ public class KeycloakUserEventListenerCreateReadingLists {
     @Inject
     UserService userService;
 
-    @Incoming("registrations")
-    public void processUserEvent(byte[] event) {
+    @Incoming("user-profile-created")
+    @Blocking
+    public void processUserCreation(User user) {
         MDC.put(TraceIdFilter.TRACE_ID_KEY, "event-" + UUID.randomUUID().toString());
-        String message = new String(event, StandardCharsets.UTF_8);
-        LOGGER.infof("Received user registration event to create default reading lists");
-        LOGGER.debugf("Event payload: %s", message);
-
-        try (Jsonb jsonb = JsonbBuilder.create()) {
-            KeycloakEventDTO keycloakEvent = jsonb.fromJson(message, KeycloakEventDTO.class);
-            String userIdString = keycloakEvent.getUserId();
-
-            if (userIdString != null) {
-                UUID userId = UUID.fromString(userIdString);
-                userService.findUserByIdInternal(userId)
-                    .ifPresentOrElse(
-                        this::createDefaultReadingListsForUser,
-                        () -> LOGGER.warnf("User with ID %s not found, cannot create default lists.", userId)
-                    );
-            } else {
-                LOGGER.warn("Could not find 'userId' in the event payload.");
-            }
+        LOGGER.infof("Received internal user profile created event for user: %s", user.getUsername());
+        
+        try {
+            createDefaultReadingListsForUser(user);
+            LOGGER.infof("Successfully created default reading lists for user %s.", user.getKeycloakUserId());
         } catch (Exception e) {
-            LOGGER.errorf(e, "Failed to process user registration event. Payload: %s", message);
+            LOGGER.errorf(e, "Failed to create default reading lists for user %s", user.getKeycloakUserId());
         } finally {
             MDC.remove(TraceIdFilter.TRACE_ID_KEY);
         }

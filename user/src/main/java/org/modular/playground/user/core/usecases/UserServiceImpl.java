@@ -4,6 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.ForbiddenException;
+
+import org.modular.playground.common.security.SecurityUtils;
 import org.modular.playground.user.core.domain.User;
 import org.modular.playground.user.core.usecases.repositories.UserRepository;
 import org.eclipse.microprofile.jwt.JsonWebToken;
@@ -37,15 +39,7 @@ public class UserServiceImpl implements UserService {
         LOGGER.debugf("Attempting to find user profile with ID: %s", userId);
 
         UUID authenticatedUserId = UUID.fromString(principal.getSubject());
-
-        boolean isAdmin = false;
-        if (principal.getClaim("realm_access") instanceof jakarta.json.JsonObject) {
-            jakarta.json.JsonObject realmAccess = principal.getClaim("realm_access");
-            jakarta.json.JsonArray roles = realmAccess.getJsonArray("roles");
-            if (roles != null) {
-                isAdmin = roles.stream().anyMatch(role -> "admin".equals(((jakarta.json.JsonString) role).getString()));
-            }
-        }
+        boolean isAdmin = SecurityUtils.isAdmin(principal);
 
         if (!authenticatedUserId.equals(userId) && !isAdmin) {
             LOGGER.warnf("Authorization failed: User %s tried to access profile of user %s without admin role.",

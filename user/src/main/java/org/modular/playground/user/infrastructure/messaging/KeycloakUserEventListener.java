@@ -9,6 +9,8 @@ import org.modular.playground.common.filters.TraceIdFilter;
 import org.modular.playground.user.core.domain.User;
 import org.modular.playground.user.core.usecases.UserService;
 import org.modular.playground.user.infrastructure.persistence.postgres.mapper.UserMapper;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.jboss.logging.Logger;
 import org.jboss.logging.MDC;
@@ -27,6 +29,11 @@ public class KeycloakUserEventListener {
     @Inject
     UserMapper userMapper;
 
+    // use in-memory bus
+    @Inject
+    @Channel("user-profile-created")
+    Emitter<User> userCreatedEmitter;
+
     @Incoming("registrations")
     public void processUserEvent(byte[] event) {
         MDC.put(TraceIdFilter.TRACE_ID_KEY, "event-" + UUID.randomUUID().toString());
@@ -42,7 +49,10 @@ public class KeycloakUserEventListener {
                 
                 User user = userMapper.toDomain(registrationEvent);
                 
-                userService.createUserProfile(user);
+                User createdUser = userService.createUserProfile(user);
+                
+                LOGGER.infof("User profile created for %s. Emitting internal event.", createdUser.getUsername());
+                userCreatedEmitter.send(createdUser);
 
             } else {
                 LOGGER.warnf("Keycloak event details not found or failed to parse. Message: %s", message);

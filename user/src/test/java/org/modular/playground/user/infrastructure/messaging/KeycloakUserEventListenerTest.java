@@ -45,8 +45,8 @@ public class KeycloakUserEventListenerTest {
                 "  \"@class\" : \"com.github.aznamier.keycloak.event.provider.EventClientNotificationMqMsg\",\n" +
                 "  \"time\" : 1742495768687,\n" +
                 "  \"type\" : \"REGISTER\",\n" +
-                "  \"realmId\" : \"myreadings\",\n" +
-                "  \"clientId\" : \"myreadings-app\",\n" +
+                "  \"realmId\" : \"my-readings\",\n" +
+                "  \"clientId\" : \"myreadings-client\",\n" +
                 "  \"userId\" : \"a9a2e247-f06f-4023-82e5-a0a07cee5c63\",\n" +
                 "  \"ipAddress\" : \"10.89.1.7\",\n" +
                 "  \"details\" : {\n" +

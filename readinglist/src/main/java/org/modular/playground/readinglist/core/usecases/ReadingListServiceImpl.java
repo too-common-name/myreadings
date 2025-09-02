@@ -48,10 +48,9 @@ public class ReadingListServiceImpl implements ReadingListService {
     }
 
     @Override
-    @Transactional
     public ReadingList createReadingListInternal(ReadingList readingList) {
         LOGGER.infof("Internally creating reading list '%s' for user %s", readingList.getName(), readingList.getUser().getKeycloakUserId());
-        return readingListRepository.create(readingList);
+        return createInTransaction(readingList);
     }
 
     @Override
