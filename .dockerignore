@@ -1,5 +1,11 @@
-*
 !target/*-runner
 !target/*-runner.jar
 !target/lib/*
 !target/quarkus-app/*
+**/target/
+.idea/
+.git/
+*.iml
+.vscode/
+/doc
+/config

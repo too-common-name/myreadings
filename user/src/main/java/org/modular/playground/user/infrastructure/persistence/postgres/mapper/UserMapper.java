@@ -5,6 +5,7 @@ import org.modular.playground.user.core.domain.UserImpl;
 import org.modular.playground.user.infrastructure.messaging.KeycloakEventDTO;
 import org.modular.playground.user.infrastructure.persistence.postgres.UserEntity;
 import org.modular.playground.user.web.dto.UserResponseDTO;
+
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;

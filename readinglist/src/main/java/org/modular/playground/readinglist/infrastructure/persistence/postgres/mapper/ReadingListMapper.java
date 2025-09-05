@@ -10,6 +10,7 @@ import org.modular.playground.readinglist.web.dto.ReadingListRequestDTO;
 import org.modular.playground.readinglist.web.dto.ReadingListResponseDTO;
 import org.modular.playground.user.core.domain.User;
 import org.modular.playground.user.core.domain.UserImpl;
+
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
