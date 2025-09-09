@@ -1,0 +1,17 @@
+@startuml
+!include https://raw.githubusercontent.com/kirchsth/C4-PlantUML/extended/C4_Container.puml
+
+System(BookReadingApp, "MyReadings App", "Manages user profiles, book catalogs, reading lists, and reviews.")
+
+Person(User, "User", "A reader who uses the MyReadings App.")
+
+System_Ext(OpenLibraryAPI, "Open Library API", "Provides book cover images.")
+System_Ext(Keycloak, "Keycloak", "Identity Provider for authentication and authorization.")
+
+Rel(User, BookReadingApp, "Uses", "Web Browser / Mobile App")
+Rel(BookReadingApp, OpenLibraryAPI, "Fetches book cover images via", "REST API (HTTPS)")
+Rel(BookReadingApp, Keycloak, "Authenticates users & \nAuthorizes access", "OIDC / OAuth 2.0")
+
+SHOW_LEGEND()
+footer System Context Diagram - Book Reading App (C4 Model - Level 1)
+@enduml

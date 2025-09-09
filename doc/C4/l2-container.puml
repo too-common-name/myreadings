@@ -1,0 +1,24 @@
+@startuml
+!include https://raw.githubusercontent.com/kirchsth/C4-PlantUML/extended/C4_Container.puml
+
+System_Boundary(b, "Book Reading App") {
+    Container(SPA, "SPA", "Vue.js", "Frontend web application providing user interface", $tags="Frontend")
+    ContainerDb(AppDB, "Application Database", "PostgreSQL", "Stores user profiles, the book catalog, reading lists, and reviews.", $tags="Backend")
+    Container(BackendAPI, "Backend API", "Quarkus (Java)", "Provides REST APIs for application logic, security, and integration", $tags="Backend")
+}
+
+Person(User, "User", "Reader who uses the Book Reading App")
+System_Ext(OpenLibraryAPI, "Open Library API", "Provides book cover images.")
+System_Ext(Keycloak, "Keycloak", "Identity Provider for authentication and authorization")
+
+
+Rel(User, SPA, "Uses", "HTTPS")
+Rel(SPA, Keycloak, "Handles login and registration flows", "OIDC Redirects")
+Rel(BackendAPI, Keycloak, "Validates access tokens", "OIDC")
+Rel(SPA, BackendAPI, "Makes API calls to", "HTTPS / JSON")
+Rel(SPA, OpenLibraryAPI, "Fetches book cover images", "HTTPS / REST")
+Rel(BackendAPI, AppDB, "Reads from and writes to", "JDBC")
+
+SHOW_LEGEND()
+footer Container Diagram - Book Reading App (C4 Model - Level 2)
+@enduml

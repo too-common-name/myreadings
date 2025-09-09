@@ -1,0 +1,56 @@
+@startuml
+!include https://raw.githubusercontent.com/kirchsth/C4-PlantUML/extended/C4_Component.puml
+
+Person(User, "User", "A reader using the SPA.")
+Container(SPA, "Single-Page Application", "Vue.js", "The frontend application.")
+System_Ext(OpenLibraryAPI, "Open Library API", "Provides book cover images.")
+System_Ext(Keycloak, "Keycloak", "Identity & Access Management.")
+ContainerQueue(RabbitMQ, "RabbitMQ", "Message Broker", "Handles asynchronous event communication.")
+
+System_Boundary(b, "MyReadings Backend API") {
+
+    usecase "REST API Interface" as ApiInterface 
+
+    Component(UserModule, "User Module", "Quarkus / Java", "Manages user profiles. Consumes Keycloak events and emits internal 'User Profile Created' events.")
+    Component(CatalogModule, "Catalog Module", "Quarkus / Java", "Manages the local book catalog.")
+    Component(ReadingListModule, "Reading List Module", "Quarkus / Java", "Manages user reading lists. Consumes 'User Profile Created' events.")
+    Component(ReviewModule, "Review Module", "Quarkus / Java", "Manages book reviews and ratings.")
+
+}
+
+Boundary(db, "Application Database", "PostgreSQL") {
+    ComponentDb(UserSchema, "User Schema", "Stores user profiles and preferences.")
+    ComponentDb(CatalogSchema, "Catalog Schema", "Stores the local book catalog.")
+    ComponentDb(ReadingListSchema, "Reading List Schema", "Stores user reading lists.")
+    ComponentDb(ReviewSchema, "Review Schema", "Stores book reviews and ratings.")
+}
+
+Rel_D(User, SPA, "Uses", "HTTPS")
+Rel_D(SPA, ApiInterface, "Makes API calls", "HTTPS/JSON/JWT")
+
+Rel_R(ApiInterface, Keycloak, "Validates JWT", "OIDC")
+Rel_D(ApiInterface, UserModule, "Routes requests to")
+Rel_D(ApiInterface, CatalogModule, "Routes requests to")
+Rel_D(ApiInterface, ReadingListModule, "Routes requests to")
+Rel_D(ApiInterface, ReviewModule, "Routes requests to")
+
+Rel_R(SPA, OpenLibraryAPI, "Fetches book covers", "HTTPS/REST")
+Rel_R(SPA, Keycloak, "Redirects for Login/Register", "OIDC")
+
+Rel(Keycloak, RabbitMQ, "Publishes", "User Registration Event")
+Rel_R(RabbitMQ, UserModule, "Delivers", "User Registration Event")
+Rel_L(UserModule, RabbitMQ, "Publishes", "User Profile Created Event")
+Rel_R(RabbitMQ, ReadingListModule, "Delivers", "User Profile Created Event")
+
+Rel(ReadingListModule, UserModule, "Validates user existence", "Sync Java API Call")
+Rel(ReviewModule, UserModule, "Validates user existence", "Sync Java API Call")
+Rel(ReviewModule, CatalogModule, "Validates book existence", "Sync Java API Call")
+
+Rel_D(UserModule, UserSchema, "Reads from and writes to", "JDBC")
+Rel_D(CatalogModule, CatalogSchema, "Reads from and writes to", "JDBC")
+Rel_D(ReadingListModule, ReadingListSchema, "Reads from and writes to", "JDBC")
+Rel_D(ReviewModule, ReviewSchema, "Reads from and writes to", "JDBC")
+
+SHOW_LEGEND()
+footer Component Diagram - MyReadings Backend API (C4 Model - Level 3)
+@enduml
