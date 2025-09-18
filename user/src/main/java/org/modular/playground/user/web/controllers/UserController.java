@@ -9,14 +9,12 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.modular.playground.user.core.domain.User;
 import org.modular.playground.user.core.usecases.UserService;
 import org.modular.playground.user.infrastructure.persistence.postgres.mapper.UserMapper;
 import org.modular.playground.user.web.dto.UserResponseDTO;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Path("/api/v1/users")
@@ -41,15 +39,15 @@ public class UserController {
     public Response getUserById(@PathParam("userId") UUID userId) {
         LOGGER.infof("Received request to get user profile by ID: %s", userId);
 
-        Optional<User> userOptional = userService.findUserProfileById(userId, jwt);
-
-        if (userOptional.isPresent()) {
+        return userService.findUserProfileById(userId, jwt)
+        .map(user -> {
             LOGGER.debugf("User profile found for ID: %s", userId);
-            UserResponseDTO responseDTO = userMapper.toResponseDTO(userOptional.get());
+            UserResponseDTO responseDTO = userMapper.toResponseDTO(user);
             return Response.ok(responseDTO).build();
-        } else {
+        })
+        .orElseGet(() -> {
             LOGGER.warnf("User profile not found for ID: %s", userId);
             return Response.status(Response.Status.NOT_FOUND).build();
-        }
+        });
     }
 }

@@ -72,10 +72,8 @@ This is the recommended workflow for actively developing and debugging the backe
 **Step 2: Start the Backend in Dev Mode** Navigate to the `application` module within this repository and run Quarkus in development mode. The command sources the necessary environment variables to connect to the Docker containers via `localhost`.
 
     # From the 'myreadings' backend root directory
-    cd application
-
     # Load environment variables and start Quarkus dev mode
-    (set -a; source ../../myreadings_deploy/.env; source ../../myreadings_deploy/.env.local; set +a; ../mvnw quarkus:dev)
+    (set -a; source ../myreadings_deploy/.env; source ../myreadings_deploy/.env.local; set +a; ./mvnw package quarkus:dev -DskipTests=true)
 
 The application will start, connect to the running Docker containers, and enable hot-reloading for live code changes.
 
