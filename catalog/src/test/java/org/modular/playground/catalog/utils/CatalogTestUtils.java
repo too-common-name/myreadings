@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.modular.playground.catalog.core.domain.Book;
 import org.modular.playground.catalog.core.domain.BookImpl;
 import org.modular.playground.catalog.web.dto.BookRequestDTO;
+import org.modular.playground.catalog.web.graphql.BookGql;
 
 public class CatalogTestUtils {
 
@@ -93,5 +94,18 @@ public class CatalogTestUtils {
                 .originalLanguage(dto.getOriginalLanguage())
                 .genre(dto.getGenre())
                 .build();
+    }
+
+    public static BookGql createValidBookGql() {
+        BookGql book = new BookGql();
+        book.setTitle("Test Title");
+        book.setIsbn("1234567890123");
+        book.setAuthors(Arrays.asList("Default Author"));
+        book.setPublisher("Test Publisher");
+        book.setGenre("Fiction");
+        book.setPageCount(200);
+        book.setPublicationDate(LocalDate.of(2020, 1, 1));
+        book.setOriginalLanguage("EN");
+        return book;
     }
 }
