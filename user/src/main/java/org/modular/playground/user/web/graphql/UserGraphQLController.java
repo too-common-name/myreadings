@@ -29,7 +29,7 @@ public class UserGraphQLController {
     UserMapper userMapper;
 
     @Inject
-    public JsonWebToken jwt;
+    JsonWebToken jwt;
 
     @Query("userById")
     @Description("Finds a user by their unique ID.")

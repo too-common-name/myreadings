@@ -46,7 +46,6 @@ public class UserGraphQLControllerUnitTest {
 
     @BeforeEach
     void setUp() {
-        userGraphQLController.jwt = jwt;
         testUserId = UUID.randomUUID();
         mockUser = UserImpl.builder().keycloakUserId(testUserId).build();
     }

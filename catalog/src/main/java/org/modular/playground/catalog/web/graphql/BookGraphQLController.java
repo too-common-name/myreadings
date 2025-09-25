@@ -13,10 +13,13 @@ import org.modular.playground.catalog.web.dto.BookRequestDTO;
 import org.modular.playground.catalog.web.dto.BookResponseDTO;
 import org.modular.playground.catalog.web.dto.BookUpdateDTO;
 
+import io.quarkus.security.Authenticated;
+
 import java.util.List;
 import java.util.UUID;
 
 @GraphQLApi
+@Authenticated
 public class BookGraphQLController {
 
     private static final Logger LOGGER = Logger.getLogger(BookGraphQLController.class);
