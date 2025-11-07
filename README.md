@@ -69,13 +69,21 @@ This is the recommended workflow for actively developing and debugging the backe
 
 **Step 1: Start the Infrastructure** The complete infrastructure (Keycloak, PostgreSQL, RabbitMQ, etc.) is managed in the `myreadings_deploy` repository. Please follow the instructions in its `README.md` to launch the `dev` profile.
 
-**Step 2: Start the Backend in Dev Mode** Navigate to the `application` module within this repository and run Quarkus in development mode. The command sources the necessary environment variables to connect to the Docker containers via `localhost`.
+**Step 2: Start the Backend in Dev Mode** The application is configured with sensible defaults for local development, so you can run the application directly from the monolith's root directory:
 
-    # From the 'myreadings' backend root directory
-    # Load environment variables and start Quarkus dev mode
-    (set -a; source ../myreadings_deploy/.env; source ../myreadings_deploy/.env.local; set +a; ./mvnw package quarkus:dev -DskipTests=true)
+```bash
+# From the 'myreadings' backend root directory
+./mvnw quarkus:dev
+```
 
-The application will start, connect to the running Docker containers, and enable hot-reloading for live code changes.
+The application will start, connect to your running Docker containers, and enable hot-reloading for live code changes.
+If you need to **override** the built-in defaults, you can use the following command to load variables from `.env` files. This is useful for testing configurations that mimic a demo environment.
+
+```bash
+# From the 'myreadings' backend root directory
+# Load environment variables and start
+(set -a; source ../myreadings_deploy/.env; source ../myreadings_deploy/.env.local; set +a; ./mvnw quarkus:dev)
+```
 
 **Step 3: (Optional) Start the Frontend** The frontend application is managed in the `myreadings_ui` repository. To interact with the backend through the UI, follow the instructions in its `README.md` to start the local development server.
 
@@ -89,8 +97,10 @@ The test suite includes both fast, isolated **Unit Tests** (`*UnitTest.java`) th
 
 To run the entire suite, execute the standard Maven `test` command from the root of this repository.
 
+```bash
     # From the 'myreadings' root directory
     ./mvnw test
+```
 
 ### Code Coverage
 
