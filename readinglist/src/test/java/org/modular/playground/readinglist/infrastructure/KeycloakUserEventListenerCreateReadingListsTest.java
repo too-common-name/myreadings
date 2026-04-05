@@ -9,7 +9,8 @@ import org.mockito.MockitoAnnotations;
 import org.modular.playground.readinglist.core.domain.ReadingList;
 import org.modular.playground.readinglist.core.usecases.ReadingListService;
 import org.modular.playground.readinglist.infrastructure.messaging.KeycloakUserEventListenerCreateReadingLists;
-import org.modular.playground.user.core.domain.User;
+
+import io.vertx.core.json.JsonObject;
 
 import java.util.List;
 import java.util.UUID;
@@ -33,14 +34,21 @@ public class KeycloakUserEventListenerCreateReadingListsTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    @Test
-    void shouldCreateDefaultListsWhenUserObjectIsReceived() {
-        User mockUser = mock(User.class);
-        when(mockUser.getKeycloakUserId()).thenReturn(UUID.randomUUID());
+    private JsonObject createUserEvent() {
+        return new JsonObject()
+                .put("keycloakUserId", UUID.randomUUID().toString())
+                .put("firstName", "Test")
+                .put("lastName", "User")
+                .put("username", "testuser")
+                .put("email", "test@example.com");
+    }
 
+    @Test
+    void shouldCreateDefaultListsWhenUserEventIsReceived() {
+        JsonObject event = createUserEvent();
         ArgumentCaptor<ReadingList> readingListCaptor = ArgumentCaptor.forClass(ReadingList.class);
 
-        listener.processUserCreation(mockUser);
+        listener.processUserCreation(event);
 
         verify(readingListService, times(2)).createReadingListInternal(readingListCaptor.capture());
 
@@ -52,12 +60,9 @@ public class KeycloakUserEventListenerCreateReadingListsTest {
 
     @Test
     void shouldHandleServiceExceptionsGracefully() {
-        User mockUser = mock(User.class);
-
+        JsonObject event = createUserEvent();
         doThrow(new RuntimeException("Database connection failed")).when(readingListService).createReadingListInternal(any());
 
-        assertDoesNotThrow(() -> {
-            listener.processUserCreation(mockUser);
-        });
+        assertDoesNotThrow(() -> listener.processUserCreation(event));
     }
 }
