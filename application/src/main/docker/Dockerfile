@@ -1,5 +1,5 @@
 
-FROM maven:3.9-eclipse-temurin-21 AS builder
+FROM docker.io/library/maven:3.9-eclipse-temurin-21 AS builder
 
 WORKDIR /app
 
