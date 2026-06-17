@@ -1,24 +1,32 @@
 @startuml
 !include https://raw.githubusercontent.com/kirchsth/C4-PlantUML/extended/C4_Container.puml
 
-System_Boundary(b, "Book Reading App") {
-    Container(SPA, "SPA", "Vue.js", "Frontend web application providing user interface", $tags="Frontend")
-    ContainerDb(AppDB, "Application Database", "PostgreSQL", "Stores user profiles, the book catalog, reading lists, and reviews.", $tags="Backend")
-    Container(BackendAPI, "Backend API", "Quarkus (Java)", "Provides REST APIs for application logic, security, and integration", $tags="Backend")
-}
-
-Person(User, "User", "Reader who uses the Book Reading App")
-System_Ext(OpenLibraryAPI, "Open Library API", "Provides book cover images.")
+Person(User, "User", "Reader who uses the MyReadings App")
 System_Ext(Keycloak, "Keycloak", "Identity Provider for authentication and authorization")
 
+System_Boundary(b, "MyReadings App") {
+    Container(SPA, "SPA", "Vue.js 3 / Vuetify", "Frontend web application providing user interface")
+    Container(NodeServer, "UI Server", "Node.js / Express", "Serves the SPA, proxies API calls to backend services")
+    Container(BackendAPI, "Backend API", "Quarkus (Java 21)", "Modular monolith providing REST & GraphQL APIs")
+    ContainerQueue(RabbitMQ, "RabbitMQ", "Message Broker", "Handles asynchronous event communication between Keycloak and backend modules")
+    ContainerDb(BooksDB, "Books Database", "PostgreSQL", "Stores the book catalog")
+    ContainerDb(UsersDB, "Users Database", "PostgreSQL", "Stores user profiles")
+    ContainerDb(ReadingListDB, "Reading List Database", "PostgreSQL", "Stores user reading lists and book assignments")
+    ContainerDb(ReviewDB, "Review Database", "PostgreSQL", "Stores book reviews and ratings")
+}
 
 Rel(User, SPA, "Uses", "HTTPS")
-Rel(SPA, Keycloak, "Handles login and registration flows", "OIDC Redirects")
+Rel(SPA, NodeServer, "Served by and\nroutes API calls through", "HTTPS")
+Rel(NodeServer, BackendAPI, "Proxies API calls to", "HTTP / JSON")
+Rel(SPA, Keycloak, "Handles login and\nregistration flows", "OIDC Redirects")
 Rel(BackendAPI, Keycloak, "Validates access tokens", "OIDC")
-Rel(SPA, BackendAPI, "Makes API calls to", "HTTPS / JSON")
-Rel(SPA, OpenLibraryAPI, "Fetches book cover images", "HTTPS / REST")
-Rel(BackendAPI, AppDB, "Reads from and writes to", "JDBC")
+Rel(Keycloak, RabbitMQ, "Publishes user\nregistration events", "AMQP")
+Rel(RabbitMQ, BackendAPI, "Delivers events to", "AMQP")
+Rel(BackendAPI, BooksDB, "Reads/writes", "JDBC")
+Rel(BackendAPI, UsersDB, "Reads/writes", "JDBC")
+Rel(BackendAPI, ReadingListDB, "Reads/writes", "JDBC")
+Rel(BackendAPI, ReviewDB, "Reads/writes", "JDBC")
 
 SHOW_LEGEND()
-footer Container Diagram - Book Reading App (C4 Model - Level 2)
+footer Container Diagram - MyReadings App (C4 Model - Level 2)
 @enduml

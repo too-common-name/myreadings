@@ -1,8 +1,10 @@
 package org.modular.playground.catalog.core.usecases;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.modular.playground.catalog.core.domain.Book;
 import org.modular.playground.catalog.core.domain.BookImpl;
 import org.modular.playground.catalog.core.domain.DomainPage;
@@ -16,6 +18,7 @@ import org.jboss.logging.Logger;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class BookServiceImpl implements BookService {
@@ -27,6 +30,9 @@ public class BookServiceImpl implements BookService {
 
     @Inject
     BookMapper bookMapper;
+
+    @ConfigProperty(name = "app.search.enrichment-strategy", defaultValue = "normal")
+    String searchEnrichmentStrategy;
 
     @Override
     @Transactional
@@ -77,9 +83,25 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
+    @WithSpan("catalog.searchBooks")
     public DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder) {
-        LOGGER.debugf("Passing search to repository with query: '%s'", query);
-        return bookRepository.searchBooks(query, page, size, sortBy, sortOrder);
+        LOGGER.debugf("Searching books with query: '%s' (strategy: %s)", query, searchEnrichmentStrategy);
+        DomainPage<Book> results = bookRepository.searchBooks(query, page, size, sortBy, sortOrder);
+
+        if ("broken".equals(searchEnrichmentStrategy) && !results.content().isEmpty()) {
+            return refetchResultsIndividually(results);
+        }
+
+        return results;
+    }
+
+    @WithSpan("catalog.searchBooks.refetchBroken")
+    private DomainPage<Book> refetchResultsIndividually(DomainPage<Book> results) {
+        List<Book> refetched = results.content().stream()
+            .map(book -> bookRepository.findById(book.getBookId()).orElse(book))
+            .collect(Collectors.toList());
+        return new DomainPage<>(refetched, results.totalElements(), results.totalPages(),
+                results.pageNumber(), results.pageSize(), results.isLast(), results.isFirst());
     }
 
     @Override

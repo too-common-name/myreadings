@@ -1,10 +1,12 @@
 package org.modular.playground.readinglist.core.usecases;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.modular.playground.catalog.core.domain.Book;
 import org.modular.playground.catalog.core.usecases.BookService;
 import org.modular.playground.common.security.SecurityUtils;
@@ -35,6 +37,9 @@ public class ReadingListServiceImpl implements ReadingListService {
     BookService bookService;
     @Inject
     ReadingListMapper readingListMapper;
+
+    @ConfigProperty(name = "app.readinglist.enrichment-strategy", defaultValue = "hexagonal")
+    String enrichmentStrategy;
 
     @Override
     public ReadingList createReadingList(ReadingListRequestDTO request, JsonWebToken principal) {
@@ -71,9 +76,12 @@ public class ReadingListServiceImpl implements ReadingListService {
 
     @Override
     public List<ReadingList> getReadingListsForUser(UUID userId) {
-        LOGGER.debugf("Finding all reading lists for user ID: %s", userId);
+        LOGGER.debugf("Finding all reading lists for user ID: %s (strategy: %s)", userId, enrichmentStrategy);
         List<ReadingList> lists = findByUserIdInTransaction(userId);
-        return enrichListsWithBooks(lists);
+        return switch (enrichmentStrategy) {
+            case "broken" -> enrichListsWithBooksBroken(lists);
+            default -> enrichListsWithBooks(lists);
+        };
     }
 
     @Override
@@ -158,6 +166,7 @@ public class ReadingListServiceImpl implements ReadingListService {
         }
     }
 
+    @WithSpan("readinglist.enrichListWithBooks")
     private ReadingList enrichListWithBooks(ReadingList list) {
         List<UUID> bookIds = list.getBooks().stream().map(Book::getBookId).collect(Collectors.toList());
         if (bookIds.isEmpty()) {
@@ -168,26 +177,53 @@ public class ReadingListServiceImpl implements ReadingListService {
         return list;
     }
 
+    @WithSpan("readinglist.enrichListsWithBooks")
     private List<ReadingList> enrichListsWithBooks(List<ReadingList> lists) {
         if (lists.isEmpty()) return Collections.emptyList();
         
-        List<UUID> allBookIds = lists.stream()
-            .flatMap(list -> list.getBooks().stream().map(Book::getBookId))
-            .distinct().collect(Collectors.toList());
-        
+        List<UUID> allBookIds = collectBookIds(lists);
         if (allBookIds.isEmpty()) return lists;
 
         Map<UUID, Book> booksMap = bookService.getBooksByIds(allBookIds).stream()
             .collect(Collectors.toMap(Book::getBookId, Function.identity()));
             
+        mapBooksToLists(lists, booksMap);
+        return lists;
+    }
+
+    @WithSpan("readinglist.enrichListsWithBooks.broken")
+    private List<ReadingList> enrichListsWithBooksBroken(List<ReadingList> lists) {
+        if (lists.isEmpty()) return Collections.emptyList();
+
+        List<UUID> allBookIds = collectBookIds(lists);
+        if (allBookIds.isEmpty()) return lists;
+
+        // N+1: fetch each book individually instead of batch
+        Map<UUID, Book> booksMap = allBookIds.stream()
+            .map(id -> bookService.getBookById(id))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(Collectors.toMap(Book::getBookId, Function.identity()));
+
+        mapBooksToLists(lists, booksMap);
+        return lists;
+    }
+
+    @WithSpan("readinglist.collectBookIds")
+    private List<UUID> collectBookIds(List<ReadingList> lists) {
+        return lists.stream()
+            .flatMap(list -> list.getBooks().stream().map(Book::getBookId))
+            .distinct().collect(Collectors.toList());
+    }
+
+    @WithSpan("readinglist.mapBooksToLists")
+    private void mapBooksToLists(List<ReadingList> lists, Map<UUID, Book> booksMap) {
         lists.forEach(list -> {
             List<Book> fullBooks = list.getBooks().stream()
                 .map(bookStub -> booksMap.get(bookStub.getBookId()))
                 .filter(Objects::nonNull).collect(Collectors.toList());
             ((ReadingListImpl) list).setBooks(fullBooks);
         });
-        
-        return lists;
     }
 
     @Transactional
