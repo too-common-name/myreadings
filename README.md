@@ -110,3 +110,4 @@ To run all tests and generate a complete code coverage report, use the Maven `ve
 # From the root directory
 ./mvnw clean verify
 ```
+

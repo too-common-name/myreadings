@@ -96,7 +96,7 @@ public class BookServiceImpl implements BookService {
     }
 
     @WithSpan("catalog.searchBooks.refetchBroken")
-    private DomainPage<Book> refetchResultsIndividually(DomainPage<Book> results) {
+    protected DomainPage<Book> refetchResultsIndividually(DomainPage<Book> results) {
         List<Book> refetched = results.content().stream()
             .map(book -> bookRepository.findById(book.getBookId()).orElse(book))
             .collect(Collectors.toList());

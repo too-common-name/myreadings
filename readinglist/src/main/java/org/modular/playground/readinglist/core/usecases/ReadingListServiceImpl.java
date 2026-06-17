@@ -167,7 +167,7 @@ public class ReadingListServiceImpl implements ReadingListService {
     }
 
     @WithSpan("readinglist.enrichListWithBooks")
-    private ReadingList enrichListWithBooks(ReadingList list) {
+    protected ReadingList enrichListWithBooks(ReadingList list) {
         List<UUID> bookIds = list.getBooks().stream().map(Book::getBookId).collect(Collectors.toList());
         if (bookIds.isEmpty()) {
             return list;
@@ -178,7 +178,7 @@ public class ReadingListServiceImpl implements ReadingListService {
     }
 
     @WithSpan("readinglist.enrichListsWithBooks")
-    private List<ReadingList> enrichListsWithBooks(List<ReadingList> lists) {
+    protected List<ReadingList> enrichListsWithBooks(List<ReadingList> lists) {
         if (lists.isEmpty()) return Collections.emptyList();
         
         List<UUID> allBookIds = collectBookIds(lists);
@@ -192,7 +192,7 @@ public class ReadingListServiceImpl implements ReadingListService {
     }
 
     @WithSpan("readinglist.enrichListsWithBooks.broken")
-    private List<ReadingList> enrichListsWithBooksBroken(List<ReadingList> lists) {
+    protected List<ReadingList> enrichListsWithBooksBroken(List<ReadingList> lists) {
         if (lists.isEmpty()) return Collections.emptyList();
 
         List<UUID> allBookIds = collectBookIds(lists);
@@ -210,14 +210,14 @@ public class ReadingListServiceImpl implements ReadingListService {
     }
 
     @WithSpan("readinglist.collectBookIds")
-    private List<UUID> collectBookIds(List<ReadingList> lists) {
+    protected List<UUID> collectBookIds(List<ReadingList> lists) {
         return lists.stream()
             .flatMap(list -> list.getBooks().stream().map(Book::getBookId))
             .distinct().collect(Collectors.toList());
     }
 
     @WithSpan("readinglist.mapBooksToLists")
-    private void mapBooksToLists(List<ReadingList> lists, Map<UUID, Book> booksMap) {
+    protected void mapBooksToLists(List<ReadingList> lists, Map<UUID, Book> booksMap) {
         lists.forEach(list -> {
             List<Book> fullBooks = list.getBooks().stream()
                 .map(bookStub -> booksMap.get(bookStub.getBookId()))
