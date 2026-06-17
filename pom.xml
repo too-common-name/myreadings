@@ -6,6 +6,14 @@
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/too-common-name/myreadings_utils</url>
+        </repository>
+    </distributionManagement>
+
     <properties>
         <quarkus.platform.version>3.26.3</quarkus.platform.version>
         <compiler-plugin.version>3.13.0</compiler-plugin.version>
