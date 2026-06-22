@@ -95,8 +95,9 @@ public class BookServiceImpl implements BookService {
         return results;
     }
 
-    @WithSpan("catalog.searchBooks.refetchBroken")
+    @WithSpan("catalog.searchBooks.enrichResults")
     protected DomainPage<Book> refetchResultsIndividually(DomainPage<Book> results) {
+        bookRepository.clearCache();
         List<Book> refetched = results.content().stream()
             .map(book -> bookRepository.findById(book.getBookId()).orElse(book))
             .collect(Collectors.toList());

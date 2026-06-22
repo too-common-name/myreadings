@@ -57,6 +57,11 @@ public class JpaBookRepository implements BookRepository {
     }
 
     @Override
+    public void clearCache() {
+        entityManager.clear();
+    }
+
+    @Override
     public Optional<Book> findById(UUID bookId) {
         LOGGER.debugf("JPA: Finding book entity by ID: %s", bookId);
         return Optional.ofNullable(entityManager.find(BookEntity.class, bookId))

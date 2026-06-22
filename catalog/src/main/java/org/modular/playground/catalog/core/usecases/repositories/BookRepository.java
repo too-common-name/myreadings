@@ -17,4 +17,5 @@ public interface BookRepository {
     List<Book> findAll(String sort, String order, Integer limit);
     boolean deleteById(UUID bookId);
     DomainPage<Book> searchBooks(String query, int page, int size, String sortBy, String sortOrder);
+    void clearCache();
 }
